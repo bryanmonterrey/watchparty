@@ -94,16 +94,32 @@ export function TabNotificationBadge() {
     const { data: session } = useAuthSession();
     const signedIn = !!session?.user;
 
-    const { data } = trpc.notification.getUnreadCount.useQuery(undefined, {
+    // Notifications have NO push channel — nothing invalidates this except
+    // interacting with the panel — so the poll is the only thing that keeps the
+    // tab live. Cheap COUNT, and the tab is the one surface visible while the
+    // user is doing something else.
+    const { data: notifs } = trpc.notification.getUnreadCount.useQuery(undefined, {
         enabled: signedIn,
-        // Cheap COUNT, and the tab is the one surface that is visible while the
-        // user is doing something else — so it refreshes on its own rather than
-        // waiting for an interaction to invalidate it.
         refetchInterval: 60_000,
         refetchOnWindowFocus: true,
     });
 
-    const count = signedIn ? (data?.count ?? 0) : 0;
+    // Unread DMs, merged in the way Discord's badge does.
+    //
+    // 300_000 is copied from the sidebar's observer ON PURPOSE, not tuned for
+    // this component: react-query runs a shared key at the MOST AGGRESSIVE
+    // interval any observer asks for, so a tighter value here would silently
+    // undo the widening the sidebar did deliberately for container load (it
+    // notes 30s was the widest poll in the app, every page, every user).
+    // Liveness doesn't depend on it anyway — useInboxRealtime push-invalidates
+    // this key on every inbox event.
+    const { data: dms } = trpc.conversation.getUnreadCount.useQuery(undefined, {
+        enabled: signedIn,
+        refetchInterval: 300_000,
+        refetchOnWindowFocus: true,
+    });
+
+    const count = signedIn ? (notifs?.count ?? 0) + (dms?.count ?? 0) : 0;
 
     // The href of the icon link as it was before we touched it, so signing out
     // or clearing the count restores the real favicon rather than a stale PNG.

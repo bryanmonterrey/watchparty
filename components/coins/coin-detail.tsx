@@ -38,6 +38,7 @@ import { HomeActionDock } from "@/components/home/home-action-dock";
 import { coinTag, logClient } from "@/lib/client-log";
 import { Squircle } from "@/components/ui/squircle";
 import { retryTransient } from "@/lib/query-retry";
+import { CoinTabPrice } from "./coin-tab-price";
 
 /** Token-address pill beside the coin name — a small squircle chip with three
  *  faces, swapped in place by the transitions.dev text swap (exit up + blur,
@@ -914,6 +915,15 @@ export function CoinDetail({ coin, wpToken }: { coin: CoinViewData; wpToken?: Wa
 
     return (
         <div className="flex w-full min-w-0">
+            {/* Live price in the browser tab. Renders nothing, and shares the
+                tape query the panels below already run — so it costs no extra
+                requests. */}
+            <CoinTabPrice
+                network={coin.network}
+                address={coin.tokenAddress}
+                symbol={coin.symbol}
+                fallbackPriceUsd={coin.priceUsd}
+            />
             <div className="pl-3 @container/coin min-w-0 flex-1 pt-header">
                 <div className="grid gap-1 min-h-full grid-cols-1 @4xl/coin:grid-cols-[minmax(0,1fr)_324px]">
                     {/* Header and chart are one column — the header spans the
