@@ -390,7 +390,11 @@ export function WalletConnectModal({ open, onOpenChange }: WalletConnectModalPro
             <div className="flex flex-col gap-3 p-5 pb-8">
 
                 {/* Email Input */}
-                <form onSubmit={handleEmailSubmit} className="relative flex items-center bg-transparent rounded-2xl border border-zinc-800 p-1 py-2 pl-3 focus-within:ring-2 focus-within:ring-bleu">
+                {/* [--autofill-surface]: this field is bg-transparent inside a
+                    bordered pill, so the global autofill fill (an input tint)
+                    would show as a lighter rectangle inside it. Pin it to the
+                    modal's own zinc-950 so a browser-filled email is seamless. */}
+                <form onSubmit={handleEmailSubmit} className="relative flex items-center bg-transparent rounded-2xl border border-zinc-800 p-1 py-2 pl-3 focus-within:ring-2 focus-within:ring-bleu [--autofill-surface:#09090b]">
                     <div className="p-1 mr-2 bg-zinc-600/15 rounded-lg h-fit w-fit shrink-0 flex items-center pointer-events-none">
                         <MessagesIcon className="w-5 h-5 text-zinc-500 shrink-0" />
                     </div>

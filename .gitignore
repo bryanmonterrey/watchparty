@@ -88,3 +88,7 @@ skills-lock.json
 
 # Nested worker deps (installed in CI, like realtime)
 og-worker/node_modules
+
+# Python bytecode from the phoenix service (build artifact, regenerated on run)
+__pycache__/
+*.py[cod]

@@ -63,7 +63,7 @@ export function DayDivider({
                 className,
             )}
         >
-            <span className="rounded-full border bg-canvas px-2.5 py-1 text-xs font-medium tracking-wide text-zinc-500">
+            <span className="rounded-full border border-border bg-canvas px-2.5 py-1 text-xs font-medium tracking-wide text-zinc-500">
                 {label}
             </span>
         </div>

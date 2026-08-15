@@ -49,13 +49,16 @@ export function CommunityHomeSidebar() {
     return (
         <div className="flex flex-col h-full py-4 w-76 shrink-0 border-x border-flexwhite/10 overflow-hidden max-md:w-full">
             <div className="p-3 -mt-1 px-2 h-12 flex items-center text-lg justify-center">
-                {/* Outlined, not filled. `border` with no colour picks up the
-                    app-wide slate hairline from globals.css, so this matches
-                    every other neutral edge. h-11 is the standard button height
-                    (design-principles §1) — it was py-3 on an unset height. */}
+                {/* Outlined, not filled. border-border is load-bearing: the
+                    globals.css hairline remap is an ATTRIBUTE selector
+                    ([class*="border-border"] et al), so it only fires when such
+                    a class is present — a bare `border` matches nothing and
+                    falls back to currentColor, which here is text-flexwhite/35.
+                    h-11 is the standard button height (design-principles §1) —
+                    it was py-3 on an unset height. */}
                 <button
                     onClick={() => setSearchOpen(true)}
-                    className="relative cursor-pointer text-lg font-medium gap-2.5 flex items-center justify-start text-flexwhite/35 border hover:bg-zinc-600/10 rounded-full transition-colors w-full px-4 h-11"
+                    className="relative cursor-pointer text-lg font-medium gap-2.5 flex items-center justify-start text-flexwhite/35 border border-border hover:bg-zinc-600/10 rounded-full transition-colors w-full px-4 h-11"
                 >
                     <SearchIcon className="size-6 text-flexwhite/35" />
                     Search

@@ -543,6 +543,47 @@ body {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
+/* Chrome paints an autofilled field from a UA layer that `background-color`
+   cannot reach, so every Tailwind bg-* on the element is ignored and the field
+   renders near-white with dark text. On the app's dark surfaces — the sign-in
+   dialog most visibly, since an email field is exactly what the browser fills —
+   that lands as a glaring white box.
+
+   An inset box-shadow is the only thing that repaints it. It's a FILL, not a
+   drop shadow, so it doesn't conflict with the no-gray-shadows rule. The long
+   background-color transition is the companion hack: it defers the UA repaint
+   past any realistic session for the Chrome versions that still apply it on
+   top of the shadow. -webkit-text-fill-color carries the glyphs, because
+   `color` is overridden by the same UA layer.
+
+   --autofill-surface is a variable so a surface with a different tint can
+   override it locally rather than fighting the selector. */
+:root {
+  --autofill-surface: #ffffff;
+  --autofill-ink: var(--foreground);
+}
+
+/* :root.dark, not the project's usual bare `.dark` — that block lives earlier in
+   this file, so at equal specificity the light `:root` above would win. */
+:root.dark {
+  /* Reads as an input tint on both the #0C0C0C dialog and the app canvas. */
+  --autofill-surface: #17171a;
+  --autofill-ink: #ffffff;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: var(--autofill-ink);
+  caret-color: var(--autofill-ink);
+  -webkit-box-shadow: 0 0 0 1000px var(--autofill-surface) inset;
+  box-shadow: 0 0 0 1000px var(--autofill-surface) inset;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
 /* Hide scrollbars everywhere, app-wide (scrolling itself still works).
    Supersedes the per-element .hidden-scrollbar utility, which stays for
    compatibility with ported markup. */

@@ -49,7 +49,7 @@ export function ComposerReplyBanner({
     return (
         <div
             className={cn(
-                "flex items-center gap-2 rounded-t-2xl border border-b-0 bg-white/[0.04] px-3.5 py-2",
+                "flex items-center gap-2 rounded-t-2xl border border-border border-b-0 bg-white/[0.04] px-3.5 py-2",
                 className,
             )}
         >

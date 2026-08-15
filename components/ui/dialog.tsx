@@ -67,14 +67,19 @@ function DialogContent({
           //
           // border-soft-gray/10 is not decoration — `border` on its own sets a
           // WIDTH and leaves the colour at currentColor (Tailwind v4 changed
-          // the default from gray-200), and this surface is text-flexwhite, so
-          // every dialog that didn't pass its own border colour was drawing a
-          // white hairline. Naming a colour here fixes all of them at once;
-          // callers that pass their own still win through cn(). The value lands
-          // on the app's standard hairline either way — globals.css remaps
-          // border-soft-gray* to --wp-border.
+          // the default from gray-200), so every dialog that didn't pass its
+          // own border colour was drawing a hairline in its TEXT colour.
+          // Naming a colour here fixes all of them at once; callers that pass
+          // their own still win through cn(). The value lands on the app's
+          // standard hairline either way — globals.css remaps border-soft-gray*
+          // to --wp-border.
+          //
+          // text-white, not text-flexwhite: this surface paints its own
+          // near-black background in BOTH themes, but --flexwhite inverts to
+          // #0f1419 on Light — which rendered every dialog's text black on
+          // black for anyone not using the default theme.
           MODAL_CONTENT_MOTION_CLASS,
-          "bg-[#0C0C0C] border-soft-gray/10 backdrop-blur-xl text-flexwhite fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-4xl border p-6 duration-200 sm:max-w-lg",
+          "bg-[#0C0C0C] border-soft-gray/10 backdrop-blur-xl text-white fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-4xl border p-6 duration-200 sm:max-w-lg",
           className
         )}
         {...props}

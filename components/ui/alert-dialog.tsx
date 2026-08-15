@@ -58,7 +58,9 @@ function AlertDialogContent({
         className={cn(
           // Frosted surface matching DialogContent (see components/ui/dialog.tsx).
           MODAL_CONTENT_MOTION_CLASS,
-          "bg-[#6A6A6A]/35 backdrop-blur-xl text-flexwhite fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-4xl border p-6 duration-200 sm:max-w-lg",
+          // text-white, not text-flexwhite — see the note in dialog.tsx: this
+          // surface stays dark in both themes but --flexwhite inverts on Light.
+          "bg-[#6A6A6A]/35 backdrop-blur-xl text-white fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-4xl border border-border p-6 duration-200 sm:max-w-lg",
           className
         )}
         {...props}

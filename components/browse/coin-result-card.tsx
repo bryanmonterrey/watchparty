@@ -38,7 +38,7 @@ function formatCompactUsd(n: number | null): string {
 function Figure({ label, value }: { label: string; value: string }) {
     return (
         <div className="hidden sm:flex items-center gap-1.5 min-w-[92px] justify-end">
-            <span className="text-xs font-semibold text-zinc-500 border rounded-md px-1.5 py-0.5">{label}</span>
+            <span className="text-xs font-semibold text-zinc-500 border border-border rounded-md px-1.5 py-0.5">{label}</span>
             <span className="text-sm font-medium text-zinc-100 tabular-nums">{value}</span>
         </div>
     );
