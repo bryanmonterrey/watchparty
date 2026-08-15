@@ -241,8 +241,14 @@ token-launch blocks are separable.
 
 ## Waiting on the user
 
-- **fomo's URL** — `.biz` and `.fun` both refuse connections. Wanted to inspect
-  how their chart marker layer is positioned.
+- ~~**fomo's URL**~~ — RESOLVED 2026-08-15, and it was never blocked on the
+  user. The domain is **`fomo.family`** (200), not `.biz` or `.fun` (both
+  NXDOMAIN). It is named in three of this repo's own docs —
+  `docs/exp-callouts.md` §"Phase 4 — fomo.family social-trading layer",
+  `docs/TODO.md`, and `docs/coin-alert-feed.md`, which models the alert copy on
+  it. Guessing TLDs and escalating beat reading the docs that already had it.
+  Still open as WORK, not as a question: inspect how their chart marker layer is
+  positioned, for the coin page.
 - **`ALERT_WEBHOOK_URL`** — last item on `docs/cloudflare-launch.md` step 7.
   ⚠️ Looks like this is ALREADY SET: `.env.production` carries a real Discord
   webhook for it. What's unconfirmed is whether the deployed `DOTENV_PRODUCTION`
