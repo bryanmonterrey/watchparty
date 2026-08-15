@@ -83,7 +83,7 @@ export function GlobalSearch({
                     // 75%) is gone; the bar is now a hairline over whatever it
                     // floats above, with backdrop-blur-xl still doing the work
                     // of keeping the text legible against moving content.
-                    "relative z-50 h-11 backdrop-blur-xl hover:cursor-pointer cursor-pointer flex items-center bg-transparent hover:bg-soft-gray-10 active:bg-soft-gray-15 border border-soft-gray/12 rounded-full transition-colors",
+                    "relative z-50 h-11 backdrop-blur-xl hover:cursor-pointer cursor-pointer flex items-center bg-transparent active:bg-soft-gray-15 hover:bg-soft-gray-10 focus-within:hover:bg-soft-gray-10  focus-within:bg-soft-gray-15 focus:bg-soft-gray-15 border border-soft-gray/12 rounded-full transition-colors",
                     // Single source of truth for the ring: isFocused (set on
                     // input focus, cleared on submit / outside click). No ring
                     // while the panel is showing — it would sit inside the

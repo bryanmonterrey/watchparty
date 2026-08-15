@@ -17,22 +17,11 @@ const DWELL_CAP_SECONDS = 180;
 // are swallowed. Callers await it (a single cheap insert) rather than dangling
 // the promise, since background work can be cut off on Workers.
 
-export const ACTION = {
-    FAVORITE: 1,
-    REPLY: 4,
-    QUOTE: 5,
-    REPOST: 6,
-    DWELL: 11,
-    VIDEO_VIEW: 13,
-    // CLIENT_TWEET_NOT_INTERESTED_IN in Phoenix's ActionName proto. Was 20,
-    // which the model checkpoint (num_actions=19, slots 0-18) silently ZEROED
-    // in the service's history guard — every negative signal was discarded.
-    // history.ts remaps legacy 20-rows to 17 during assembly.
-    NEGATIVE: 17,
-    // Reserved, not logged in v1. Parked far past the proto enum (runs to 60+;
-    // 21 is CLIENT_TWEET_FOLLOW_AUTHOR there) so it can never collide.
-    TRADE: 100,
-} as const;
+// Defined in ./config (which has no `server-only`) so tests can import the
+// indices and assert they stay inside the model's logit slots. Re-exported
+// here because every caller imports ACTION from this module.
+export { ACTION } from "./config";
+import { ACTION } from "./config";
 
 export async function recordSignal(p: {
     userId: string;
