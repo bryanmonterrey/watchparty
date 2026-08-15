@@ -11,6 +11,7 @@ import { MorphMenuIcon } from '@/components/marketing/morph-menu-icon'
 import { useClipsOverlay } from '@/hooks/use-clips-overlay'
 import { useHomeFeedOverlay } from '@/hooks/use-home-feed-overlay'
 import { useAskOverlay } from '@/hooks/use-ask-overlay'
+import { useProfileLiveView } from '@/hooks/use-profile-live-view'
 import { CreateMenu } from './create-menu'
 import { SolBalanceChip, SolBalanceChipSkeleton, useHeaderWalletLoading } from '@/components/wallet/sol-balance-chip2'
 import { useEffect, useState } from 'react'
@@ -64,6 +65,8 @@ export function AppHeader2() {
   // search bar hides (it targets the covered page, which nobody can see), and
   // the scroll backdrop is suppressed.
   const askOverlayOpen = useAskOverlay((s) => s.open)
+  // Set by UserProfile — see isLiveProfile below.
+  const profileLiveView = useProfileLiveView((s) => s.live)
   const closeAsk = useAskOverlay((s) => s.onClose)
   const homeOverlayOpen = clipsOpen || homeFeedOpen || askOverlayOpen
   const closeHomeOverlay = () => {
@@ -120,15 +123,19 @@ export function AppHeader2() {
   // firstSegment.length >= 21` — guessing "is this a mint address?" from string
   // length, back when a coin and a username shared the top-level namespace.
   const isTokenPage = isCoinPath;
-  // A profile — /<username> — and that includes the LIVE page, which is a
-  // profile whose host happens to be broadcasting. Both are topped by media (a
-  // banner, or the player) that the header sits over, so both want the same
-  // black scrim on scroll that watch and token pages get. It never had it:
-  // isWatchPage wants three segments and a profile is one.
+  // A profile — /<username>. (isWatchPage can't catch it: that wants three
+  // segments and a profile is one.)
   const isProfilePage = segments.length === 2
     && firstSegment !== ''
     && !APP_ROOT_SEGMENTS.includes(firstSegment);
-  const isMediaPage = isWatchPage || isTokenPage || isProfilePage;
+  // ...but a profile is only MEDIA while its live view is up. Live is a mode of
+  // the profile page, not a route of its own, so the path is identical either
+  // way and only UserProfile knows which is showing — it publishes the mode
+  // through use-profile-live-view. In the plain profile view the header sits
+  // over the banner, which is a flat panel fill, so a black scrim over it is
+  // just a dark band with nothing underneath to separate the header from.
+  const isLiveProfile = isProfilePage && profileLiveView;
+  const isMediaPage = isWatchPage || isTokenPage || isLiveProfile;
   // The scroll-in backdrop exists on media-style pages (watch/token), the /home
   // feed, /search, and /settings; everywhere else the header stays as-is on
   // scroll. NOT on /feed: the app shell stacks the fixed header above all

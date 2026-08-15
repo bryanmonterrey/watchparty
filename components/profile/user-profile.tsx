@@ -13,6 +13,7 @@ import { ProfileTabContent } from "./profile-tab-content";
 import { StreamWatchPage } from "@/components/streaming/stream-watch-page";
 import { MaximizeIcon, MinimizeIcon } from "@/components/icons";
 import { trpc } from "@/lib/trpc/client";
+import { useProfileLiveView } from "@/hooks/use-profile-live-view";
 import { cn } from "@/lib/utils";
 
 // Resize toggle skin — sits right-aligned on the tabs row in both the full and
@@ -90,6 +91,18 @@ export function UserProfile({ user, initialFollowCounts, initialIsLive }: UserPr
             container?.scrollTo({ top: 0, behavior: "smooth" });
         }
     };
+
+    // Publish the mode to the app header, whose scroll backdrop is a black
+    // scrim meant for media: it belongs over the PLAYER, not over the plain
+    // profile, whose banner is a flat fill with nothing to separate from. The
+    // header sees only the pathname and both modes share `/<username>`.
+    // Cleared on unmount so navigating off a live host's page doesn't leave the
+    // scrim armed on whatever route comes next.
+    const setProfileLiveView = useProfileLiveView((s) => s.setLive);
+    useEffect(() => {
+        setProfileLiveView(showLive);
+        return () => setProfileLiveView(false);
+    }, [showLive, setProfileLiveView]);
 
     // Below every hook, so switching modes never changes the hook order.
     if (showLive) {
