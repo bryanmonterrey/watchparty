@@ -4,23 +4,19 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-    ArrowDown01Icon,
-    Copy01Icon,
-    Globe02Icon,
-    MenuTwoLineIcon,
-    Tick02Icon,
-    UserGroup02Icon,
-} from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import type { SortingState } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { getRealtimeClient, authenticateRealtimeClient } from "@/lib/supabase/realtime-client";
 import { GooDropdown, gooMenuItem, GOO_TRIGGER_PILL, GOO_PANEL_FILL } from "@/components/ui/goo-dropdown";
 import { Squircle } from "@/components/ui/squircle";
-import { SolanaIcon } from "@/components/icons";
-import { useQuickBuy, QUICK_BUY_PRESETS } from "@/hooks/use-quick-buy";
+import { DataTable } from "@/components/ui/data-table";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { useQuickBuy } from "@/hooks/use-quick-buy";
 import { CHAIN_OPTIONS, type TradeChain } from "./chains";
 import { collapseCopycats } from "./collapse-copycats";
+import { buildTradeColumns, TIMEFRAMES, type Timeframe } from "./trade-columns";
 import type { TokenStatus, TradeToken } from "./types";
 
 // Discover: the /trade landing (per the Axiom reference, in watchparty's
@@ -44,7 +40,10 @@ const TABS: { key: Tab; label: string }[] = [
     { key: "new", label: "New" },
 ];
 
-type SortKey = "volume" | "marketCap" | "txCount" | "newest";
+// Ids of the sortable columns, plus `newest`, which the New tab uses and no
+// column offers. Every other member matches a column id in `trade-columns` —
+// the header IS the sort control now that the sort dropdown is hidden.
+type SortKey = "volume" | "marketCap" | "price" | "txCount" | "newest";
 
 // Each tab's natural ordering; the sort dropdown can override it afterwards.
 const TAB_SORT: Record<Tab, SortKey> = {
@@ -63,244 +62,16 @@ const EMPTY_COPY: Record<Tab, { title: string; hint: string }> = {
     new: { title: "No fresh launches yet", hint: "Brand-new coins land here first." },
 };
 
-const SORTS: { key: SortKey; label: string }[] = [
-    { key: "volume", label: "Volume" },
-    { key: "marketCap", label: "Market cap" },
-    { key: "txCount", label: "Transactions" },
-    { key: "newest", label: "Newest" },
-];
-
-// Timeframe pills drive which window the %-change and volume cells show.
-// Falls back to 24h until the sync has data for a window.
-type Timeframe = "5m" | "1h" | "24h";
-const TIMEFRAMES: Timeframe[] = ["5m", "1h", "24h"];
-
-function changeFor(t: TradeToken, tf: Timeframe): number {
-    if (tf === "5m") return t.changePercent5m ?? t.changePercent;
-    if (tf === "1h") return t.changePercent1h ?? t.changePercent;
-    return t.changePercent;
-}
-
-function volumeFor(t: TradeToken, tf: Timeframe): number {
-    if (tf === "5m") return t.volume5m ?? t.volume;
-    if (tf === "1h") return t.volume1h ?? t.volume;
-    return t.volume;
-}
-
-function formatUsd(value: number): string {
-    if (value >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(1)}B`;
-    if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
-    if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
-    return `$${value.toFixed(2)}`;
-}
-
-function formatPrice(value: number): string {
-    if (value === 0) return "—";
-    if (value >= 1) return `$${value.toFixed(2)}`;
-    if (value >= 0.001) return `$${value.toFixed(4)}`;
-    // sub-milli prices: show leading-zero count notation ($0.0₅123)
-    const s = value.toFixed(12);
-    const m = s.match(/^0\.(0*)(\d{1,3})/);
-    if (!m) return `$${value.toPrecision(2)}`;
-    return `$0.0${String.fromCharCode(0x2080 + m[1].length)}${m[2]}`;
-}
-
-function formatCount(count: number): string {
-    if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
-    return String(count);
-}
-
-function XIcon({ className }: { className?: string }) {
-    return (
-        <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
-            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.742l7.737-8.835L1.254 2.25H8.08l4.254 5.622 5.91-5.622Zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-        </svg>
-    );
-}
-
-// Plain tile — the bonding-progress ring is gone by request, in every state.
-function TokenAvatar({ token }: { token: TradeToken }) {
-    return (
-        <div className="size-12 shrink-0 overflow-hidden rounded-[14px] bg-zinc-800">
-            {token.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={token.imageUrl} alt={token.symbol} className="size-full object-cover" />
-            ) : null}
-        </div>
-    );
-}
-
-// Shared grid template so the header row and token rows stay aligned.
-const GRID = "grid grid-cols-[minmax(220px,1.5fr)_minmax(96px,1fr)_minmax(88px,1fr)_minmax(88px,1fr)_minmax(72px,0.8fr)_minmax(96px,auto)] max-lg:grid-cols-[minmax(200px,1.6fr)_minmax(96px,1fr)_minmax(88px,1fr)_minmax(96px,auto)] max-md:grid-cols-[minmax(0,1.6fr)_minmax(90px,1fr)_minmax(84px,auto)] items-center gap-3";
-
-function DiscoverRow({
-    token,
-    timeframe,
-    quickBuy,
-    buying,
-    amountSol,
-}: {
-    token: TradeToken;
-    timeframe: Timeframe;
-    quickBuy: (t: TradeToken) => Promise<"done" | "no-wallet" | "no-mint" | "failed">;
-    buying: boolean;
-    amountSol: number;
-}) {
-    const router = useRouter();
-    const [copied, setCopied] = useState(false);
-    const slug = token.tokenAddress || token.id;
-    // Chain-wide rows carry their chain in the URL — the same address can live
-    // on several chains, which is exactly why /coin/<chain>/<address> exists.
-    const href = token.external ? `/coin/${token.chain}/${token.tokenAddress}` : `/${slug}`;
-    // The swap engine only speaks Solana: external Solana coins quick-buy by
-    // mint like any in-house coin, EVM rows just open their coin page.
-    const canBuy = !token.external || token.chain === "solana";
-
-    const copy = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        void navigator.clipboard.writeText(token.tokenAddress || token.id);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1200);
-    };
-
-    const openSocial = (e: React.MouseEvent, url?: string) => {
-        e.stopPropagation();
-        if (url) window.open(url, "_blank", "noopener,noreferrer");
-    };
-
-    const handleBuy = async (e: React.MouseEvent) => {
-        e.stopPropagation();
-        const result = await quickBuy(token);
-        if (result === "no-mint") router.push(href);
-    };
-
-    const change = changeFor(token, timeframe);
-    const vol = volumeFor(token, timeframe);
-    const up = change >= 0;
-
-    return (
-        <div
-            onClick={() => router.push(href)}
-            className={cn(GRID, "cursor-pointer px-4 py-3 transition-colors hover:bg-white/[0.04] active:bg-white/[0.06]")}
-        >
-            {/* Pair */}
-            <div className="flex min-w-0 items-center gap-3">
-                <TokenAvatar token={token} />
-                <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                        <span className="truncate text-[16px] font-bold tracking-tight text-white">
-                            {token.symbol.startsWith("$") ? token.symbol : `$${token.symbol}`}
-                        </span>
-                        <span className="hidden truncate text-[14px] font-medium text-zinc-500 sm:inline">{token.name}</span>
-                        <button onClick={copy} aria-label="Copy coin address" className="shrink-0 cursor-pointer text-zinc-600 transition-colors hover:text-zinc-300">
-                            {copied
-                                ? <HugeiconsIcon icon={Tick02Icon} className="size-3 text-white" strokeWidth={2.5} />
-                                : <HugeiconsIcon icon={Copy01Icon} className="size-3" strokeWidth={2} />}
-                        </button>
-                    </div>
-                    <div className="mt-1 flex items-center gap-2">
-                        {token.creatorIsLive && (
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    router.push(`/${token.creatorUsername ?? slug}`);
-                                }}
-                                aria-label="Watch the creator's live stream"
-                                className="flex cursor-pointer items-center gap-1 rounded-full bg-pastelred/15 px-1.5 py-0.5 text-[11px] font-bold tracking-wide text-pastelred transition-colors hover:bg-pastelred/25"
-                            >
-                                <span className="size-1.5 animate-pulse rounded-full bg-pastelred" />
-                                LIVE{token.liveViewerCount > 0 ? ` · ${formatCount(token.liveViewerCount)}` : ""}
-                            </button>
-                        )}
-                        <span className="text-[12px] font-medium text-zinc-500">{token.timeAgo}</span>
-                        {token.hasSocials.twitter && (
-                            <button onClick={(e) => openSocial(e, token.hasSocials.twitter)} aria-label="X profile" className="cursor-pointer text-zinc-600 transition-colors hover:text-white">
-                                <XIcon className="size-[11px]" />
-                            </button>
-                        )}
-                        {token.hasSocials.website && (
-                            <button onClick={(e) => openSocial(e, token.hasSocials.website)} aria-label="Website" className="cursor-pointer text-zinc-600 transition-colors hover:text-white">
-                                <HugeiconsIcon icon={Globe02Icon} className="size-3" strokeWidth={2} />
-                            </button>
-                        )}
-                        <span className="flex items-center gap-1 text-[12px] font-medium text-zinc-500 md:hidden">
-                            <HugeiconsIcon icon={UserGroup02Icon} className="size-[11px]" strokeWidth={2} />
-                            {formatCount(token.holderCount)}
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Market cap + window change */}
-            <div className="min-w-0">
-                <p className="text-[15px] font-bold tabular-nums tracking-tight text-white">{formatUsd(token.marketCap)}</p>
-                <p className={cn("mt-0.5 text-[13px] font-semibold tabular-nums", up ? "text-lantern" : "text-pastelred")}>
-                    {up ? "+" : ""}{change.toFixed(1)}%
-                </p>
-            </div>
-
-            {/* Window volume */}
-            <div className="min-w-0 max-md:hidden">
-                <p className="text-[15px] font-semibold tabular-nums text-zinc-200">{vol > 0 ? formatUsd(vol) : "—"}</p>
-                <p className="mt-0.5 text-[12px] font-medium text-zinc-600">{timeframe} vol</p>
-            </div>
-
-            {/* Price */}
-            <div className="min-w-0 max-lg:hidden">
-                <p className="text-[15px] font-semibold tabular-nums text-zinc-200">{formatPrice(token.priceUsd)}</p>
-                <p className="mt-0.5 text-[12px] font-medium text-zinc-600">Price</p>
-            </div>
-
-            {/* TX + holders */}
-            <div className="min-w-0 max-lg:hidden">
-                <p className="text-[15px] font-semibold tabular-nums text-zinc-200">{formatCount(token.txCount)}</p>
-                <p className="mt-0.5 flex items-center gap-1 text-[12px] font-medium text-zinc-600">
-                    <HugeiconsIcon icon={UserGroup02Icon} className="size-[11px]" strokeWidth={2} />
-                    {formatCount(token.holderCount)}
-                </p>
-            </div>
-
-            {/* Quick buy — preset SOL amount, swaps in place. EVM rows have no
-                buy (the swap engine is Solana-only); the cell stays for grid
-                alignment and the row itself opens the coin page. */}
-            <div className="flex justify-end">
-                {canBuy && (
-                    <button
-                        onClick={handleBuy}
-                        disabled={buying}
-                        className="flex cursor-pointer items-center gap-1.5 rounded-full bg-white/10 px-4 py-2 text-[14px] font-bold text-white transition-colors hover:bg-white/20 active:scale-95 disabled:opacity-50 disabled:cursor-default"
-                    >
-                        <SolanaIcon className="size-3.5" />
-                        {buying ? "Buying…" : `Buy ${amountSol}`}
-                    </button>
-                )}
-            </div>
-        </div>
-    );
-}
-
-function RowSkeleton() {
-    return (
-        <div className={cn(GRID, "px-4 py-3")}>
-            <div className="flex items-center gap-3">
-                <div className="size-12 shrink-0 overflow-hidden rounded-[14px]"><div className="size-full shimmer-skeleton" /></div>
-                <div className="flex w-full max-w-[160px] flex-col gap-2">
-                    <div className="h-3.5 w-2/3 overflow-hidden rounded-full"><div className="size-full shimmer-skeleton" /></div>
-                    <div className="h-2.5 w-1/2 overflow-hidden rounded-full"><div className="size-full shimmer-skeleton" /></div>
-                </div>
-            </div>
-            <div className="h-3.5 w-14 overflow-hidden rounded-full"><div className="size-full shimmer-skeleton" /></div>
-            <div className="h-3.5 w-14 overflow-hidden rounded-full max-md:hidden"><div className="size-full shimmer-skeleton" /></div>
-            <div className="h-3.5 w-14 overflow-hidden rounded-full max-lg:hidden"><div className="size-full shimmer-skeleton" /></div>
-            <div className="h-3.5 w-10 overflow-hidden rounded-full max-lg:hidden"><div className="size-full shimmer-skeleton" /></div>
-            <div className="flex justify-end"><div className="h-9 w-[76px] overflow-hidden rounded-full"><div className="size-full shimmer-skeleton" /></div></div>
-        </div>
-    );
-}
 
 export function TradeDiscover() {
+    const router = useRouter();
     const [tab, setTab] = useState<Tab>("trending");
-    const [sort, setSort] = useState<SortKey>("volume");
+    // Sorting is TanStack v9 state now (the table is `manualSorting`, so this
+    // drives the memo below rather than the row model). Removal is disabled and
+    // a tab always seeds one entry, so `sorting[0]` is never empty.
+    const [sorting, setSorting] = useState<SortingState>([{ id: "volume", desc: true }]);
+    const sort = (sorting[0]?.id ?? "volume") as SortKey;
+    const sortDesc = sorting[0]?.desc ?? true;
     const [timeframe, setTimeframe] = useState<Timeframe>("24h");
     const [chain, setChain] = useState<TradeChain>("solana");
     // ON by default. Measured 2026-08-12 against the live solana board: 22 of
@@ -311,11 +82,25 @@ export function TradeDiscover() {
     // Photon and Axiom both ship their holder-concentration and dev/sniper
     // filters as active defaults rather than opt-in; a discovery surface whose
     // safety net is off until you find the toggle is not protecting anyone.
-    // The button beside the tabs still turns it off, and carries aria-pressed,
-    // so the state stays visible and reversible.
-    const [hideRisky, setHideRisky] = useState(true);
-    const { quickBuy, buyingId, amountSol, setAmountSol } = useQuickBuy();
+    // The "Hide risky" toggle that used to sit beside the tabs is hidden by
+    // request, so this is now a fixed default rather than a control — the state
+    // stays a hook so restoring the button is one line, not a refactor.
+    const [hideRisky] = useState(true);
+    // `setAmountSol` went with the quick-buy amount pill (also hidden); the
+    // amount itself still labels each row's Buy button.
+    const { quickBuy, buyingId, amountSol } = useQuickBuy();
     const utils = trpc.useUtils();
+
+    // Narrow viewports drop columns through TanStack's visibility state rather
+    // than a `max-md:hidden` class, because a CSS-hidden cell still leaves its
+    // `<col>` reserving width — the table would keep a third of the row for
+    // three invisible columns.
+    const isMd = useMediaQuery("(min-width: 768px)");
+    const isLg = useMediaQuery("(min-width: 1024px)");
+    const columnVisibility = useMemo(
+        () => ({ volume: isMd, price: isLg, txCount: isLg }),
+        [isMd, isLg],
+    );
 
     const onSolana = chain === "solana";
     const activeChain = CHAIN_OPTIONS.find((c) => c.id === chain) ?? CHAIN_OPTIONS[0];
@@ -385,7 +170,7 @@ export function TradeDiscover() {
         const merged: TradeToken[] = [...all, ...external];
 
         const visible = hideRisky ? merged.filter((t) => !t.risky) : merged;
-        const base =
+        const base: TradeToken[] =
             // Live is watchparty-native: coins whose creator is streaming here.
             tab === "live" ? all.filter((t) => t.creatorIsLive)
             // Surge = positive 5-minute momentum with real 5-minute volume —
@@ -393,26 +178,39 @@ export function TradeDiscover() {
             : tab === "surge" ? visible.filter((t) => (t.changePercent5m ?? 0) > 0 && (t.volume5m ?? 0) > 0)
             : tab === "new" ? ([...(onSolana ? data.new : []), ...external] as TradeToken[]).filter((t) => !hideRisky || !t.risky)
             : visible;
+        // Every comparator is written descending; `dir` flips the whole chain
+        // when the header is toggled to ascending, so the tab's own tiebreakers
+        // invert with it instead of fighting the user's choice.
+        const dir = sortDesc ? 1 : -1;
         const by: Record<SortKey, (a: TradeToken, b: TradeToken) => number> = {
             volume: (a, b) => b.volume - a.volume,
             marketCap: (a, b) => b.marketCap - a.marketCap,
+            price: (a, b) => b.priceUsd - a.priceUsd,
             txCount: (a, b) => b.txCount - a.txCount,
             newest: (a, b) => (b.createdAtMs ?? 0) - (a.createdAtMs ?? 0),
         };
-        return collapseCopycats(base.sort((a, b) =>
+        return collapseCopycats(base.sort((a, b) => dir * (
             // Live tab: most-watched streams first; Surge: hottest 5m move
             // first, 5m volume as tiebreaker; market sort breaks remaining ties.
             tab === "live" ? b.liveViewerCount - a.liveViewerCount || by[sort](a, b)
             : tab === "surge" ? (b.changePercent5m ?? 0) - (a.changePercent5m ?? 0) || (b.volume5m ?? 0) - (a.volume5m ?? 0)
-            : by[sort](a, b),
-        ));
-    }, [data, all, externalRows, onSolana, tab, sort, hideRisky]);
+            : by[sort](a, b)
+        )));
+    }, [data, all, externalRows, onSolana, tab, sort, sortDesc, hideRisky]);
 
     const selectTab = (t: Tab) => {
         setTab(t);
-        setSort(TAB_SORT[t]);
+        setSorting([{ id: TAB_SORT[t], desc: true }]);
         if (t === "surge") setTimeframe("5m"); // surge reads in 5m terms
     };
+
+    // The columns close over the timeframe and the quick-buy state, so they are
+    // rebuilt when either changes and are otherwise stable — a fresh array on
+    // every render would re-create the table's column instances each time.
+    const columns = useMemo(
+        () => buildTradeColumns({ timeframe, quickBuy, buyingId, amountSol }),
+        [timeframe, quickBuy, buyingId, amountSol],
+    );
 
     const selectChain = (c: TradeChain) => {
         setChain(c);
@@ -498,47 +296,6 @@ export function TradeDiscover() {
                         ))}
                     </div>
 
-                    {/* Risky-coin filter — drops rows the holder-quality
-                        thresholds flag (sniper/insider/top-10 concentration). */}
-                    <button
-                        type="button"
-                        onClick={() => setHideRisky((v) => !v)}
-                        aria-pressed={hideRisky}
-                        className={cn(
-                            "h-11 shrink-0 cursor-pointer rounded-full px-4 text-base font-bold transition-colors",
-                            hideRisky ? "bg-lantern text-black" : "bg-white/5 text-zinc-400 hover:text-white",
-                        )}
-                    >
-                        Hide risky
-                    </button>
-
-                    {/* Quick-buy amount — Solana only; the amount is SOL and
-                        the engine it feeds only swaps there. */}
-                    {onSolana && (
-                        <GooDropdown
-                            align="end"
-                            width={160}
-                            gap={8}
-                            fill={GOO_PANEL_FILL}
-                            triggerAriaLabel="Quick-buy amount"
-                            triggerClassName={GOO_TRIGGER_PILL}
-                            trigger={
-                                <>
-                                    <SolanaIcon className="size-4" />
-                                    {amountSol}
-                                    <HugeiconsIcon icon={ArrowDown01Icon} className="size-6 text-zinc-500" strokeWidth={2} />
-                                </>
-                            }
-                            items={QUICK_BUY_PRESETS.map((v) => gooMenuItem({
-                                key: String(v),
-                                label: `${v} SOL`,
-                                onClick: () => setAmountSol(v),
-                                right: amountSol === v
-                                    ? <HugeiconsIcon icon={Tick02Icon} className="size-4 text-white" strokeWidth={2} />
-                                    : undefined,
-                            }))}
-                        />
-                    )}
 
                     {/* Chain picker — which chain the board shows. Every coin
                         on that chain is eligible, DexScreener-style. */}
@@ -567,55 +324,44 @@ export function TradeDiscover() {
                         }))}
                     />
 
-                    <GooDropdown
-                        align="end"
-                        width={220}
-                        gap={8}
-                        fill={GOO_PANEL_FILL}
-                        triggerAriaLabel="Sort coins"
-                        triggerClassName={GOO_TRIGGER_PILL}
-                        trigger={
-                            <>
-                                <HugeiconsIcon icon={MenuTwoLineIcon} className="size-6" strokeWidth={2} />
-                                {SORTS.find((s) => s.key === sort)?.label}
-                                <HugeiconsIcon icon={ArrowDown01Icon} className="size-6 text-zinc-500" strokeWidth={2} />
-                            </>
-                        }
-                        items={SORTS.map((s) => gooMenuItem({
-                            key: s.key,
-                            label: s.label,
-                            onClick: () => setSort(s.key),
-                            right: sort === s.key
-                                ? <HugeiconsIcon icon={Tick02Icon} className="size-4 text-white" strokeWidth={2} />
-                                : undefined,
-                        }))}
-                    />
                     </div>
                 </div>
             </div>
 
-            {/* Token table */}
+            {/* Token table — TanStack Table v9 under the beui.dev chrome.
+                `manualSorting`: the rows arrive already ordered by the memo
+                above (tab tiebreakers and copycat collapsing can't be expressed
+                as a column comparator), so the headers set the sort state and
+                the memo does the ordering. */}
             <div className="flex-1 px-4 pb-8 lg:px-6">
                 <Squircle asChild radius={20} autoEffects={false}>
                     {/* Opaque, not sidebar-hover/30: same colour, but it holds
                         it anywhere instead of darkening or lightening with
                         whatever it's over. */}
-                    <div className="bg-sidebar-hover-30">
-                        {/* Column headers */}
-                        <div className={cn(GRID, "px-4 pb-2 pt-4 text-base font-semibold text-zinc-400")}>
-                            <span>Coin</span>
-                            <span>Market cap</span>
-                            <span className="max-md:hidden">Volume</span>
-                            <span className="max-lg:hidden">Price</span>
-                            <span className="max-lg:hidden">Txns</span>
-                            <span className="text-right">Action</span>
-                        </div>
-
-                        <div>
-                            {(onSolana ? isLoading : chainFeed.isLoading) ? (
-                                Array.from({ length: 10 }).map((_, i) => <RowSkeleton key={i} />)
-                            ) : tokens.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center gap-1 py-20">
+                    <div className="bg-sidebar-hover-30 pt-2">
+                        <DataTable
+                            data={tokens}
+                            columns={columns}
+                            getRowId={(t) => t.id}
+                            sorting={sorting}
+                            onSortingChange={setSorting}
+                            manualSorting
+                            columnVisibility={columnVisibility}
+                            rowHeight={76}
+                            resizable
+                            reorderable
+                            loading={onSolana ? isLoading : chainFeed.isLoading}
+                            onRowClick={(t) =>
+                                router.push(
+                                    t.external
+                                        ? `/coin/${t.chain}/${t.tokenAddress}`
+                                        : `/${t.tokenAddress || t.id}`,
+                                )
+                            }
+                            className="px-2"
+                            headerClassName="bg-transparent"
+                            emptyState={
+                                <div className="flex flex-col items-center justify-center gap-1 py-8">
                                     <p className="text-base font-bold text-zinc-400">{EMPTY_COPY[tab].title}</p>
                                     <p className="text-sm text-zinc-600">
                                         {marketDataOff && tab !== "live"
@@ -623,19 +369,8 @@ export function TradeDiscover() {
                                             : EMPTY_COPY[tab].hint}
                                     </p>
                                 </div>
-                            ) : (
-                                tokens.map((t) => (
-                                    <DiscoverRow
-                                        key={t.id}
-                                        token={t}
-                                        timeframe={timeframe}
-                                        quickBuy={quickBuy}
-                                        buying={buyingId === t.id}
-                                        amountSol={amountSol}
-                                    />
-                                ))
-                            )}
-                        </div>
+                            }
+                        />
                     </div>
                 </Squircle>
             </div>
