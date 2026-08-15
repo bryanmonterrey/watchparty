@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { cn } from "@/lib/utils";
-import { PlusSignCircleIcon } from "@hugeicons/core-free-icons";
+import { ArrowRightDoubleIcon } from "@hugeicons/core-free-icons";
 import { AlertsRail } from "@/components/coin-feed/alerts-rail";
 
 // Home's left column. This exists as a client component purely to own the
@@ -125,7 +125,7 @@ export function HomeLeftRail() {
                 className={cn("hidden shrink-0 lg:block", keepsWidth ? "w-72" : "w-11")}
             >
                 <div className={INNER}>
-                    {/* Holding the column, the plus sits where the collapse
+                    {/* Holding the column, the chevron sits where the collapse
                         control it replaces sat — the right end of the header row
                         — so it doesn't jump under the cursor. In the narrow
                         strip there's only one place for it. */}
@@ -138,7 +138,7 @@ export function HomeLeftRail() {
                             keepsWidth ? "self-end" : "mx-auto",
                         )}
                     >
-                        <HugeiconsIcon icon={PlusSignCircleIcon} className="size-6" strokeWidth={2} />
+                        <HugeiconsIcon icon={ArrowRightDoubleIcon} className="size-6" strokeWidth={2} />
                     </button>
                 </div>
             </aside>

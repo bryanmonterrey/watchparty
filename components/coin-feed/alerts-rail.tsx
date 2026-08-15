@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import BidirectionalList, { type BidirectionalListRef } from "broad-infinite-list/react";
 import { AnimatePresence, motion } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowUp02Icon, AtIcon, MinusSignCircleIcon } from "@hugeicons/core-free-icons";
+import { ArrowLeftDoubleIcon, ArrowUp02Icon, AtIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
@@ -499,10 +499,11 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
 
                 <div className="ml-auto flex items-center">
                     <AlertFiltersButton filters={filters} onChange={applyFilters} coverage={coverage} />
-                    {/* Circled minus — the same collapse/expand pair the action
-                        dock uses, so both rails' controls read as one set. Sized
-                        and coloured like the other header icons (AtIcon, the
-                        filter button) so the row reads as one set too. */}
+                    {/* Double arrow pointing left, at the strip the rail
+                        collapses into — the mirror of the action dock's, which
+                        points right for the same reason. Sized and coloured like
+                        the other header icons (AtIcon, the filter button) so the
+                        row reads as one set. */}
                     {onCollapse && (
                         <button
                             type="button"
@@ -510,7 +511,7 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                             aria-label="minimize alerts rail"
                             className="flex cursor-pointer items-center px-1.5 py-1.5 text-zinc-500 transition-colors hover:text-white"
                         >
-                            <HugeiconsIcon icon={MinusSignCircleIcon} className="size-6" strokeWidth={2} />
+                            <HugeiconsIcon icon={ArrowLeftDoubleIcon} className="size-6" strokeWidth={2} />
                         </button>
                     )}
                 </div>

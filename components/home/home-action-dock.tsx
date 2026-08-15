@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { MinusSignCircleIcon, PlusSignCircleIcon } from "@hugeicons/core-free-icons";
+import { ArrowLeftDoubleIcon, ArrowRightDoubleIcon } from "@hugeicons/core-free-icons";
 import { BookmarkIcon, MessagesIcon } from "@/components/icons";
 import { Squircle } from "@/components/ui/squircle";
 import { AskWatchparty } from "@/components/ai/ask-watchparty";
@@ -66,7 +66,7 @@ const BUTTON_GLOW = { offsetX: 0, offsetY: 0, blur: 3, spread: 0, color: "#fffff
 // question — the badge always anchors to the button's real corner.
 const SLOT = "relative size-15";
 
-// The collapse/expand toggle is chrome, not an action — bare icon, same
+// The collapse/expand chevron is chrome, not an action — bare icon, same
 // padding and size as the left rail's so the two rails' controls match.
 const CHEVRON = "flex cursor-pointer items-center px-1.5 py-1.5 text-zinc-500 transition-colors hover:text-white";
 
@@ -120,7 +120,7 @@ export function HomeActionDock() {
                         aria-label="show dock"
                         className={CHEVRON}
                     >
-                        <HugeiconsIcon icon={PlusSignCircleIcon} className="size-6" strokeWidth={2} />
+                        <HugeiconsIcon icon={ArrowLeftDoubleIcon} className="size-6" strokeWidth={2} />
                     </button>
                 </div>
             </aside>
@@ -143,7 +143,7 @@ export function HomeActionDock() {
                     aria-label="hide dock"
                     className={CHEVRON}
                 >
-                    <HugeiconsIcon icon={MinusSignCircleIcon} className="size-6" strokeWidth={2} />
+                    <HugeiconsIcon icon={ArrowRightDoubleIcon} className="size-6" strokeWidth={2} />
                 </button>
 
                 {/* AI is the first button under the chevron — the top of the
