@@ -110,10 +110,14 @@ export function TokenHoldersTable({ token }: TokenHoldersTableProps) {
         [poolAddress],
     )
 
+    // bg-canvas, not the bg-panel card this used to be — the board sits
+    // straight on the page like /trade and the trending table, so a row is
+    // defined by its own hover wash rather than by a raised surface.
+    //
+    // A `//` comment ABOVE the return, never a {/* */} directly after `return (`
+    // — that position parses as an object literal and Turbopack fails the build
+    // on it, which is exactly how this shipped red.
     return (
-        {/* bg-canvas, not the bg-panel card this used to be — the board sits
-            straight on the page like /trade and the trending table, so a row is
-            defined by its own hover wash rather than by a raised surface. */}
         <div className="bg-canvas rounded-[25px] flex flex-col overflow-hidden w-full">
             <div className="p-5 flex items-center gap-2.5">
                 <span className="text-lg font-extrabold text-white">Holders</span>
