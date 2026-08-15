@@ -11,10 +11,16 @@
 // the sidebar badges use, so every existing invalidation repaints the tab with
 // no reload.
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { drawFaviconBadge } from "@/lib/tab-badge/draw";
+
+/** The site's own favicon links — everything except the one this file appends. */
+const SITE_ICONS = "link[rel~='icon'], link[rel='shortcut icon']";
+
+/** A rel no browser resolves, so the link is inert without leaving the DOM. */
+const INACTIVE_REL = "wp-inactive-icon";
 
 export function TabNotificationBadge() {
     const { data: session } = useAuthSession();
@@ -47,60 +53,85 @@ export function TabNotificationBadge() {
 
     const count = signedIn ? (notifs?.count ?? 0) + (dms?.count ?? 0) : 0;
 
-    // The favicon links as they were before we touched them, so clearing the
-    // count (or signing out) puts the real icon back.
-    const original = useRef<{ rel: string; href: string; type: string }[] | null>(null);
-
     useEffect(() => {
         if (typeof document === "undefined") return;
         let cancelled = false;
 
-        const iconLinks = () =>
-            [...document.querySelectorAll<HTMLLinkElement>("link[rel~='icon'], link[rel='shortcut icon']")];
+        // NEVER `.remove()` a site icon link. Those <link rel="icon"> elements
+        // come from Next's metadata, so REACT OWNS THEM — taking them out of
+        // the DOM behind its back leaves fibers pointing at parentless nodes,
+        // and the next commit that deletes one throws
+        // `Cannot read properties of null (reading 'removeChild')` inside
+        // React's deletion phase. That kills the commit, which means the
+        // NAVIGATION never renders: the URL changes, <title> blanks, and the
+        // old page stays on screen until a second click bails Next out to a
+        // full document load. That was the "every link needs two clicks" bug
+        // (measured on production 2026-08-15: ~19 removeChild throws per page,
+        // and blocking just this removal made one-click navigation work).
+        //
+        // Deactivating by REL is the safe equivalent. Chrome stops treating
+        // the link as an icon, React's memoized props still say `rel="icon"`
+        // so it never diffs the attribute back, and the node stays in the DOM
+        // where React can still delete it normally.
+        const deactivateSiteIcons = () => {
+            for (const l of document.querySelectorAll<HTMLLinkElement>(SITE_ICONS)) {
+                if (l.dataset.tabBadge) continue;
+                l.dataset.tabBadgeRel = l.getAttribute("rel") ?? "icon";
+                l.setAttribute("rel", INACTIVE_REL);
+            }
+        };
 
-        if (original.current === null) {
-            original.current = iconLinks()
-                .filter((l) => !l.dataset.tabBadge)
-                .map((l) => ({ rel: l.getAttribute("rel") ?? "icon", href: l.href, type: l.getAttribute("type") ?? "" }));
+        const reactivateSiteIcons = () => {
+            for (const l of document.querySelectorAll<HTMLLinkElement>(`link[rel="${INACTIVE_REL}"]`)) {
+                const rel = l.dataset.tabBadgeRel;
+                if (!rel) continue;
+                delete l.dataset.tabBadgeRel;
+                l.setAttribute("rel", rel);
+            }
+        };
+
+        // Ours, and only ours — this one React has never heard of, so removing
+        // it is safe.
+        const dropBadgeLink = () => {
+            for (const l of document.querySelectorAll("link[data-tab-badge]")) l.remove();
+        };
+
+        if (count <= 0) {
+            dropBadgeLink();
+            reactivateSiteIcons();
+            return;
         }
 
-        // Replacing the ELEMENT is load-bearing. Chrome frequently ignores an
-        // href mutation on an existing favicon link — the tab keeps the icon it
-        // already resolved — so the only reliable update is to remove every
-        // icon link and append a fresh one.
-        const swapIn = (href: string, type: string) => {
-            for (const l of iconLinks()) l.remove();
+        // Replacing the ELEMENT is still load-bearing for OUR link: Chrome
+        // frequently ignores an href mutation on a favicon link it has already
+        // resolved, so each repaint appends a fresh one.
+        const swapIn = (href: string) => {
+            deactivateSiteIcons();
+            dropBadgeLink();
             const link = document.createElement("link");
             link.rel = "icon";
-            if (type) link.type = type;
+            link.type = "image/png";
             link.dataset.tabBadge = "1";
             link.href = href;
             document.head.appendChild(link);
         };
 
-        const restore = () => {
-            for (const l of iconLinks()) l.remove();
-            for (const o of original.current ?? []) {
-                const link = document.createElement("link");
-                link.setAttribute("rel", o.rel);
-                if (o.type) link.type = o.type;
-                link.href = o.href;
-                document.head.appendChild(link);
-            }
-        };
-
-        if (count <= 0) {
-            restore();
-            return;
-        }
+        // Next re-renders the metadata on every navigation, so React can mount
+        // a FRESH `rel="icon"` link at any time — which would outrank the badge
+        // for the rest of the session. Watching <head> re-deactivates those.
+        // No feedback loop: our own link carries data-tab-badge and is skipped,
+        // and a deactivated link no longer matches SITE_ICONS.
+        const observer = new MutationObserver(deactivateSiteIcons);
+        observer.observe(document.head, { childList: true });
 
         void drawFaviconBadge(count).then((url) => {
             if (cancelled || !url) return;
-            swapIn(url, "image/png");
+            swapIn(url);
         });
 
         return () => {
             cancelled = true;
+            observer.disconnect();
         };
     }, [count]);
 
@@ -108,12 +139,11 @@ export function TabNotificationBadge() {
     useEffect(() => {
         return () => {
             for (const l of document.querySelectorAll("link[data-tab-badge]")) l.remove();
-            for (const o of original.current ?? []) {
-                const link = document.createElement("link");
-                link.setAttribute("rel", o.rel);
-                if (o.type) link.type = o.type;
-                link.href = o.href;
-                document.head.appendChild(link);
+            for (const l of document.querySelectorAll<HTMLLinkElement>(`link[rel="${INACTIVE_REL}"]`)) {
+                const rel = l.dataset.tabBadgeRel;
+                if (!rel) continue;
+                delete l.dataset.tabBadgeRel;
+                l.setAttribute("rel", rel);
             }
         };
     }, []);
