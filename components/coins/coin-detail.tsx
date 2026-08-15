@@ -600,7 +600,10 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
         <Squircle
             radius={25}
             autoEffects={false}
-            className="flex min-w-0 flex-col overflow-hidden"
+            // bg-canvas spelled out rather than left to inherit: the board is
+            // deliberately flat now, and an explicit fill means it can't pick up
+            // a tint from whatever it's dropped into later.
+            className="flex min-w-0 flex-col overflow-hidden bg-canvas"
         >
             {/* Tab row. Divided by hairlines rather than spacing — the reference
                 reads as one control, not three separate links. */}

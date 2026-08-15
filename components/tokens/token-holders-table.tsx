@@ -111,7 +111,10 @@ export function TokenHoldersTable({ token }: TokenHoldersTableProps) {
     )
 
     return (
-        <div className="bg-panel rounded-[25px] flex flex-col overflow-hidden w-full">
+        {/* bg-canvas, not the bg-panel card this used to be — the board sits
+            straight on the page like /trade and the trending table, so a row is
+            defined by its own hover wash rather than by a raised surface. */}
+        <div className="bg-canvas rounded-[25px] flex flex-col overflow-hidden w-full">
             <div className="p-5 flex items-center gap-2.5">
                 <span className="text-lg font-extrabold text-white">Holders</span>
                 <span className="bg-zinc-800 text-zinc-400 font-bold text-xs px-2.5 py-0.5 rounded-full">

@@ -198,7 +198,10 @@ export function TokenTradesTable({ token }: { token: Token }) {
     )
 
     return (
-        <div className="bg-panel rounded-[25px] flex flex-col overflow-hidden w-full">
+        {/* bg-canvas, not the bg-panel card this used to be — the board sits
+            straight on the page like /trade and the trending table, so a row is
+            defined by its own hover wash rather than by a raised surface. */}
+        <div className="bg-canvas rounded-[25px] flex flex-col overflow-hidden w-full">
             {/* Filter Bar */}
             <div className="p-5 border-b border-zinc-800/40 flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
