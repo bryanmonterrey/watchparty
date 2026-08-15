@@ -10,6 +10,7 @@ import { formatRelativeTime } from "@/lib/date-utils";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { PostCardPost } from "./post-card.types";
+import { EmoteText } from "@/components/emoji/emote-text";
 
 type QuotedPost = NonNullable<PostCardPost["quotedPost"]>;
 
@@ -62,7 +63,7 @@ export function QuotedPostView({ quotedPost }: { quotedPost: QuotedPost }) {
             {/* Content */}
             {content && (
                 <div className="text-[14px] text-zinc-200 leading-normal mb-2 line-clamp-3 whitespace-pre-wrap break-words">
-                    {content}
+                    <EmoteText text={content} />
                 </div>
             )}
 
@@ -141,7 +142,7 @@ export function QuotedPostView({ quotedPost }: { quotedPost: QuotedPost }) {
 
                             {content && (
                                 <div className="text-[17px] text-zinc-100 leading-normal mb-3 whitespace-pre-wrap break-words">
-                                    {content}
+                                    <EmoteText text={content} />
                                 </div>
                             )}
 

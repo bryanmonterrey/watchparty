@@ -15,6 +15,7 @@ import { ActionButton } from "./action-button";
 import { QuotedPostView } from "./quoted-post-view";
 import type { PostCardPost } from "./post-card.types";
 import { compactCount } from "@/lib/utils";
+import { EmoteText } from "@/components/emoji/emote-text";
 
 interface PostCardBodyProps {
     post: PostCardPost;
@@ -67,7 +68,7 @@ export function PostCardBody({
             {/* Body text */}
             {content && (
                 <div className="text-[15px] text-zinc-200 leading-normal mb-1 -mt-1.5 whitespace-pre-wrap break-words">
-                    {content}
+                    <EmoteText text={content} />
                 </div>
             )}
 
@@ -187,7 +188,7 @@ export function PostCardBody({
 
                                 {content && (
                                     <div className="text-[17px] text-zinc-100 leading-normal mb-3 whitespace-pre-wrap break-words">
-                                        {content}
+                                        <EmoteText text={content} />
                                     </div>
                                 )}
 

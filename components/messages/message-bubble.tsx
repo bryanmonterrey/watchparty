@@ -8,6 +8,7 @@ import { CornerUpLeftIcon } from '@hugeicons/core-free-icons';
 import { Check, CheckCheck } from 'lucide-react';
 import { TransactionBubble } from './transaction-bubble';
 import { AudioMessagePlayer } from './audio-message-player';
+import { EmoteText } from "@/components/emoji/emote-text";
 
 interface Reaction {
     id: string;
@@ -95,7 +96,10 @@ export function MessageBubble({ message, isSent, onReact, onReply, onImageLoad, 
                     </a>
                 );
             }
-            return <span key={i}>{part}</span>;
+            // The non-link runs go through EmoteText so a `:code:` picked from
+            // the emoji picker renders as its image rather than as literal
+            // text. Links are left alone — a URL can contain a colon pair.
+            return <span key={i}><EmoteText text={part as string} size={20} /></span>;
         });
     };
 

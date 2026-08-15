@@ -33,6 +33,7 @@ import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { PostCardPost } from "../post-card/post-card.types";
+import { EmoteText } from "@/components/emoji/emote-text";
 
 interface PostDetailViewProps {
     postId: string;
@@ -273,7 +274,7 @@ export function PostDetailView({ postId }: PostDetailViewProps) {
                                             </span>
                                         </div>
                                         <div className="text-[15px] text-zinc-100 leading-normal line-clamp-4 whitespace-pre-wrap">
-                                            {(post as any).parentContent}
+                                            <EmoteText text={(post as any).parentContent} />
                                         </div>
 
                                         {/* Parent Media Preview */}
@@ -371,7 +372,7 @@ export function PostDetailView({ postId }: PostDetailViewProps) {
                             )}
                             {post.content && (
                                 <div className="text-[20px] text-zinc-100 leading-normal mb-4 whitespace-pre-wrap break-words text-left">
-                                    {post.content}
+                                    <EmoteText text={post.content} />
                                 </div>
                             )}
 
@@ -578,7 +579,7 @@ export function PostDetailView({ postId }: PostDetailViewProps) {
 
                                 {post.content && (
                                     <div className="text-[17px] text-zinc-100 leading-normal mb-3 whitespace-pre-wrap break-words">
-                                        {post.content}
+                                        <EmoteText text={post.content} />
                                     </div>
                                 )}
 

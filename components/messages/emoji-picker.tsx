@@ -2,6 +2,7 @@
 
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
+import { EMOJI_PACKS } from '@/lib/emoji/packs.generated';
 import { useTheme } from 'next-themes';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Smile } from 'lucide-react';
@@ -26,9 +27,43 @@ interface EmojiPickerProps {
     onOpenChange?: (open: boolean) => void;
 }
 
+/**
+ * The emoji.gg packs, in emoji-mart's `custom` shape — one category per pack,
+ * appended after the unicode categories.
+ *
+ * Module scope, not per-render: emoji-mart re-indexes the whole custom set
+ * whenever this array's identity changes, so building it inline would rebuild
+ * the search index on every keystroke in the panel.
+ */
+const CUSTOM = EMOJI_PACKS.map((pack) => ({
+    id: pack.slug,
+    name: pack.title,
+    emojis: pack.emojis.map((e) => ({
+        id: e.code,
+        name: e.code,
+        keywords: [e.code, pack.slug],
+        skins: [{ src: e.src }],
+    })),
+}));
+
 export function EmojiPicker({ onEmojiSelect, className, iconClassName, children, onOpenChange }: EmojiPickerProps) {
     const { resolvedTheme } = useTheme();
     const theme = resolvedTheme === 'dark' ? 'dark' : 'light'; // Fallback logic
+
+    /**
+     * Normalises the two kinds of result into the ONE shape every caller
+     * already handles.
+     *
+     * A unicode emoji has `native` ("😀"); a custom one has no native character
+     * at all — it's an image. Callers insert `native` into a plain textarea, so
+     * a custom pick becomes its `:code:`, which is the same thing chat emotes
+     * have always travelled as. Without this every caller would insert
+     * `undefined` the moment someone picked a pack emoji.
+     */
+    const handleSelect = (emoji: { native?: string; id?: string }) => {
+        const native = emoji.native ?? (emoji.id ? `:${emoji.id}:` : '');
+        if (native) onEmojiSelect({ native });
+    };
 
     return (
         <Popover onOpenChange={onOpenChange}>
@@ -100,7 +135,8 @@ export function EmojiPicker({ onEmojiSelect, className, iconClassName, children,
                     `}} />
                     <Picker
                         data={data}
-                        onEmojiSelect={onEmojiSelect}
+                        custom={CUSTOM}
+                        onEmojiSelect={handleSelect}
                         theme="dark"
                         previewPosition="none"
                         skinTonePosition="none"
