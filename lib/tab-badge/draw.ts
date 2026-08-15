@@ -51,7 +51,11 @@ export async function drawFaviconBadge(count: number, baseIcon: string = BASE_IC
     const h = 40;
     ctx.font = `bold ${h - 8}px system-ui, -apple-system, sans-serif`;
     const w = Math.min(size, Math.max(h, ctx.measureText(text).width + 14));
-    const x = size - w;
+    // Centred on the horizontal axis rather than pinned to the right edge:
+    // right-anchoring reads as lopsided once the pill widens past two digits,
+    // and at 16px the badge is most of what you see anyway. Still bottom-
+    // anchored, so the mark stays recognisable above it.
+    const x = (size - w) / 2;
     const y = size - h;
     const r = h / 2;
 

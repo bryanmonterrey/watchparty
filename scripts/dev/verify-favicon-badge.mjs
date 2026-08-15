@@ -46,16 +46,35 @@ try {
 
                 let red = 0;
                 let ink = 0;
+                let minX = 64, maxX = -1, minY = 64, maxY = -1;
                 for (let i = 0; i < data.length; i += 4) {
                     const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
-                    if (a > 200 && r > 200 && g < 90 && b < 90) red++;
+                    if (a > 200 && r > 200 && g < 90 && b < 90) {
+                        red++;
+                        const px = (i / 4) % 64;
+                        const py = Math.floor(i / 4 / 64);
+                        if (px < minX) minX = px;
+                        if (px > maxX) maxX = px;
+                        if (py < minY) minY = py;
+                        if (py > maxY) maxY = py;
+                    }
                     if (a > 200 && r > 240 && g > 240 && b > 240) ink++;
                 }
+                // The badge is centred on the horizontal axis and anchored to
+                // the bottom, so its red span should straddle x=32 and reach
+                // the lower edge. Counting red pixels alone can't see either.
+                const centreX = (minX + maxX) / 2;
+                const centred = Math.abs(centreX - 32) <= 2;
+                const bottomAnchored = maxY >= 60;
                 out[count] = {
-                    ok: url.startsWith("data:image/png") && red > 100 && ink > 20,
+                    ok: url.startsWith("data:image/png") && red > 100 && ink > 20 && centred && bottomAnchored,
                     label: mod.badgeText(count),
                     redPixels: red,
                     inkPixels: ink,
+                    centreX,
+                    centred,
+                    bottomAnchored,
+                    bounds: { minX, maxX, minY, maxY },
                 };
             }
             return out;
