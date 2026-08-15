@@ -29,11 +29,14 @@ const VideoPlayer = dynamic(
 // belong to the slot and to MEDIA_RADIUS, and the ambient glow behind it is the
 // same AMBIENT_PRESET the full player already runs.
 //
-// Four things separate it from the watch page's mount, all of them props:
+// Three things separate it from the watch page's mount, all of them props:
 // autoplay, the audio bus (so a hovered card's preview doesn't double up with
-// it), `transient` (a video that started playing on its own must not count a
-// view or write watch progress for the whole feed), and `fill`, because this
-// slot grows past 16:9 in focus mode.
+// it), and `fill`, because this slot grows past 16:9 in focus mode.
+//
+// Engagement is NOT one of them (owner call 2026-08-15): playing here is real
+// watching, so the hero counts a view, records heatmap buckets and saves watch
+// progress exactly as the watch page does — and resumes from it, which is the
+// half people forget comes with saving.
 //
 // Keyed on the video id so picking a different one remounts the player rather
 // than swapping its src on a playing element.
@@ -105,7 +108,6 @@ export function HomeHero({
             fill
             autoPlay
             audioBus
-            transient
             loop={!hasQueue}
             onEnded={hasQueue ? next : undefined}
             theaterMode={theaterMode}

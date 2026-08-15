@@ -66,12 +66,6 @@ export interface VideoPlayerProps {
      */
     audioBus?: boolean;
     /**
-     * A surface someone landed on rather than chose: no view counted, no
-     * heatmap recorded, no watch progress saved or resumed. The home hero, whose
-     * videos autoplay by themselves, would otherwise mark the whole feed watched.
-     */
-    transient?: boolean;
-    /**
      * Theater mode as a CONTROLLED value, for a host that owns the layout the
      * button changes (home's focus mode). Left undefined the player keeps its own
      * state, which is what the watch page wants.

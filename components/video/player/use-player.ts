@@ -30,7 +30,6 @@ export function usePlayer(props: VideoPlayerProps) {
         progressDots: _progressDots = [],
         autoPlay = false,
         audioBus = false,
-        transient = false,
         theaterMode,
         onEnded: onEndedProp,
         onTheaterModeChange,
@@ -187,7 +186,7 @@ export function usePlayer(props: VideoPlayerProps) {
     const saveProgressMutation = trpc.content.saveProgress.useMutation();
     const { data: progressData } = trpc.content.getProgress.useQuery(
         { postId },
-        { enabled: !!session?.user && !transient, staleTime: Infinity }
+        { enabled: !!session?.user, staleTime: Infinity }
     );
 
     const { data: heatmapData } = trpc.content.getHeatmap.useQuery(
@@ -205,12 +204,15 @@ export function usePlayer(props: VideoPlayerProps) {
         {
             // Never re-fetch once we have captions — avoids disrupting oncuechange
             staleTime: Infinity,
-            // The poll is for the minutes right after an upload, on the page the
-            // uploader is watching. A transient surface fetches once and lives
-            // with the answer — otherwise home would poll every 12s forever, for
-            // whichever feed video happens to be on the screen.
+            // …and give up after ~10 minutes of silence. The poll exists for the
+            // minutes after an upload, while Deepgram works; past that the video
+            // simply has no captions and asking again forever is a request every
+            // 12s for as long as the player stays mounted. That bill lands on
+            // home, where the hero autoplays and people sit.
             refetchInterval: (query) =>
-                transient || (query.state.data?.captions?.length ?? 0) > 0 ? false : 12_000,
+                (query.state.data?.captions?.length ?? 0) > 0 || query.state.dataUpdateCount > 50
+                    ? false
+                    : 12_000,
         }
     );
     const captionTracks = captionsData?.captions ?? [];
@@ -433,7 +435,6 @@ export function usePlayer(props: VideoPlayerProps) {
 
     // ── View-increment ────────────────────────────────────────────────────────
     useEffect(() => {
-        if (transient) return;
         if (isPlaying && !viewIncremented.current) {
             viewIncremented.current = true;
             incrementView.mutate({ postId, contentType: "video" });
@@ -444,7 +445,7 @@ export function usePlayer(props: VideoPlayerProps) {
     // ── Resume from saved position ────────────────────────────────────────────
     // Apply once when metadata is loaded AND progressData is available
     useEffect(() => {
-        if (transient || resumeAppliedRef.current) return;
+        if (resumeAppliedRef.current) return;
         const video = videoRef.current;
         if (!video || !progressData) return;
 
@@ -468,7 +469,7 @@ export function usePlayer(props: VideoPlayerProps) {
         } else {
             resumeAppliedRef.current = true;
         }
-    }, [progressData, postId, session?.user, transient]);
+    }, [progressData, postId, session?.user]);
 
     // Reset resume gate and recorded heatmap buckets when postId changes
     useEffect(() => {
@@ -856,7 +857,7 @@ export function usePlayer(props: VideoPlayerProps) {
         }
 
         // Record heatmap hit for this 5-second bucket (once per session per bucket)
-        if (!transient && !isScrubbingRef.current) {
+        if (!isScrubbingRef.current) {
             const bucket = Math.floor(video.currentTime / 5);
             if (!recordedBucketsRef.current.has(bucket)) {
                 recordedBucketsRef.current.add(bucket);
@@ -865,7 +866,7 @@ export function usePlayer(props: VideoPlayerProps) {
         }
 
         // Throttled progress save: every 5s
-        if (!transient && !saveProgressThrottleRef.current) {
+        if (!saveProgressThrottleRef.current) {
             saveProgressThrottleRef.current = setTimeout(() => {
                 saveProgressThrottleRef.current = null;
                 const t = video.currentTime;
@@ -878,7 +879,7 @@ export function usePlayer(props: VideoPlayerProps) {
                 }
             }, 5000);
         }
-    }, [session?.user, postId, saveProgressMutation, transient]);
+    }, [session?.user, postId, saveProgressMutation]);
 
     const onLoadedMetadata = useCallback(() => {
         const video = videoRef.current;
@@ -903,14 +904,12 @@ export function usePlayer(props: VideoPlayerProps) {
         setShowControls(true);
         ads.onVideoEnded();
         // Clear saved progress so next watch starts from beginning
-        if (!transient) {
-            if (session?.user) saveProgressMutation.mutate({ postId, currentTime: 0 });
-            else store.set(`ytp-progress-${postId}`, "0");
-        }
+        if (session?.user) saveProgressMutation.mutate({ postId, currentTime: 0 });
+        else store.set(`ytp-progress-${postId}`, "0");
         // Last, so a host that swaps the source on this (the home hero advancing
         // its queue) does it against a settled player.
         onEndedProp?.();
-    }, [session?.user, postId, saveProgressMutation, ads, transient, onEndedProp]);
+    }, [session?.user, postId, saveProgressMutation, ads, onEndedProp]);
 
     const onWaiting = useCallback(() => setIsWaiting(true), []);
     const onCanPlay = useCallback(() => { setIsWaiting(false); setVideoError(null); }, []);
