@@ -2,6 +2,7 @@
 
 import React, { useRef } from "react";
 import { ThumbnailHover } from "./thumbnail-hover";
+import { DitherHeatmap } from "./dither-heatmap";
 import type { VttThumb } from "./use-preview-thumbnails";
 import type { Chapter, ProgressDot, Marker } from "./types";
 
@@ -33,23 +34,6 @@ interface ScrubberProps {
     setIsScrubbing: (v: boolean) => void;
     formatTime: (s: number) => string;
     getChapterAtTime: (t: number) => Chapter | undefined;
-}
-
-// Build an SVG filled-area path from normalized bucket values.
-// viewBox is 0 0 100 100; baseline is y=100, peaks go toward y=0.
-function buildHeatmapPath(buckets: number[]): string {
-    if (buckets.length < 2) return "";
-    const n = buckets.length;
-    const pts = buckets.map((v, i) => [
-        (i / (n - 1)) * 100,
-        100 - v * 100,
-    ]);
-    const d = [`M 0 100`, `L ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`];
-    for (let i = 1; i < pts.length; i++) {
-        d.push(`L ${pts[i][0].toFixed(1)} ${pts[i][1].toFixed(1)}`);
-    }
-    d.push("L 100 100 Z");
-    return d.join(" ");
 }
 
 // Pixels of upward drag to fully open the fine-scrub strip (matches YouTube ~34px)
@@ -99,7 +83,6 @@ export function Scrubber({
     const onFineScrubProgressRef = useRef(onFineScrubProgress);
     onFineScrubProgressRef.current = onFineScrubProgress;
 
-    const heatmapPath = buildHeatmapPath(heatmapBuckets);
 
     return (
         <div
@@ -219,23 +202,7 @@ export function Scrubber({
                         : "opacity 0.2s cubic-bezier(0.05, 0, 0, 1) 0.1s, transform 0.2s cubic-bezier(0.05, 0, 0, 1)",
                 }}
             >
-                <svg
-                    className="w-full h-full"
-                    preserveAspectRatio="none"
-                    viewBox="0 0 100 100"
-                    style={{ opacity: 0.35 }}
-                >
-                    <defs>
-                        <linearGradient id="heatmap-grad" x1="0%" x2="0%" y1="0%" y2="100%">
-                            <stop offset="0%" stopColor="white" stopOpacity="1" />
-                            <stop offset="100%" stopColor="white" stopOpacity="0" />
-                        </linearGradient>
-                    </defs>
-                    {heatmapPath
-                        ? <path fill="url(#heatmap-grad)" d={heatmapPath} />
-                        : <rect fill="url(#heatmap-grad)" height="30%" width="100%" x="0" y="70%" />
-                    }
-                </svg>
+                <DitherHeatmap buckets={heatmapBuckets} active={hoverPercent !== null} />
             </div>
 
             {/* Thumbnail preview above cursor */}
