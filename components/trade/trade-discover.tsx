@@ -7,6 +7,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import type { SortingState } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
+import { stableHoverColor } from "@/lib/stable-hover-color";
 import { trpc } from "@/lib/trpc/client";
 import { getRealtimeClient, authenticateRealtimeClient } from "@/lib/supabase/realtime-client";
 import { GooDropdown, gooMenuItem, GOO_TRIGGER_PILL, GOO_PANEL_FILL } from "@/components/ui/goo-dropdown";
@@ -335,10 +336,10 @@ export function TradeDiscover() {
                 the memo does the ordering. */}
             <div className="flex-1 px-4 pb-8 lg:px-6">
                 <Squircle asChild radius={20} autoEffects={false}>
-                    {/* Opaque, not sidebar-hover/30: same colour, but it holds
-                        it anywhere instead of darkening or lightening with
-                        whatever it's over. */}
-                    <div className="bg-sidebar-hover-30 pt-2">
+                    {/* bg-canvas, not a raised sidebar-hover card: the board
+                        sits straight on the page like the trending table, so
+                        the only thing defining a row is its own hover wash. */}
+                    <div className="bg-canvas pt-2">
                         <DataTable
                             data={tokens}
                             columns={columns}
@@ -358,6 +359,8 @@ export function TradeDiscover() {
                                         : `/${t.tokenAddress || t.id}`,
                                 )
                             }
+                            rowHoverRadius={12}
+                            rowHoverColor={(t) => stableHoverColor(t.id)}
                             className="px-2"
                             headerClassName="bg-transparent"
                             emptyState={

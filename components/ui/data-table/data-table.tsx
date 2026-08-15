@@ -21,6 +21,7 @@ import {
     type SortingState,
 } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
+import { Squircle } from "@/components/ui/squircle";
 import { dataTableFeatures, type DataTableColumnMeta, type DataTableFeatures } from "./features";
 import { DataTableHeader, type HeaderCellRefs } from "./data-table-header";
 import { DataTableSkeletonRows } from "./data-table-skeleton";
@@ -72,6 +73,19 @@ export interface DataTableProps<TData extends RowData> {
     emptyState?: ReactNode;
 
     onRowClick?: (row: TData) => void;
+    /**
+     * Corner radius of the row hover wash, in px. Setting it switches the row
+     * from "hairline divider + flat tint" to the trending-table treatment: a
+     * squircle-clipped wash and no divider at all. Leave unset for a plain
+     * bordered table.
+     */
+    rowHoverRadius?: number;
+    /**
+     * Colour of that wash, per row — pass `stableHoverColor(row.id)` to get the
+     * coin feed's varied-but-stable palette. Defaults to a neutral white tint.
+     * Only read when `rowHoverRadius` is set.
+     */
+    rowHoverColor?: (row: TData) => string;
     /** Pin the header while the page scrolls; pair with `stickyTop`. */
     stickyHeader?: boolean;
     stickyTop?: string;
@@ -115,6 +129,8 @@ export function DataTable<TData extends RowData>({
     skeletonRows = 3,
     emptyState = "No data",
     onRowClick,
+    rowHoverRadius: hoverRadius,
+    rowHoverColor,
     stickyHeader = false,
     stickyTop = "0px",
     className,
@@ -352,12 +368,26 @@ export function DataTable<TData extends RowData>({
                                 style={{ height: rowHeight }}
                                 onClick={onRowClick ? () => onRowClick(row.original) : undefined}
                                 className={cn(
-                                    "border-b border-border/60 transition-colors",
-                                    onRowClick && "cursor-pointer hover:bg-white/[0.04] active:bg-white/[0.06]",
+                                    "transition-colors",
+                                    // The two row treatments are alternatives, not layers:
+                                    // the squircled wash is the trending-table look, whose
+                                    // rows sit straight on the canvas with no divider and
+                                    // no fill, so a hairline under each one would contradict
+                                    // it. `relative` is what the wash's inset-0 resolves
+                                    // against — verified in the browser that a positioned
+                                    // <tr> really does become the containing block for an
+                                    // absolute child of its cells.
+                                    hoverRadius != null
+                                        ? "group/row relative z-0"
+                                        : "border-b border-border/60",
+                                    onRowClick && "cursor-pointer",
+                                    onRowClick &&
+                                        hoverRadius == null &&
+                                        "hover:bg-white/[0.04] active:bg-white/[0.06]",
                                     rowClassName,
                                 )}
                             >
-                                {row.getVisibleCells().map((cell) => {
+                                {row.getVisibleCells().map((cell, cellIndex) => {
                                     const meta = cell.column.columnDef.meta as DataTableColumnMeta | undefined;
                                     return (
                                         <td
@@ -369,6 +399,24 @@ export function DataTable<TData extends RowData>({
                                                 cellClassName,
                                             )}
                                         >
+                                            {/* Rendered once, from the FIRST cell, because a
+                                                <span> is not valid content for a <tr> — it
+                                                spans the whole row anyway via the row's
+                                                containing block. It paints OVER the cells
+                                                rather than behind them, which is the shipped
+                                                trending/alert-rail look, not an accident. */}
+                                            {hoverRadius != null && cellIndex === 0 ? (
+                                                <Squircle asChild radius={hoverRadius} autoEffects={false}>
+                                                    <span
+                                                        aria-hidden
+                                                        style={{ backgroundColor: rowHoverColor?.(row.original) }}
+                                                        className={cn(
+                                                            "pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover/row:opacity-10",
+                                                            !rowHoverColor && "bg-white group-hover/row:opacity-[0.06]",
+                                                        )}
+                                                    />
+                                                </Squircle>
+                                            ) : null}
                                             <table.FlexRender cell={cell} />
                                         </td>
                                     );
