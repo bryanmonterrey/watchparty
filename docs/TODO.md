@@ -160,6 +160,11 @@ Follow-ups (small, whenever):
   `rm -rf .next/dev` regenerates; filter with `grep -v '^\.next/'` meanwhile.
 
 ## 🔜 Loose ends (small)
+- **Sniper icon = `Target02Icon`** (2026-08-14). Whenever a surface needs to signify
+  *snipers* (early/bot buyers), the mark is HugeIcons `Target02Icon`
+  (`import { Target02Icon } from "@hugeicons/core-free-icons"`, rendered through
+  `HugeiconsIcon`). Nothing renders a sniper affordance yet — this is the decision
+  banked ahead of the feature, so the first surface that needs one doesn't re-pick.
 - **Buy crypto with fiat (Stripe) — button HIDDEN until it exists** (2026-08-03). The
   receive view's "Buy \<SOL\> with Fiat" button is removed from
   `components/wallet/wallet-drawer2/views/receive/receive-view.tsx`. Nothing was ever

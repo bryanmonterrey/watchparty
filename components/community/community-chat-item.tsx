@@ -2,7 +2,7 @@
 
 import { ShieldAlert, ShieldCheck } from "lucide-react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowTurnBackwardIcon, PinIcon } from "@hugeicons/core-free-icons";
+import { CornerUpLeftIcon, PinIcon } from "@hugeicons/core-free-icons";
 import { useCommunityReply } from "@/hooks/use-community-reply";
 import { CommunityLinkEmbed, extractFirstUrl } from "./community-link-embed";
 import { CommunityMessageReactions, type MessageReaction } from "./community-message-reactions";
@@ -279,7 +279,7 @@ function CommunityChatItemImpl({
                 <div className="flex flex-col w-full">
                     {replyTo && (
                         <div className="mb-0.5 flex items-center gap-1.5 text-[12px] font-medium text-zinc-500">
-                            <HugeiconsIcon icon={ArrowTurnBackwardIcon} className="size-3 shrink-0 scale-y-[-1]" strokeWidth={2} />
+                            <HugeiconsIcon icon={CornerUpLeftIcon} className="size-3 shrink-0" strokeWidth={2} />
                             <span className="shrink-0 font-semibold text-zinc-400">{replyTo.userName ?? ""}</span>
                             <span className="truncate">{replyTo.deleted ? "message deleted" : replyTo.content}</span>
                         </div>

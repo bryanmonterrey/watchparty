@@ -2,7 +2,9 @@
 
 import { cn } from '@/lib/utils';
 import { MessageActions } from './message-actions';
-import { PlayIcon, PauseIcon, ReplyIcon } from '@/components/icons';
+import { PlayIcon, PauseIcon } from '@/components/icons';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { CornerUpLeftIcon } from '@hugeicons/core-free-icons';
 import { Check, CheckCheck } from 'lucide-react';
 import { TransactionBubble } from './transaction-bubble';
 import { AudioMessagePlayer } from './audio-message-player';
@@ -164,7 +166,7 @@ export function MessageBubble({ message, isSent, onReact, onReply, onImageLoad, 
                                     }}
                                 >
                                     <div className="font-semibold opacity-70 mb-0.5 flex items-center gap-1">
-                                        <ReplyIcon className="size-3" />
+                                        <HugeiconsIcon icon={CornerUpLeftIcon} className="size-3" strokeWidth={2} />
                                         <span>Replying to {message.replyToMessage.senderId === currentUserId ? 'You' : 'User'}</span>
                                     </div>
                                     <div className="opacity-90 truncate max-w-[200px]">

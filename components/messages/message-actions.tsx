@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-    ArrowTurnBackwardIcon,
+    CornerUpLeftIcon,
     Delete02Icon,
     PencilEdit02Icon,
     PinIcon,
@@ -160,7 +160,7 @@ export function MessageActions({
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <button type="button" aria-label="Reply" onClick={onReply} className={BTN}>
-                                <HugeiconsIcon icon={ArrowTurnBackwardIcon} className={cn(ICON, "scale-y-[-1]")} strokeWidth={2} />
+                                <HugeiconsIcon icon={CornerUpLeftIcon} className={ICON} strokeWidth={2} />
                             </button>
                         </TooltipTrigger>
                         <TooltipContent side="top"><p className="text-xs">Reply</p></TooltipContent>

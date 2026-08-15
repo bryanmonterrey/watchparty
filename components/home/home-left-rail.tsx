@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { cn } from "@/lib/utils";
-import { ArrowRightDoubleIcon } from "@hugeicons/core-free-icons";
+import { GreaterThanCircleIcon } from "@hugeicons/core-free-icons";
 import { AlertsRail } from "@/components/coin-feed/alerts-rail";
 
 // Home's left column. This exists as a client component purely to own the
@@ -138,7 +138,7 @@ export function HomeLeftRail() {
                             keepsWidth ? "self-end" : "mx-auto",
                         )}
                     >
-                        <HugeiconsIcon icon={ArrowRightDoubleIcon} className="size-6" strokeWidth={2} />
+                        <HugeiconsIcon icon={GreaterThanCircleIcon} className="size-6" strokeWidth={2} />
                     </button>
                 </div>
             </aside>

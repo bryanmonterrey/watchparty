@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowTurnBackwardIcon, Cancel01Icon, PencilEdit02Icon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, CornerUpLeftIcon, PencilEdit02Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 
 /**
@@ -54,8 +54,8 @@ export function ComposerReplyBanner({
             )}
         >
             <HugeiconsIcon
-                icon={editing ? PencilEdit02Icon : ArrowTurnBackwardIcon}
-                className={cn("size-3.5 shrink-0 text-zinc-500", !editing && "scale-y-[-1]")}
+                icon={editing ? PencilEdit02Icon : CornerUpLeftIcon}
+                className="size-3.5 shrink-0 text-zinc-500"
                 strokeWidth={2}
             />
             <p className="min-w-0 flex-1 truncate text-xs font-medium text-zinc-400">
