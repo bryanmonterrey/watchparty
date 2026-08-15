@@ -355,7 +355,22 @@ async function upsertChunk(rows: DiscoveredPool[]): Promise<void> {
                 imageUrl: sql`coalesce(excluded.image_url, ${trackedTokens.imageUrl})`,
                 priceUsd: sql`excluded.price_usd`,
                 marketCapUsd: sql`excluded.market_cap_usd`,
-                liquidityUsd: sql`excluded.liquidity_usd`,
+                // COALESCE — the same fix trending-mobula needed, and missing
+                // here until 2026-08-14.
+                //
+                // These rows come from `discoverFromMobula`, which maps
+                // `liquidityUsd: p.liquidity`, and `MobulaPair.liquidity` is
+                // hardcoded null (lib/coins/mobula.ts) because the pairs
+                // endpoint's liquidity field is not dollars. So `excluded` is
+                // ALWAYS null on this path, and assigning it unconditionally
+                // erased the measured figure `backfillTrendingLiquidity` writes
+                // — on every discovery pass.
+                //
+                // That mattered more than a blank column: `tracked_tokens` is
+                // what `clearsBrandBar` reads to decide whether a
+                // brand-squatting ticker has earned the alert rail, and a null
+                // there denies the escape hatch outright.
+                liquidityUsd: sql`coalesce(excluded.liquidity_usd, ${trackedTokens.liquidityUsd})`,
                 volume24hUsd: sql`excluded.volume_24h_usd`,
                 priceChange5m: sql`excluded.price_change_5m`,
                 priceChange1h: sql`excluded.price_change_1h`,

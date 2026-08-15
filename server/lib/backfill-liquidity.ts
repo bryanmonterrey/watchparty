@@ -3,7 +3,7 @@ import "server-only";
 import { db } from "@/db";
 import { trendingCoins } from "@/db/schema/content/trending";
 import { trackedTokens } from "@/db/schema/content/coin-feed";
-import { and, eq, gte, isNull, sql } from "drizzle-orm";
+import { and, eq, gte, isNull, lt, or, sql } from "drizzle-orm";
 import { after } from "next/server";
 import { fetchMobulaTokenSecurity } from "@/lib/coins/mobula";
 
@@ -94,6 +94,16 @@ export async function securityWithLiquidityBackfill(network: string, address: st
  *  board will not serve is not worth a credit. */
 const SCREEN_STALE_AFTER_MS = 6 * 60 * 60 * 1000;
 
+/**
+ * How long a measured figure is trusted before the screen re-checks it.
+ *
+ * 6h, matching the board's own staleness window: a row older than that is not
+ * served anyway, so refreshing faster would spend credits on rows nobody sees.
+ * This is what turns liquidity_usd from a one-shot fill into a maintained
+ * measurement — and what lets a wrong value correct itself.
+ */
+const SCREEN_REFRESH_MS = 6 * 60 * 60 * 1000;
+
 /** Stop starting new calls this long into a pass. The cron's `maxDuration` is
  *  120s and each screen call carries an 8s timeout, so a full 20-coin pass
  *  against a slow provider could otherwise outlive the request. */
@@ -152,15 +162,26 @@ export interface LiquidityScreenResult {
  * Bounded per pass by wall-clock inside the cron's 120s ceiling, and by credits:
  * 1 per coin.
  *
- * ## Highest volume first
+ * ## It REFRESHES, it does not just fill
  *
- * Spends the pass where the board is most read, and on the coins whose being
- * wrong matters most. `measured` / `unmeasured` stay separate in the result so a
- * provider that starts returning nothing is visible in the cron's response
- * rather than looking like a quiet success.
+ * This selected `WHERE liquidity_usd IS NULL` until 2026-08-14, which made it
+ * fill-only: a row that already held a value was invisible to it forever. So a
+ * wrong figure was permanent and a stale one was never revisited — and
+ * liquidity is a market quantity that moves, not a fixed attribute of a coin.
+ * That single predicate is why this problem kept returning in new clothes: each
+ * previous fix improved how blanks got FILLED (the producer, the erase on
+ * upsert, the provider) and none of them gave the column a way to stay true.
  *
- * Never throws: a failed screen leaves the status quo (an unmeasured row), which
- * the board already renders correctly.
+ * Eligibility is now `liquidity_screened_at IS NULL OR older than the TTL`,
+ * ordered never-screened first then longest-unrefreshed, and within that by
+ * volume so a pass still spends itself where the board is most read.
+ *
+ * `measured` / `unmeasured` stay separate in the result so a provider that
+ * starts returning nothing is visible in the cron's response rather than
+ * looking like a quiet success.
+ *
+ * Never throws: a failed screen leaves the status quo, which the board already
+ * renders correctly.
  */
 export async function screenBoardLiquidity(limit: number): Promise<LiquidityScreenResult> {
     const out: LiquidityScreenResult = {
@@ -179,7 +200,20 @@ export async function screenBoardLiquidity(limit: number): Promise<LiquidityScre
             .from(trendingCoins)
             .where(
                 and(
-                    isNull(trendingCoins.liquidityUsd),
+                    // NOT `isNull(liquidityUsd)`. That made this fill-only: a row
+                    // holding a value was invisible forever, so a WRONG figure
+                    // could never be corrected and a STALE one never refreshed —
+                    // and liquidity is a market quantity, not a fixed attribute.
+                    //
+                    // Eligible = never screened, or screened longer ago than the
+                    // TTL. Every row written before this column existed reads
+                    // NULL, so the Dexscreener-era values are all immediately
+                    // eligible and get overwritten IN PLACE. Nothing is nulled,
+                    // so no reader ever sees the column go blank.
+                    or(
+                        isNull(trendingCoins.liquidityScreenedAt),
+                        lt(trendingCoins.liquidityScreenedAt, new Date(Date.now() - SCREEN_REFRESH_MS)),
+                    ),
                     // gte() with the COLUMN, never a Date interpolated into a
                     // sql template — drizzle needs the column to reach its
                     // timestamptz encoder, and the bare Date is what workerd's
@@ -187,9 +221,13 @@ export async function screenBoardLiquidity(limit: number): Promise<LiquidityScre
                     gte(trendingCoins.fetchedAt, new Date(Date.now() - SCREEN_STALE_AFTER_MS)),
                 ),
             )
-            // Postgres defaults DESC to NULLS FIRST, which would spend the whole
-            // budget on rows with no volume at all.
-            .orderBy(sql`${trendingCoins.volume24hUsd} desc nulls last`)
+            // Never-screened first (NULLS FIRST is ASC's default here, and is
+            // what the index is built for), then longest-unrefreshed, then by
+            // volume so a pass still spends itself where the board is most read.
+            .orderBy(
+                sql`${trendingCoins.liquidityScreenedAt} asc nulls first`,
+                sql`${trendingCoins.volume24hUsd} desc nulls last`,
+            )
             .limit(Math.floor(limit));
     } catch (err) {
         console.warn("[liquidity-screen] select failed:", err instanceof Error ? err.message : err);
@@ -199,9 +237,8 @@ export async function screenBoardLiquidity(limit: number): Promise<LiquidityScre
     out.picked = rows.length;
     const deadline = Date.now() + SCREEN_DEADLINE_MS;
 
-    // Sequential on purpose. Mobula's free key refuses a meaningful share of
-    // concurrent requests regardless of spacing, and this pass has no deadline
-    // pressure worth trading that for — it is a background fill, not a read path.
+    // Sequential on purpose — a background fill, not a read path, and there is
+    // no deadline pressure worth fanning out for.
     for (const row of rows) {
         if (Date.now() > deadline) {
             out.deadlineHit = true;
@@ -218,7 +255,27 @@ export async function screenBoardLiquidity(limit: number): Promise<LiquidityScre
                 err instanceof Error ? err.message : err,
             );
         }
+        // Stamped on EVERY outcome, including failure. Stamping only successes
+        // would leave a coin the provider cannot price at the head of the
+        // never-screened queue forever, re-picked every pass — the head-of-line
+        // stall that made the old fill-only screen measure ~1 coin an hour when
+        // the key was refusing calls. One TTL of patience is the right cost for
+        // a coin that did not answer.
+        await stampScreened(row.network, row.tokenAddress);
     }
 
     return out;
+}
+
+/** Record that this row was looked at, whatever came back. Best-effort: a lost
+ *  stamp just means the coin is retried a pass sooner. */
+async function stampScreened(network: string, tokenAddress: string): Promise<void> {
+    try {
+        await db
+            .update(trendingCoins)
+            .set({ liquidityScreenedAt: new Date() })
+            .where(and(eq(trendingCoins.network, network), eq(trendingCoins.tokenAddress, tokenAddress)));
+    } catch (err) {
+        console.warn("[liquidity-screen] stamp failed:", err instanceof Error ? err.message : err);
+    }
 }

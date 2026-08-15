@@ -32,6 +32,16 @@ export const trendingCoins = pgTable("trending_coins", {
     marketCapUsd: doublePrecision("market_cap_usd"),
     fdvUsd: doublePrecision("fdv_usd"),
     liquidityUsd: doublePrecision("liquidity_usd"),
+    /**
+     * When the per-coin liquidity screen last ATTEMPTED this row — success or
+     * not. NULL = never screened.
+     *
+     * Exists because `liquidity_usd` is a market measurement, not a static
+     * attribute: without a stamp the screen could only ever fill blanks
+     * (`WHERE liquidity_usd IS NULL`), so a wrong value was permanent and a
+     * stale one was never refreshed. See db/liquidity-screened-at.sql.
+     */
+    liquidityScreenedAt: timestamp("liquidity_screened_at", { withTimezone: true }),
 
     volume5mUsd: doublePrecision("volume_5m_usd"),
     volume1hUsd: doublePrecision("volume_1h_usd"),
