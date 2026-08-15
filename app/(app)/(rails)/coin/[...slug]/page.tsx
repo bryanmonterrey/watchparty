@@ -6,6 +6,7 @@ import { tokens } from "@/db/schema/content";
 import { eq, or } from "drizzle-orm";
 import { TokenProfile } from "@/components/tokens/token-profile";
 import { CoinDetail, type CoinViewData } from "@/components/coins/coin-detail";
+import { CoinTabPrice } from "@/components/coins/coin-tab-price";
 import { resolveCoin } from "@/lib/coins/resolve";
 
 // Coin pages live here, not at the top level. They used to share `/[slug]` with
@@ -146,5 +147,19 @@ export default async function CoinPage({ params, searchParams }: Params) {
     // No pt-header wrapper: the dock inside CoinDetail is a sticky h-screen
     // column, and offsetting it pushes its bottom that far past the viewport.
     // The clearance lives on the content column instead.
-    return <CoinDetail coin={coin} wpToken={token ?? undefined} />;
+    //
+    // CoinTabPrice (live price in the browser tab) is mounted HERE rather than
+    // inside CoinDetail: that file sits right on the 1000-line repo cap, and
+    // this needs nothing CoinDetail has that the page doesn't already hold.
+    return (
+        <>
+            <CoinTabPrice
+                network={coin.network}
+                address={coin.tokenAddress}
+                symbol={coin.symbol}
+                fallbackPriceUsd={coin.priceUsd}
+            />
+            <CoinDetail coin={coin} wpToken={token ?? undefined} />
+        </>
+    );
 }
