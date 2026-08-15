@@ -31,7 +31,9 @@ const HEADROOM = 1.15;
 
 const LINE_WIDTH = 2;
 const LINE_INK = "rgba(255,255,255,0.9)";
-const DOT_INK = "rgba(255,255,255,0.55)";
+
+/** Alpha of a mark right under the line; it falls linearly to 0 at the baseline. */
+const DOT_ALPHA = 0.75;
 
 /** Baseline height of the flat band drawn when a video has no buckets yet. */
 const FLAT_FALLBACK = 0.3;
@@ -135,17 +137,24 @@ export function DitherHeatmap({ buckets, active }: { buckets: number[]; active: 
 
             ctx.save();
             ctx.clip();
-            ctx.fillStyle = DOT_INK;
 
-            for (let x = 0; x <= w; x += cell) {
-                for (let y = 0; y <= h; y += cell) {
+            // Rows outer, columns inner — the opposite of upstream — so the
+            // depth fade can be one fillStyle per ROW instead of per dot. The
+            // marks fade to fully transparent at the baseline (the ask was
+            // "dither to transparent", the way `bg-gradient-to-b` would), on
+            // top of upstream's size falloff. Alpha carries the fade, the grid
+            // stays flat and evenly spaced, so this is still a dither and not
+            // a gradient wearing dots.
+            for (let y = 0; y <= h; y += cell) {
+                const jy = y + cell / 2;
+                const falloff = Math.max(0, 1 - jy / h);
+                if (falloff <= 0) continue;
+                ctx.fillStyle = `rgba(255,255,255,${(DOT_ALPHA * falloff).toFixed(3)})`;
+
+                for (let x = 0; x <= w; x += cell) {
                     const jx = x + cell / 2;
-                    const jy = y + cell / 2;
                     const jit = hash(jx, jy);
 
-                    // Depth falloff: heaviest against the line, gone by the
-                    // baseline. This is what replaces the alpha ramp.
-                    const falloff = Math.max(0, 1 - jy / h);
                     const waveRaw = reducedMotion
                         ? 0
                         : Math.sin(jx * 0.05 + time) + Math.sin(jy * 0.05 + time * 0.7);
