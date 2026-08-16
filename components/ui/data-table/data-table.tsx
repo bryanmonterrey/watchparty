@@ -470,27 +470,27 @@ export function DataTable<TData extends RowData>({
     // table switches to `w-max`. A sticky-header table that isn't `resizable`
     // stays `min-w-full` and can never overflow horizontally, so it loses
     // nothing here.
-    // `overscroll-chain overscroll-x-contain` on the horizontal scroller, and
-    // the pair is the whole point.
+    // No overscroll classes here on purpose — globals.css now contains only the
+    // X axis for `.overflow-x-auto`, which is the correct default for a
+    // horizontal scroller and applies to this wrapper automatically.
     //
-    // globals.css gives EVERY `.overflow-x-auto` `overscroll-behavior: contain`
-    // — right for a panel that owns its scroll, wrong here. This wrapper only
-    // scrolls sideways, so a vertical wheel over it has nowhere to go, and
-    // `contain` stops that leftover delta chaining to the page: the wheel dies
-    // wherever the cursor is over the table. It only bites once the wrapper is
-    // genuinely scrollable, which is why /trade and the coin page (both
-    // `resizable`, so the table can go `w-max`) were stuck while the home board
-    // — never horizontally overflowing — was fine, and why testing it there
-    // came back clean.
+    // It briefly carried `overscroll-chain overscroll-x-contain` (cb96f435),
+    // because the rule used to apply the `overscroll-behavior: contain`
+    // SHORTHAND: a vertical wheel over a sideways-only scroller had nowhere to
+    // go, and containment stopped that leftover delta reaching the page, so
+    // scrolling died wherever the cursor sat over the table. 0cc7d0a3 fixed it
+    // at the source for every horizontal scroller in the app, so the local
+    // patch is redundant and its explanation was about to become a lie.
     //
-    // `.overscroll-chain` is globals.css's own documented opt-out, but it
-    // clears BOTH axes, and letting horizontal overscroll chain invites a
-    // trackpad swipe to trigger back-navigation. So the X axis is contained
-    // explicitly and only Y is allowed to reach the page.
+    // Worth keeping from that episode: the trap only engages once the element
+    // is GENUINELY scrollable in the contained axis. /trade and the coin page
+    // broke because `resizable` lets their tables go `w-max`; the home board is
+    // `min-w-full`, never overflows, and tested clean — which read as
+    // "mechanism disproved" when it was "wrong surface".
     if (!virtualized) {
         return stickyHeader && !resizable
             ? <div className={cn("w-full", className)}>{body}</div>
-            : <div className={cn("w-full overflow-x-auto overscroll-chain overscroll-x-contain", className)}>{body}</div>;
+            : <div className={cn("w-full overflow-x-auto", className)}>{body}</div>;
     }
 
     return (
