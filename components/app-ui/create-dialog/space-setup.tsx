@@ -29,9 +29,15 @@ import { appToast } from "@/components/app-ui/app-toast";
 
 type Visibility = "public" | "unlisted";
 
+// "Hidden" means UNLISTED, and the hint says so rather than implying privacy.
+// There is no invite-only option because there is no invite-only enforcement:
+// `spaces.join` gates on the room being LIVE and nothing else, so anyone
+// holding the link can walk in. Offering "Private" here would be a label the
+// server does not keep — which is exactly what this option used to be, when it
+// wrote only the POST's visibility and left the room itself listed to everyone.
 const VISIBILITY: { key: Visibility; label: string; hint: string; icon: typeof EarthIcon }[] = [
-    { key: "public", label: "Visible", hint: "Shows in the feed", icon: EarthIcon },
-    { key: "unlisted", label: "Hidden", hint: "Only people with the link", icon: LockIcon },
+    { key: "public", label: "Visible", hint: "In the feed and Spaces list", icon: EarthIcon },
+    { key: "unlisted", label: "Hidden", hint: "Unlisted — anyone with the link can join", icon: LockIcon },
 ];
 
 export function SpaceSetup({ onDone }: { onDone?: () => void }) {

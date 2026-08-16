@@ -17,6 +17,17 @@ export const communitySpaces = pgTable('community_spaces', {
         .notNull(),
     // Optional: a space can belong to a server, or be standalone.
     serverId: uuid('server_id').references(() => communityServers.id, { onDelete: 'cascade' }),
+    /**
+     * `public` = listed by `listLive` and its post reaches the feed.
+     * `unlisted` = absent from both; reachable only by direct link.
+     *
+     * NOT a `private` value: invite-only access needs a per-user grant enforced
+     * in `join`, and naming it without enforcing it is exactly the bug this
+     * column fixes — the create dialog's "Hidden" option used to write only the
+     * POST's visibility, leaving the room itself listed and joinable by anyone.
+     * See db/space-visibility.sql.
+     */
+    visibility: text('visibility').notNull().default('public'),
     // Cloudflare RealtimeKit meeting id for this space's WebRTC audio (lazily
     // created on first join). Nullable — null until media is provisioned/used.
     mediaMeetingId: text('media_meeting_id'),

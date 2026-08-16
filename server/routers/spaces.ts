@@ -9,7 +9,7 @@ import { user } from "@/db/schema";
 import { posts } from "@/db/schema/content/post";
 import { postTagsInput, writePostTags } from "@/server/lib/write-post-tags";
 import { nanoid } from "nanoid";
-import { eq, and, desc, count, isNull } from "drizzle-orm";
+import { eq, and, or, desc, count, isNull } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { publishToRoom } from "@/lib/realtime/publish";
 import { rooms } from "@/lib/realtime/protocol";
@@ -44,9 +44,15 @@ export const spacesRouter = router({
                 // Coins the title tags, same validator and same meaning as a
                 // post's or a stream's.
                 tags: postTagsInput,
-                // Whether the space's post reaches the feed. This is the post's
-                // own column — the "visible or not" option is not a new concept
-                // and must not become a second one.
+                // Applies to BOTH the post and the space, and they take
+                // different values from it on purpose.
+                //
+                // The post gets this verbatim — `private` is a real value there.
+                // The SPACE only knows public/unlisted, because anything
+                // stricter than unlisted needs a per-user grant enforced in
+                // `join`, which does not exist. So `private` maps to the
+                // strictest thing the room can actually honour rather than
+                // being stored as a promise nothing keeps.
                 visibility: z.enum(["public", "private", "unlisted"]).default("public"),
             })
         )
@@ -58,6 +64,10 @@ export const spacesRouter = router({
                     title,
                     hostId: ctx.user.id,
                     serverId: input.serverId ?? null,
+                    // On the SPACE, not only on its post. Writing it to the post
+                    // alone was the bug: `listLive` has no idea what the post
+                    // says, so a "Hidden" space stayed listed and joinable.
+                    visibility: input.visibility === "public" ? "public" : "unlisted",
                 })
                 .returning();
 
@@ -106,7 +116,7 @@ export const spacesRouter = router({
         }),
 
     /** All currently-live spaces with host + participant count. */
-    listLive: protectedProcedure.query(async () => {
+    listLive: protectedProcedure.query(async ({ ctx }) => {
         const rows = await db
             .select({
                 id: communitySpaces.id,
@@ -124,7 +134,21 @@ export const spacesRouter = router({
                 communitySpaceParticipants,
                 eq(communitySpaceParticipants.spaceId, communitySpaces.id)
             )
-            .where(eq(communitySpaces.status, "LIVE"))
+            // Unlisted spaces are absent from this list — that is what the
+            // create dialog's "Hidden" option means, and until the visibility
+            // column existed it meant nothing here at all. Reachable by direct
+            // link still: `join` deliberately does not gate on visibility,
+            // because unlisted is not private.
+            //
+            // The host still sees their OWN unlisted space here, so reloading
+            // the page doesn't strand them outside a room they are hosting.
+            .where(and(
+                eq(communitySpaces.status, "LIVE"),
+                or(
+                    eq(communitySpaces.visibility, "public"),
+                    eq(communitySpaces.hostId, ctx.user.id),
+                ),
+            ))
             .groupBy(communitySpaces.id, user.id)
             .orderBy(desc(communitySpaces.startedAt));
 
