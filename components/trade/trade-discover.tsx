@@ -351,7 +351,20 @@ export function TradeDiscover() {
                             rowHeight={76}
                             resizable
                             reorderable
-                            loading={onSolana ? isLoading : chainFeed.isLoading}
+                            // Loading while EITHER source that feeds this board
+                            // is still pending — not just the in-house one.
+                            //
+                            // It was `onSolana ? isLoading : chainFeed.isLoading`,
+                            // which flashed the empty state before every load on
+                            // Solana: `tokens` merges in-house launches with the
+                            // chain-wide feed, and getFeed answers from our own
+                            // DB almost immediately (often with zero rows, since
+                            // in-house coins are rare) while chainFeed is still
+                            // waiting on Mobula. That left rows empty and loading
+                            // false, so DataTable did the correct thing with the
+                            // wrong inputs and rendered "No coins here yet" until
+                            // the real list landed.
+                            loading={(onSolana && isLoading) || chainFeed.isLoading}
                             onRowClick={(t) =>
                                 router.push(
                                     t.external
