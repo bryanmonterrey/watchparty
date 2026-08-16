@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, Globe02Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { TokenColumn } from "./token-column";
 import { TokenColumnHeader } from "./token-column-header";
+import { Menu2Icon } from "../icons";
 import { trpc } from "@/lib/trpc/client";
 import { getRealtimeClient, authenticateRealtimeClient } from "@/lib/supabase/realtime-client";
 import { useQuickBuy } from "@/hooks/use-quick-buy";
@@ -36,13 +37,17 @@ const HEADER_PUSH_PX = 168;
 export function TradeFeed() {
     const utils = trpc.useUtils();
     const { quickBuy, buyingId, amountSol } = useQuickBuy();
-    // "all" is the default — memescope is one board over every chain we route,
-    // and the picker narrows it when you care about a single ecosystem.
-    const [chain, setChain] = useState<"all" | TradeChain>("all");
+    // Solana, and no "all chains" option for now. All-chains fanned one
+    // chainFeed query out per chain in CHAIN_OPTIONS — seven cached calls to
+    // fill three columns — and the board reads as one market, not seven
+    // interleaved ones. Restoring it is re-adding the menu item and the
+    // `chain === "all"` branches below; the queries already key per chain.
+    const [chain, setChain] = useState<TradeChain>("solana");
     const [filters, setFilters] = useState<MemescopeFilters>(DEFAULT_FILTERS);
     const [filterOpen, setFilterOpen] = useState(false);
 
-    const wantsInHouse = chain === "all" || chain === "solana";
+    // In-house launches are Solana-only, so this is just the chain check now.
+    const wantsInHouse = chain === "solana";
     // Read path is cache-only on the server; refetch is a cheap fallback while
     // the realtime push (below) handles instant updates from the stream worker.
     const { data = EMPTY, isLoading } = trpc.trade.getFeed.useQuery(undefined, {
@@ -55,7 +60,7 @@ export function TradeFeed() {
     // three columns (fresh curves → New, high bonding → Migrating, bonded or
     // plain DEX pairs → Migrated), so "all chains" costs one cached call per
     // chain, not one per column.
-    const chainIds = chain === "all" ? CHAIN_OPTIONS.map((c) => c.id) : [chain];
+    const chainIds = [chain];
     const external = trpc.useQueries((t) =>
         chainIds.map((c) =>
             t.trade.chainFeed({ chain: c, list: "new" }, { staleTime: 60_000, refetchInterval: 120_000 }),
@@ -132,7 +137,7 @@ export function TradeFeed() {
     const anyAnswer = (wantsInHouse && !isLoading) || external.some((q) => q.data != null);
     const loading = !anyAnswer && ((wantsInHouse && isLoading) || external.some((q) => q.isLoading));
 
-    const activeChain = chain === "all" ? null : CHAIN_OPTIONS.find((c) => c.id === chain);
+    const activeChain = CHAIN_OPTIONS.find((c) => c.id === chain);
     const openFilter = () => setFilterOpen(true);
     const active = filtersActive(filters);
 
@@ -149,9 +154,23 @@ export function TradeFeed() {
                 <div className="absolute inset-0 -z-10 pointer-events-none bg-canvas" />
                 {/* Spacer clears the app header (logo + menu overlay this row). */}
                 <div className="w-full h-[52px]" />
-                {/* Chain picker — left-aligned; the top-right belongs to the app
-                    header's wallet cluster. */}
-                <div className="flex w-full items-center px-2">
+                {/* Filter, then chain picker, pushed right. ONE filter button
+                    for the board rather than one per column: the dialog it
+                    opens has always applied to all three at once
+                    (`applyMemescopeFilters` runs over every column), so three
+                    identical triggers were three ways to open the same thing —
+                    and each implied it filtered only its own column.
+                    Filter sits LEFT of the chain picker: chain is the coarser
+                    choice and reads as the anchor on the edge. */}
+                <div className="flex w-full items-center justify-end gap-2 px-2">
+                    <button
+                        onClick={openFilter}
+                        aria-label="Filter coins"
+                        className="relative flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-soft-gray-10 text-zinc-400 transition-colors hover:bg-soft-gray-15 hover:text-flexwhite"
+                    >
+                        <Menu2Icon className="size-6" />
+                        {active && <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-lantern" />}
+                    </button>
                     <GooDropdown
                         align="start"
                         width={200}
@@ -161,25 +180,12 @@ export function TradeFeed() {
                         triggerClassName={GOO_TRIGGER_PILL}
                         trigger={
                             <>
-                                {activeChain ? (
-                                    <activeChain.Icon className="size-4" />
-                                ) : (
-                                    <HugeiconsIcon icon={Globe02Icon} className="size-4" strokeWidth={2} />
-                                )}
-                                {activeChain?.label ?? "All chains"}
+                                {activeChain ? <activeChain.Icon className="size-4" /> : null}
+                                {activeChain?.label ?? "Chain"}
                                 <HugeiconsIcon icon={ArrowDown01Icon} className="size-6 text-zinc-500" strokeWidth={2} />
                             </>
                         }
                         items={[
-                            gooMenuItem({
-                                key: "all",
-                                label: "All chains",
-                                icon: <HugeiconsIcon icon={Globe02Icon} className="size-4" strokeWidth={2} />,
-                                onClick: () => setChain("all"),
-                                right: chain === "all"
-                                    ? <HugeiconsIcon icon={Tick02Icon} className="size-4 text-white" strokeWidth={2} />
-                                    : undefined,
-                            }),
                             ...CHAIN_OPTIONS.map((c) =>
                                 gooMenuItem({
                                     key: c.id,
@@ -195,9 +201,9 @@ export function TradeFeed() {
                     />
                 </div>
                 <div className="flex-1 w-full grid grid-cols-3 gap-1 px-2">
-                    <TokenColumnHeader status="new" tokensCount={columns.new.length} onFilter={openFilter} filterActive={active} />
-                    <TokenColumnHeader status="migrating" tokensCount={columns.migrating.length} onFilter={openFilter} filterActive={active} />
-                    <TokenColumnHeader status="migrated" tokensCount={columns.migrated.length} onFilter={openFilter} filterActive={active} />
+                    <TokenColumnHeader status="new" tokensCount={columns.new.length} />
+                    <TokenColumnHeader status="migrating" tokensCount={columns.migrating.length} />
+                    <TokenColumnHeader status="migrated" tokensCount={columns.migrated.length} />
                 </div>
             </div>
 
