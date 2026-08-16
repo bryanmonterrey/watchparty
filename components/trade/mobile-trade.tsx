@@ -39,7 +39,7 @@ function TokenRow({ token }: { token: TradeToken }) {
             {/* Token image with bonding ring + alert dot, per the design */}
             <div className="relative shrink-0">
                 <div className="size-14 overflow-hidden rounded-xl bg-muted ring-2 ring-lantern">
-                    <CoinImage src={token.imageUrl} alt={token.name} className="size-full" />
+                    <CoinImage src={token.imageUrl} alt={token.name} coin={`${token.symbol}:${token.tokenAddress || token.id}`} className="size-full" />
                 </div>
                 <span className="absolute -bottom-1 -right-1 size-4 rounded-full bg-pastelred ring-2 ring-card" />
             </div>

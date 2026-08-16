@@ -257,7 +257,7 @@ function NameCell({ row }: { row: TrendingRow }) {
                 exists on several of them, but the reference's ticker line is
                 bare — a corner badge keeps both. */}
             <span className="relative shrink-0">
-                <CoinImage src={row.imageUrl} className="size-9 rounded-full" />
+                <CoinImage src={row.imageUrl} coin={trackedTokenId(row.network, row.tokenAddress)} className="size-9 rounded-full" />
                 <ChainBadge
                     network={row.network}
                     className="absolute -bottom-0.5 rounded-full bg-black p-1 -right-0.5 ring-1 p-0 ring-black"

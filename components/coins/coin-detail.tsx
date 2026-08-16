@@ -146,7 +146,7 @@ function CoinHeader({ coin }: { coin: CoinViewData }) {
                 own name is the last thing that should be squeezed. */}
             <div className="flex min-w-0 shrink-0 items-center gap-3">
                 <div className="relative size-11 shrink-0">
-                    <CoinImage src={coin.imageUrl} className="size-full rounded-full" />
+                    <CoinImage src={coin.imageUrl} coin={coinTag(coin.network, coin.tokenAddress)} className="size-full rounded-full" />
                     {/* NO `p-1` here. Tailwind is border-box, so padding comes
                         OUT of the declared size: `size-5 p-1` rendered the chain
                         logo at 20 - 8 = 12px inside a black disc, which is why

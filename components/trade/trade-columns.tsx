@@ -67,7 +67,7 @@ function XIcon({ className }: { className?: string }) {
 function TokenAvatar({ token }: { token: TradeToken }) {
     return (
         <div className="size-12 shrink-0 overflow-hidden rounded-[14px] bg-zinc-800">
-            <CoinImage src={token.imageUrl} alt={token.symbol} className="size-full" />
+            <CoinImage src={token.imageUrl} alt={token.symbol} coin={`${token.symbol}:${token.tokenAddress || token.id}`} className="size-full" />
         </div>
     );
 }
