@@ -303,9 +303,30 @@ export function DataTable<TData extends RowData>({
     // a flexible column would size to its content instead of the viewport.
     const sized = leafColumns.length > 0 && leafColumns.every((c) => columnSizing[c.id] != null);
 
+    // A table with NO horizontal escape must not be able to exceed its box.
+    // This is the same branch the wrapper below uses — the one that ships no
+    // `overflow-x-auto`, because a sticky header pins to the nearest scrollport
+    // and an x-scroller would become that scrollport (8627b110).
+    //
+    // `min-w-full` is a floor, not a ceiling: under `table-layout: fixed` the
+    // declared column widths still add up, and if their sum exceeds the
+    // container the table simply grows past it. With a scroller that reads as
+    // "scroll sideways"; without one it reads as CUT OFF, because home's
+    // category panel clips (`overflow-clip`) and the tail column is the star.
+    // Measured on prod 2026-08-16: a 754px table in a 628px column, 132px of it
+    // unreachable, and the amount changed with the sort indicator's width.
+    //
+    // `w-full` makes the same declared widths proportional instead: fixed layout
+    // distributes the container across them, so columns compress and every one
+    // of them stays on screen.
+    const noHorizontalEscape = stickyHeader && !resizable && !virtualized;
+
     const body = (
         <table
-            className={cn("border-collapse", sized ? "w-max min-w-full" : "min-w-full")}
+            className={cn(
+                "border-collapse",
+                sized ? "w-max min-w-full" : noHorizontalEscape ? "w-full" : "min-w-full",
+            )}
             style={{ tableLayout: "fixed" }}
         >
             <colgroup>
