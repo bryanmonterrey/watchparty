@@ -235,3 +235,31 @@ export const networkLabel = (id: string) => BY_ID.get(id)?.label ?? id;
 
 export const trackedTokenId = (network: string, tokenAddress: string) =>
     `${network}:${tokenAddress}`;
+
+/**
+ * Board slug -> wallet chain id, i.e. "can this row actually be bought".
+ *
+ * The two id spaces are genuinely different and neither is wrong: the board's
+ * slugs are GeckoTerminal's (`eth`, `bsc`, `polygon_pos`), while the wallet
+ * registry uses its own (`ethereum`, `bnb`, `polygon`). Buying needs the
+ * registry id, because that is what owns the RPC, the explorer, the native
+ * currency and the derivation path.
+ *
+ * A slug absent from this map is a chain we can SHOW but not FILL — the board
+ * trends ~20 chains and the wallet holds keys for 8, so most rows are display
+ * only, and the buy UI has to say so rather than offering a button that throws.
+ * Adding a chain here is a lie unless `lib/chains/registry.ts` has it too.
+ */
+const BUYABLE_CHAIN_BY_SLUG: Record<string, string> = {
+    solana: "solana",
+    base: "base",
+    eth: "ethereum",
+    bsc: "bnb",
+    polygon_pos: "polygon",
+    hyperevm: "hyperevm",
+    robinhood: "robinhood",
+};
+
+/** The wallet chain id for a board slug, or null when the row is display-only. */
+export const buyableChainId = (slug: string): string | null =>
+    BUYABLE_CHAIN_BY_SLUG[slug] ?? null;

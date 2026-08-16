@@ -6,14 +6,20 @@
 // confirmation, no way back), and every other row opened GeckoTerminal — the
 // button naming an action, then handing you to a different product to do it.
 //
-// This is one dialog for both: the coin, the amount, and a confirm. Nothing
-// here links off-site.
+// This is one dialog for every chain we hold keys for: the coin, the amount,
+// and a confirm. Nothing here links off-site.
+//
+// COVERAGE is decided by two lists that are deliberately different sizes. The
+// board TRENDS ~20 chains; the wallet holds keys for 8. `buyableChainId()` maps
+// the first onto the second and returns null for the rest, so a display-only
+// row says so instead of offering a button that throws. Solana routes through
+// Jupiter, every EVM chain (Ethereum, Base, Polygon, BNB, HyperEVM, Robinhood)
+// through LI.FI — see `lib/chains/swap`.
 //
 // LAYOUT follows two references the owner picked, in watchparty's palette
 // rather than theirs: the coin header and the amount-carrying CTA ("Buy $200")
 // from the first, the big centred amount card with presets beneath it from the
-// second. Accent is `lantern` — the app's own go/positive green — used on
-// exactly one thing per state, per the one-accent-per-surface rule.
+// second. Accent is `lantern`, used on exactly one thing per state.
 
 import * as React from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -21,10 +27,11 @@ import { CoinImage } from "@/components/coins/coin-image";
 import { ChainBadge } from "./chain-badge";
 import { changeTone, compactUsd, percentAbs, tokenPrice } from "./trending-format";
 import { useQuickBuy, QUICK_BUY_PRESETS } from "@/hooks/use-quick-buy";
-import { useEvmQuickBuy, EVM_BUY_PRESETS } from "@/hooks/use-evm-quick-buy";
-import { useEvm } from "@/lib/chains/evm/evm-provider";
-import { evmChainId } from "@/lib/chains/evm/swap";
+import { useEvmQuickBuy, presetsForSymbol } from "@/hooks/use-evm-quick-buy";
+import { buyableChainId } from "@/lib/coin-feed/networks";
+import { getChain } from "@/lib/chains/registry";
 import { trpc } from "@/lib/trpc/client";
+import { NATIVE_TOKEN } from "@/lib/chains/swap/types";
 import { cn } from "@/lib/utils";
 
 /** Only what the dialog draws — deliberately not the trending row type, so the
@@ -42,10 +49,12 @@ export type BuyDialogCoin = {
     volume24hUsd?: number | null;
 };
 
-const EVM_AMOUNT_KEY = "trade:quickBuyEvm";
+/** Keyed by native symbol, not by chain: Base, Ethereum and Robinhood all spend
+ *  ETH, and someone who picked 0.01 ETH on one means it on the others. */
+const amountKey = (symbol: string) => `trade:quickBuy:${symbol}`;
 
-/** The board's own slippage, stated rather than assumed — it is wider than a
- *  wallet's default because a board buy is chasing a moving coin. */
+/** The board's own slippage, stated rather than assumed — wider than a wallet's
+ *  default because a board buy is chasing a moving coin. */
 const SLIPPAGE_BPS = 200;
 
 /**
@@ -61,10 +70,17 @@ function formatTokens(n: number): string {
     return n.toLocaleString(undefined, { maximumFractionDigits: 6 });
 }
 
-const usd = (n: number | null | undefined) =>
-    typeof n === "number" && Number.isFinite(n)
-        ? `$${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
-        : null;
+/**
+ * Base units -> display units on the STRING, never `Number(raw) / 10 ** dp`.
+ * An 18-decimal token passes 2^53 at a single whole token, so the float path
+ * silently drops low-order digits on any real balance.
+ */
+function scaleUnits(raw: string, decimals: number): number {
+    if (!/^\d+$/.test(raw)) return 0;
+    if (decimals <= 0) return Number(raw);
+    const padded = raw.padStart(decimals + 1, "0");
+    return Number(`${padded.slice(0, padded.length - decimals)}.${padded.slice(padded.length - decimals)}`);
+}
 
 /** One labelled line in the details block. */
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
@@ -83,61 +99,58 @@ export function BuyDialog({
     coin: BuyDialogCoin | null;
     onOpenChange: (open: boolean) => void;
 }) {
-    const isEvm = !!coin && evmChainId(coin.network) !== null;
-    const isSolana = coin?.network === "solana";
+    const chainId = coin ? buyableChainId(coin.network) : null;
+    const chain = chainId ? getChain(chainId) : undefined;
+    const isSolana = chainId === "solana";
+    const isEvm = !!chain && chain.kind === "evm";
+    const nativeSymbol = chain?.nativeCurrency.symbol ?? "";
 
-    // Both hooks mount unconditionally — hooks cannot be called behind a branch,
-    // and neither does any work until it is actually invoked.
+    // Hooks cannot sit behind a branch, so both mount; neither does any work
+    // until it is actually invoked.
     const { quickBuy, amountSol, setAmountSol, buyingId: solBuyingId } = useQuickBuy();
-    const {
-        evmBuy,
-        buyingId: evmBuyingId,
-        address: evmAddress,
-        connected: evmConnected,
-    } = useEvmQuickBuy();
-    const { wallets, connect, connecting } = useEvm();
+    const { evmBuy, buyingId: evmBuyingId } = useEvmQuickBuy();
 
-    const [evmAmount, setEvmAmount] = React.useState<number>(EVM_BUY_PRESETS[1]);
+    const presets = isSolana ? QUICK_BUY_PRESETS : presetsForSymbol(nativeSymbol);
+    const [evmAmount, setEvmAmount] = React.useState<number>(presets[1]);
 
-    // Restore the stored EVM amount on the client only — reading localStorage
-    // during render would make SSR and hydration disagree.
+    // Restore the stored amount for THIS native coin, on the client only —
+    // reading localStorage during render would desync SSR and hydration.
     React.useEffect(() => {
-        const saved = Number(localStorage.getItem(EVM_AMOUNT_KEY));
-        if (EVM_BUY_PRESETS.includes(saved as (typeof EVM_BUY_PRESETS)[number])) setEvmAmount(saved);
-    }, []);
+        if (!nativeSymbol || isSolana) return;
+        const list = presetsForSymbol(nativeSymbol);
+        const saved = Number(localStorage.getItem(amountKey(nativeSymbol)));
+        setEvmAmount(list.includes(saved) ? saved : list[1]);
+    }, [nativeSymbol, isSolana]);
 
-    const setEvmAmountPersisted = React.useCallback((v: number) => {
-        setEvmAmount(v);
-        localStorage.setItem(EVM_AMOUNT_KEY, String(v));
-    }, []);
+    const setEvmAmountPersisted = React.useCallback(
+        (v: number) => {
+            setEvmAmount(v);
+            if (nativeSymbol) localStorage.setItem(amountKey(nativeSymbol), String(v));
+        },
+        [nativeSymbol],
+    );
 
-    // Live estimate for EVM. Keyed by amount, so changing the preset refetches
-    // and the number on screen is the number that will execute. Solana has no
-    // equivalent line: Jupiter's quote returns base units with no decimals to
-    // scale them by, so an estimate there would be a guess.
-    const quote = trpc.evm.buyQuote.useQuery(
+    const amount = isSolana ? amountSol : evmAmount;
+
+    // Live estimate for EVM, keyed by amount so the number on screen is the one
+    // that executes. Solana has no equivalent: Jupiter returns base units with
+    // no decimals to scale them by, so the figure would be a guess.
+    const quote = trpc.wallet.getEvmSwapQuote.useQuery(
         {
-            network: coin?.network ?? "",
-            tokenAddress: coin?.tokenAddress ?? "",
-            amount: evmAmount,
-            fromAddress: evmAddress ?? "",
+            chain: chainId ?? "",
+            fromToken: NATIVE_TOKEN,
+            toToken: coin?.tokenAddress ?? "",
+            amountHuman: String(amount),
             slippageBps: SLIPPAGE_BPS,
         },
-        {
-            enabled: !!coin && isEvm && !!evmAddress,
-            staleTime: 20_000,
-            retry: false,
-        },
+        { enabled: !!coin && isEvm, staleTime: 20_000, retry: false },
     );
 
     if (!coin) return null;
 
     const buying = solBuyingId === coin.id || evmBuyingId === coin.id;
-    const amount = isEvm ? evmAmount : amountSol;
-    const presets: readonly number[] = isEvm ? EVM_BUY_PRESETS : QUICK_BUY_PRESETS;
-    const setAmount = isEvm ? setEvmAmountPersisted : setAmountSol;
-    const unit = isEvm ? "ETH" : "SOL";
-    const spendUsd = isEvm ? usd(quote.data?.spendUsd) : null;
+    const setAmount = isSolana ? setAmountSol : setEvmAmountPersisted;
+    const receive = quote.data ? scaleUnits(quote.data.toAmount, quote.data.toDecimals) : null;
 
     const close = () => onOpenChange(false);
 
@@ -149,22 +162,23 @@ export function BuyDialog({
                 symbol: coin.symbol,
                 imageUrl: coin.imageUrl,
             });
-            // "no-wallet" already opened the wallet drawer; leaving the dialog
-            // up would stack two surfaces asking for the same thing.
+            // "no-wallet" already opened the wallet drawer; leaving this up
+            // would stack two surfaces asking for the same thing.
             if (result === "done" || result === "no-wallet") close();
             return;
         }
-        if (isEvm && quote.data) {
+        if (isEvm && chainId) {
             const result = await evmBuy(
                 { id: coin.id, symbol: coin.symbol, tokenAddress: coin.tokenAddress },
-                quote.data,
-                String(evmAmount),
+                chainId,
+                String(amount),
+                nativeSymbol,
+                SLIPPAGE_BPS,
             );
             if (result === "done") close();
         }
     };
 
-    const needsEvmWallet = isEvm && !evmConnected;
     const tradeable = isSolana || isEvm;
 
     return (
@@ -207,22 +221,14 @@ export function BuyDialog({
                 {tradeable ? (
                     <>
                         {/* The amount, as the thing the dialog is actually about. */}
-                        <div className="flex flex-col items-center gap-3 rounded-3xl bg-white/[0.03] px-4 pt-4 pb-4">
+                        <div className="flex flex-col items-center gap-3 rounded-3xl bg-white/[0.03] p-4">
                             <span className="self-start text-13 font-medium text-zinc-500">
                                 You&apos;re buying
                             </span>
 
-                            <div className="flex flex-col items-center gap-0.5">
-                                <div className="text-4xl leading-none font-bold tracking-tight tabular-nums text-white">
-                                    {amount}
-                                    <span className="ml-1.5 text-xl font-bold text-zinc-500">{unit}</span>
-                                </div>
-                                {/* Only when it is known: LI.FI prices the spend
-                                    side, Jupiter does not, and an invented USD
-                                    figure is worse than none. */}
-                                {spendUsd ? (
-                                    <span className="text-13 font-medium text-zinc-500">≈ {spendUsd}</span>
-                                ) : null}
+                            <div className="text-4xl leading-none font-bold tracking-tight tabular-nums text-white">
+                                {amount}
+                                <span className="ml-1.5 text-xl font-bold text-zinc-500">{nativeSymbol}</span>
                             </div>
 
                             <div className="grid w-full grid-cols-4 gap-2">
@@ -234,8 +240,8 @@ export function BuyDialog({
                                             type="button"
                                             disabled={buying}
                                             onClick={() => setAmount(p)}
-                                            // Pills stay rounded-full and are never
-                                            // squircled (design principles §1).
+                                            // Pills stay rounded-full and are
+                                            // never squircled (principles §1).
                                             className={cn(
                                                 "h-11 cursor-pointer rounded-full text-15 font-bold tabular-nums transition-colors disabled:opacity-50",
                                                 active
@@ -256,8 +262,8 @@ export function BuyDialog({
                                     <Row label="You receive">
                                         {quote.isLoading
                                             ? "…"
-                                            : quote.data
-                                              ? `${formatTokens(quote.data.receiveAmount)} ${quote.data.receiveSymbol}`
+                                            : receive !== null
+                                              ? `${formatTokens(receive)} ${quote.data?.toSymbol ?? ""}`
                                               : "—"}
                                     </Row>
                                     {quote.data?.tool ? <Row label="Route">{quote.data.tool}</Row> : null}
@@ -273,50 +279,24 @@ export function BuyDialog({
                             <p className="text-13 font-medium text-pastelred">{quote.error.message}</p>
                         ) : null}
 
-                        {needsEvmWallet ? (
-                            wallets.length > 0 ? (
-                                <div className="flex flex-col gap-2">
-                                    <span className="text-13 font-medium text-zinc-500">
-                                        Connect a wallet to buy on {coin.network}
-                                    </span>
-                                    {wallets.slice(0, 3).map((w) => (
-                                        <button
-                                            key={w.rdns}
-                                            type="button"
-                                            disabled={connecting}
-                                            onClick={() => void connect(w)}
-                                            className="flex h-12 w-full cursor-pointer items-center gap-3 rounded-full bg-white/5 px-4 text-15 font-bold text-white transition-colors hover:bg-white/10 disabled:opacity-50"
-                                        >
-                                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                                            <img src={w.icon} alt="" className="size-6 rounded-md" />
-                                            {w.name}
-                                        </button>
-                                    ))}
-                                </div>
-                            ) : (
-                                <p className="text-13 font-medium text-zinc-500">
-                                    No EVM wallet detected. Install one to buy on {coin.network}.
-                                </p>
-                            )
-                        ) : (
-                            <button
-                                type="button"
-                                onClick={() => void onConfirm()}
-                                disabled={buying || (isEvm && !quote.data)}
-                                // h-12: a full-width CTA in a panel, per the
-                                // button-height standard. The amount rides in the
-                                // label so the commit and the number are one thing.
-                                className="h-12 w-full cursor-pointer rounded-full bg-lantern text-base font-bold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
-                            >
-                                {buying ? "Buying…" : `Buy ${amount} ${unit}`}
-                            </button>
-                        )}
+                        <button
+                            type="button"
+                            onClick={() => void onConfirm()}
+                            disabled={buying || (isEvm && !quote.data)}
+                            // h-12: a full-width CTA in a panel, per the button
+                            // height standard. The amount rides in the label so
+                            // the commit and the number are one thing.
+                            className="h-12 w-full cursor-pointer rounded-full bg-lantern text-base font-bold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
+                        >
+                            {buying ? "Buying…" : `Buy ${amount} ${nativeSymbol}`}
+                        </button>
                     </>
                 ) : (
-                    // A chain we surface but cannot fill. Says so plainly rather
+                    // On the board but not in the wallet registry: we can show
+                    // this coin and cannot hold its chain's keys. Say so, rather
                     // than sending the user off-site to do it themselves.
                     <p className="text-13 font-medium text-zinc-500">
-                        {coin.network} isn&apos;t tradeable in-app yet.
+                        {coin.network} isn&apos;t buyable in-app yet — no wallet on that chain.
                     </p>
                 )}
             </DialogContent>
