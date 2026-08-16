@@ -12,6 +12,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useHoverPrefetch } from "@/hooks/use-hover-prefetch";
 import { useInstantNav } from "@/hooks/use-instant-nav";
+import { Squircle } from "@/components/ui/squircle";
+import { stableHoverColor } from "@/lib/stable-hover-color";
 import { CoinImage } from "@/components/coins/coin-image";
 import type { TradeToken } from "./types";
 import { SolanaIcon } from "../icons";
@@ -107,8 +109,28 @@ export function TokenRow({ token, quickBuy, buying = false, amountSol }: TokenRo
                 if (instantNav.consumedClick()) return;
                 router.push(href);
             }}
-            className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3.5 py-3 transition-colors hover:bg-white/[0.04] active:bg-white/[0.06]"
+            className="group/row relative grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3.5 py-3 active:bg-white/[0.06]"
         >
+            {/* Hover wash — the same one the trending board and /trade use, so a
+                memescope row reads as the same object as the row it links to.
+                It replaces a flat `hover:bg-white/[0.04]`, which was neither
+                squircled nor per-coin.
+
+                Squircled and absolutely positioned rather than a `rounded-*` on
+                the row itself: the row is a grid whose cells must stay flush, so
+                the shape belongs to an overlay that paints OVER them. That is
+                the shipped look on the other boards, not an accident — see the
+                same block in ui/data-table.
+
+                autoEffects={false} because the wrapper it otherwise injects
+                would become the grid child and break the column sizing. */}
+            <Squircle asChild radius={12} autoEffects={false}>
+                <span
+                    aria-hidden
+                    style={{ backgroundColor: stableHoverColor(token.id) }}
+                    className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover/row:opacity-10"
+                />
+            </Squircle>
             <TokenAvatar token={token} />
 
             {/* Identity */}
