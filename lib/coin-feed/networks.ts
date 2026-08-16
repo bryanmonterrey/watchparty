@@ -239,11 +239,22 @@ export const trackedTokenId = (network: string, tokenAddress: string) =>
 /**
  * Board slug -> wallet chain id, i.e. "can this row actually be bought".
  *
- * The two id spaces are genuinely different and neither is wrong: the board's
- * slugs are GeckoTerminal's (`eth`, `bsc`, `polygon_pos`), while the wallet
- * registry uses its own (`ethereum`, `bnb`, `polygon`). Buying needs the
- * registry id, because that is what owns the RPC, the explorer, the native
- * currency and the derivation path.
+ * THREE id spaces meet in `trending_coins.network`, and the buy path needs the
+ * third:
+ *   - GeckoTerminal's slugs (`eth`, `bsc`, `polygon_pos`) on rows written by
+ *     the GT sweep — `source` is null on those;
+ *   - MOBULA_TRENDING_CHAINS (`ethereum`, `bnb`, `polygon`) on rows written by
+ *     the Mobula sync, which happen to match the registry already;
+ *   - the wallet registry's ids, which own the RPC, explorer, native currency
+ *     and derivation path, and are what a swap actually needs.
+ *
+ * BOTH source spellings must be listed, because both are live in the same
+ * column at the same time. Measured 2026-08-16: `bnb` 144 rows / `ethereum` 92
+ * / `polygon` 60 from Mobula, against `bsc` 35 / `eth` 19 / `polygon_pos` 14
+ * from GT. Mapping only the GT spellings — as this first did — left the
+ * MAJORITY of the board unbuyable while looking correct, since the chains that
+ * spell the same in both (`solana`, `base`, `robinhood`, `hyperevm`) worked
+ * fine and hid it.
  *
  * A slug absent from this map is a chain we can SHOW but not FILL — the board
  * trends ~20 chains and the wallet holds keys for 8, so most rows are display
@@ -251,13 +262,20 @@ export const trackedTokenId = (network: string, tokenAddress: string) =>
  * Adding a chain here is a lie unless `lib/chains/registry.ts` has it too.
  */
 const BUYABLE_CHAIN_BY_SLUG: Record<string, string> = {
+    // Same in every space.
     solana: "solana",
     base: "base",
+    hyperevm: "hyperevm",
+    robinhood: "robinhood",
+    // GeckoTerminal spelling -> registry id.
     eth: "ethereum",
     bsc: "bnb",
     polygon_pos: "polygon",
-    hyperevm: "hyperevm",
-    robinhood: "robinhood",
+    // Mobula spelling (already registry-shaped, but must be listed explicitly
+    // — a missing key here is silently "not buyable", not an error).
+    ethereum: "ethereum",
+    bnb: "bnb",
+    polygon: "polygon",
 };
 
 /** The wallet chain id for a board slug, or null when the row is display-only. */

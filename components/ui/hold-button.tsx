@@ -105,11 +105,27 @@ export function HoldButton({
                 if (e.key === " ") stop();
             }}
             onBlur={stop}
-            className={cn("relative overflow-hidden select-none", className)}
+            className={cn(
+                "relative inline-flex items-center justify-center overflow-hidden select-none",
+                className,
+            )}
         >
-            {/* The sweep. `transform: scaleX` rather than width — animating
-                width is a layout property and is ruled out by the design
-                principles; a transform stays on the compositor.
+            {/* Resting label, on the button's own dark fill. */}
+            <span className="relative">{children}</span>
+
+            {/* The sweep, as a full SECOND COPY of the button revealed left to
+                right — background and label together.
+
+                `clip-path: inset()` rather than `scaleX`: a transform would
+                squash this copy's text as it grew, and the label has to stay
+                legible the whole way across. It is also not a layout property,
+                so it still satisfies the rule against animating width/height.
+
+                Two layers rather than one translucent overlay because the fill
+                INVERTS the contrast — white-on-near-black at rest, black-on-
+                green once filled. A single label cannot be readable on both,
+                and a green wash under white text is the worse half of that
+                trade at roughly 1.9:1.
 
                 Under reduced motion there is no sweep at all, but the HOLD IS
                 STILL REQUIRED: it is a safety affordance, not decoration, and
@@ -118,14 +134,15 @@ export function HoldButton({
             {!reduced && progress > 0 ? (
                 <span
                     aria-hidden
-                    style={{ transform: `scaleX(${progress})` }}
+                    style={{ clipPath: `inset(0 ${(1 - progress) * 100}% 0 0)` }}
                     className={cn(
-                        "absolute inset-0 origin-left",
-                        fillClassName ?? "bg-black/20",
+                        "absolute inset-0 inline-flex items-center justify-center",
+                        fillClassName ?? "bg-lantern text-black",
                     )}
-                />
+                >
+                    {children}
+                </span>
             ) : null}
-            <span className="relative">{children}</span>
         </button>
     );
 }

@@ -408,6 +408,17 @@ export function BuyDialog({
 
                             Still a rounded-full pill and never squircled, and
                             still h-12 as a full-width panel CTA. */}
+                        {/* SQUIRCLED, not a pill — owner call. The Squircle
+                            wraps rather than being applied via asChild because
+                            HoldButton is a component, not an element, and
+                            asChild clones an element's props.
+
+                            The button is DARKER than the dialog it sits on
+                            (canvas rgb(5,5,5) under #0C0C0C) so the lantern
+                            sweep reads as the button filling up, rather than a
+                            bright control dimming as you hold it. */}
+                        <Squircle asChild radius={16}>
+                        <div className="w-full">
                         <HoldButton
                             onConfirm={() => void onConfirm()}
                             disabled={
@@ -416,8 +427,8 @@ export function BuyDialog({
                                 (isEvm && !payingByCard && !quote.data) ||
                                 (payingByCard && fundSession.isPending)
                             }
-                            fillClassName="bg-black/25"
-                            className="h-12 w-full cursor-pointer rounded-full bg-lantern text-base font-bold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
+                            fillClassName="bg-lantern text-black"
+                            className="h-12 w-full cursor-pointer bg-canvas text-base font-bold text-white transition-colors hover:bg-white/[0.06] disabled:opacity-50"
                         >
                             {buying
                                 ? "Buying…"
@@ -429,6 +440,8 @@ export function BuyDialog({
                                         : `Hold to add ${nativeSymbol} with card`
                                     : `Hold to buy ${amount} ${spendSymbol}`}
                         </HoldButton>
+                        </div>
+                        </Squircle>
 
                         {fundSession.error ? (
                             <p className="text-13 font-medium text-pastelred">
