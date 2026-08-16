@@ -470,11 +470,25 @@ export function TrendingTable({ className }: { className?: string }) {
         // is present, the width is fine and `columnVisibility` is not being
         // applied; if it reads >=768, the measurement is stale-high and
         // use-element-width is the culprit.
+        //
+        // `@container` is BACK, and its job here is `container-type:
+        // inline-size` rather than any container query. That applies
+        // inline-size containment: the element's width comes from its parent
+        // and is explicitly INDEPENDENT OF ITS CONTENTS.
+        //
+        // The pre-DataTable board had it (the comments at the top of this file
+        // still describe it as present, which is how it was spotted) and the
+        // migration dropped it — swapping a contained div wrapping a CSS grid
+        // for a bare div wrapping a `<table>`, which is precisely the content
+        // that can be wider than its box. Without containment, "how wide am I"
+        // can answer with the table's width instead of the column's, and every
+        // extra column makes the answer larger — a ratchet that settles on the
+        // widest set no matter how narrow the column really is.
         <div
             ref={boardRef}
             data-board-width={boardWidth}
             data-board-cols={`${showVolume ? "v" : ""}${showWide ? "w" : ""}` || "narrow"}
-            className={className}
+            className={cn("@container", className)}
         >
             {/* The labels pin as the board scrolls under them, so you can still
                 read which column is which a hundred rows down.
