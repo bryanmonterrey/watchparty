@@ -122,6 +122,17 @@ export function BuyDialog({
     /** Contract of the token being SPENT: null = the chain's native coin. */
     const [payWith, setPayWith] = React.useState<string | null>(null);
 
+    /** Set only once a buy actually LANDS. The button cannot infer this — the
+     *  gesture completing says nothing about whether the swap filled. */
+    const [succeeded, setSucceeded] = React.useState(false);
+
+    // A dialog reopened on another coin must not still be showing the last
+    // coin's success. Keyed on the coin id rather than on open/closed because
+    // the component stays mounted between them.
+    React.useEffect(() => {
+        setSucceeded(false);
+    }, [coin?.id]);
+
     // Spendable balances. Two sources because Solana's path carries Helius,
     // NFTs and spam filtering that the generic per-chain providers don't.
     const solAssets = trpc.wallet.getWalletAssets.useQuery(
@@ -240,6 +251,14 @@ export function BuyDialog({
 
     const close = () => onOpenChange(false);
 
+    /** Show the filled state, then get out of the way. Closing on the same tick
+     *  would make the success colour a frame nobody sees; the swap toast keeps
+     *  reporting from there. */
+    const settle = () => {
+        setSucceeded(true);
+        setTimeout(close, 1100);
+    };
+
     const onConfirm = async () => {
         // Card is funding, not a swap: it puts the native coin in the wallet,
         // and the user comes back and buys with it. Stripe cannot deliver an
@@ -268,8 +287,10 @@ export function BuyDialog({
                     : undefined,
             );
             // "no-wallet" already opened the wallet drawer; leaving this up
-            // would stack two surfaces asking for the same thing.
-            if (result === "done" || result === "no-wallet") close();
+            // would stack two surfaces asking for the same thing, so it closes
+            // immediately rather than celebrating something that didn't happen.
+            if (result === "no-wallet") close();
+            else if (result === "done") settle();
             return;
         }
         if (isEvm && chainId) {
@@ -280,7 +301,7 @@ export function BuyDialog({
                 { token: payAsset?.contract ?? NATIVE_TOKEN, symbol: spendSymbol },
                 SLIPPAGE_BPS,
             );
-            if (result === "done") close();
+            if (result === "done") settle();
         }
     };
 
@@ -413,10 +434,13 @@ export function BuyDialog({
                             HoldButton is a component, not an element, and
                             asChild clones an element's props.
 
-                            The button is DARKER than the dialog it sits on
-                            (canvas rgb(5,5,5) under #0C0C0C) so the lantern
-                            sweep reads as the button filling up, rather than a
-                            bright control dimming as you hold it. */}
+                            THREE states, owner's palette: a neutral white/30
+                            rest, a twitter/55 sweep as the hold fills, and
+                            `long` once it lands. The success state restyles the
+                            WHOLE button rather than sweeping, which is also why
+                            it can flip the text to black — white on #33FDA1 is
+                            about 1.4:1 and unreadable, while white is fine on
+                            both of the other two. */}
                         <Squircle asChild radius={16}>
                         <div className="w-full">
                         <HoldButton
@@ -427,10 +451,14 @@ export function BuyDialog({
                                 (isEvm && !payingByCard && !quote.data) ||
                                 (payingByCard && fundSession.isPending)
                             }
-                            fillClassName="bg-lantern text-black"
-                            className="h-12 w-full cursor-pointer bg-canvas text-base font-bold text-white transition-colors hover:bg-white/[0.06] disabled:opacity-50"
+                            succeeded={succeeded}
+                            fillClassName="bg-twitter/55"
+                            successClassName="h-12 w-full bg-long text-base font-bold text-black"
+                            className="h-12 w-full cursor-pointer bg-white/30 text-base font-bold text-white hover:bg-white/35 disabled:opacity-50"
                         >
-                            {buying
+                            {succeeded
+                                ? "Bought"
+                                : buying
                                 ? "Buying…"
                                 : overBalance
                                   ? `Not enough ${spendSymbol}`

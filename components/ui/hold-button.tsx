@@ -22,15 +22,23 @@ const HOLD_MS = 700;
 export function HoldButton({
     onConfirm,
     disabled,
+    succeeded,
     className,
     fillClassName,
+    successClassName,
     children,
 }: {
     onConfirm: () => void;
     disabled?: boolean;
+    /** Owned by the CALLER, not inferred here: only it knows whether the thing
+     *  the hold started actually landed. A button that congratulated itself the
+     *  moment the gesture completed would be lying about the outcome. */
+    succeeded?: boolean;
     className?: string;
     /** The sweep colour — a caller on a coloured button needs contrast against it. */
     fillClassName?: string;
+    /** Replaces `className` once `succeeded`, so the whole button restyles. */
+    successClassName?: string;
     children: React.ReactNode;
 }) {
     const reduced = useReducedMotion();
@@ -62,8 +70,13 @@ export function HoldButton({
 
     React.useEffect(() => stop, [stop]);
 
+    // A completed buy must not be re-triggerable by keeping a finger down.
+    React.useEffect(() => {
+        if (succeeded) stop();
+    }, [succeeded, stop]);
+
     const begin = React.useCallback(() => {
-        if (disabled || holding.current) return;
+        if (disabled || succeeded || holding.current) return;
         holding.current = true;
         startedAt.current = performance.now();
 
@@ -82,12 +95,12 @@ export function HoldButton({
             frame.current = requestAnimationFrame(tick);
         };
         frame.current = requestAnimationFrame(tick);
-    }, [disabled, onConfirm, stop]);
+    }, [disabled, succeeded, onConfirm, stop]);
 
     return (
         <button
             type="button"
-            disabled={disabled}
+            disabled={disabled || succeeded}
             onPointerDown={begin}
             onPointerUp={stop}
             onPointerLeave={stop}
@@ -106,43 +119,34 @@ export function HoldButton({
             }}
             onBlur={stop}
             className={cn(
-                "relative inline-flex items-center justify-center overflow-hidden select-none",
-                className,
+                "relative inline-flex items-center justify-center overflow-hidden select-none transition-colors",
+                succeeded ? successClassName : className,
             )}
         >
-            {/* Resting label, on the button's own dark fill. */}
-            <span className="relative">{children}</span>
+            {/* The sweep, BEHIND the label and revealed left to right.
+                `clip-path: inset()` rather than `scaleX`, which would squash it
+                as it grew; it is also not a layout property, so the rule
+                against animating width/height still holds.
 
-            {/* The sweep, as a full SECOND COPY of the button revealed left to
-                right — background and label together.
-
-                `clip-path: inset()` rather than `scaleX`: a transform would
-                squash this copy's text as it grew, and the label has to stay
-                legible the whole way across. It is also not a layout property,
-                so it still satisfies the rule against animating width/height.
-
-                Two layers rather than one translucent overlay because the fill
-                INVERTS the contrast — white-on-near-black at rest, black-on-
-                green once filled. A single label cannot be readable on both,
-                and a green wash under white text is the worse half of that
-                trade at roughly 1.9:1.
+                One layer, not two, because the label is legible on the base and
+                on the fill alike — that is a property of the palette the caller
+                passes, and it stops being true the moment a bright fill is
+                used, which is why the success state restyles the whole button
+                (including its text colour) rather than sweeping.
 
                 Under reduced motion there is no sweep at all, but the HOLD IS
                 STILL REQUIRED: it is a safety affordance, not decoration, and
                 dropping it there would hand the least motion-tolerant users the
                 least protected button. */}
-            {!reduced && progress > 0 ? (
+            {!reduced && progress > 0 && !succeeded ? (
                 <span
                     aria-hidden
                     style={{ clipPath: `inset(0 ${(1 - progress) * 100}% 0 0)` }}
-                    className={cn(
-                        "absolute inset-0 inline-flex items-center justify-center",
-                        fillClassName ?? "bg-lantern text-black",
-                    )}
-                >
-                    {children}
-                </span>
+                    className={cn("absolute inset-0", fillClassName ?? "bg-white/20")}
+                />
             ) : null}
+
+            <span className="relative">{children}</span>
         </button>
     );
 }
