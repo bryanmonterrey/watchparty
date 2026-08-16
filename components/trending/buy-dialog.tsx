@@ -32,6 +32,8 @@ import { buyableChainId } from "@/lib/coin-feed/networks";
 import { getChain } from "@/lib/chains/registry";
 import { trpc } from "@/lib/trpc/client";
 import { NATIVE_TOKEN } from "@/lib/chains/swap/types";
+import { Squircle } from "@/components/ui/squircle";
+import { HoldButton } from "@/components/ui/hold-button";
 import { cn } from "@/lib/utils";
 
 /** Only what the dialog draws — deliberately not the trending row type, so the
@@ -238,7 +240,8 @@ export function BuyDialog({
                 {tradeable ? (
                     <>
                         {/* The amount, as the thing the dialog is actually about. */}
-                        <div className="flex flex-col items-center gap-3 rounded-3xl bg-white/[0.03] p-4">
+                        <Squircle asChild radius={24}>
+                        <div className="flex flex-col items-center gap-3 bg-white/[0.03] p-4">
                             <span className="self-start text-13 font-medium text-zinc-500">
                                 You&apos;re buying
                             </span>
@@ -272,8 +275,10 @@ export function BuyDialog({
                                 })}
                             </div>
                         </div>
+                        </Squircle>
 
-                        <div className="flex flex-col gap-2 rounded-3xl bg-white/[0.03] p-4">
+                        <Squircle asChild radius={24}>
+                        <div className="flex flex-col gap-2 bg-white/[0.03] p-4">
                             {isEvm ? (
                                 <>
                                     <Row label="You receive">
@@ -291,22 +296,28 @@ export function BuyDialog({
                             <Row label="24h volume">{compactUsd(coin.volume24hUsd)}</Row>
                             <Row label="Max slippage">{SLIPPAGE_BPS / 100}%</Row>
                         </div>
+                        </Squircle>
 
                         {quote.error && isEvm ? (
                             <p className="text-13 font-medium text-pastelred">{quote.error.message}</p>
                         ) : null}
 
-                        <button
-                            type="button"
-                            onClick={() => void onConfirm()}
+                        {/* HOLD, not click. This button spends real money and
+                            sits under a scrolling list, where a mis-tap used to
+                            be one click from an unwanted trade. The label says
+                            "Hold" because a button that ignores taps and
+                            explains nothing reads as broken.
+
+                            Still a rounded-full pill and never squircled, and
+                            still h-12 as a full-width panel CTA. */}
+                        <HoldButton
+                            onConfirm={() => void onConfirm()}
                             disabled={buying || (isEvm && !quote.data)}
-                            // h-12: a full-width CTA in a panel, per the button
-                            // height standard. The amount rides in the label so
-                            // the commit and the number are one thing.
+                            fillClassName="bg-black/25"
                             className="h-12 w-full cursor-pointer rounded-full bg-lantern text-base font-bold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
                         >
-                            {buying ? "Buying…" : `Buy ${amount} ${nativeSymbol}`}
-                        </button>
+                            {buying ? "Buying…" : `Hold to buy ${amount} ${nativeSymbol}`}
+                        </HoldButton>
 
                         {/* Funding, for when there is no native coin to spend.
                             A text action rather than a second filled button —
