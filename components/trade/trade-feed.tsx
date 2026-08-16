@@ -5,7 +5,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { TokenColumn } from "./token-column";
 import { TokenColumnHeader } from "./token-column-header";
-import { Menu2Icon } from "../icons";
+import { SettingsIcon } from "../icons";
 import { trpc } from "@/lib/trpc/client";
 import { getRealtimeClient, authenticateRealtimeClient } from "@/lib/supabase/realtime-client";
 import { useQuickBuy } from "@/hooks/use-quick-buy";
@@ -29,10 +29,13 @@ const EMPTY: Record<TokenStatus, TradeToken[]> = { new: [], migrating: [], migra
  *  near-migration color flip at 80. */
 const FINAL_STRETCH_AT = 70;
 
-/** The sticky header's height: 52px app-header spacer + 48px chain-picker row
- *  + 52px column headers + the row gaps. The columns' top pusher must match or
- *  rows start underneath the glass. */
-const HEADER_PUSH_PX = 168;
+/** The sticky header's height: 52px app-header spacer + 12px gap + 52px for the
+ *  single labels-and-controls row. The columns' top pusher must match or rows
+ *  start underneath the glass.
+ *
+ *  Was 168 when the controls had a row of their own; folding them into the last
+ *  column header removed that row (h-11 = 44px) and its gap (12px). */
+const HEADER_PUSH_PX = 112;
 
 export function TradeFeed() {
     const utils = trpc.useUtils();
@@ -154,21 +157,34 @@ export function TradeFeed() {
                 <div className="absolute inset-0 -z-10 pointer-events-none bg-canvas" />
                 {/* Spacer clears the app header (logo + menu overlay this row). */}
                 <div className="w-full h-[52px]" />
-                {/* Filter, then chain picker, pushed right. ONE filter button
-                    for the board rather than one per column: the dialog it
-                    opens has always applied to all three at once
+                {/* ONE row: the column labels AND the board controls.
+                    The controls ride in the LAST column's header rather than a
+                    row of their own — that keeps the labels in the same
+                    full-width `grid-cols-3` as the columns beneath them, so
+                    each label stays over its own column. A separate
+                    right-aligned row would have squeezed the label grid and
+                    floated the labels off their columns.
+
+                    ONE filter button for the board rather than one per column:
+                    the dialog it opens has always applied to all three at once
                     (`applyMemescopeFilters` runs over every column), so three
-                    identical triggers were three ways to open the same thing —
-                    and each implied it filtered only its own column.
+                    identical triggers were three ways to open the same thing.
                     Filter sits LEFT of the chain picker: chain is the coarser
                     choice and reads as the anchor on the edge. */}
-                <div className="flex w-full items-center justify-end gap-2 px-2">
+                <div className="flex-1 w-full grid grid-cols-3 gap-1 px-2">
+                    <TokenColumnHeader status="new" tokensCount={columns.new.length} />
+                    <TokenColumnHeader status="migrating" tokensCount={columns.migrating.length} />
+                    <TokenColumnHeader
+                        status="migrated"
+                        tokensCount={columns.migrated.length}
+                        right={
+                            <div className="flex items-center gap-2">
                     <button
                         onClick={openFilter}
                         aria-label="Filter coins"
                         className="relative flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-soft-gray-10 text-zinc-400 transition-colors hover:bg-soft-gray-15 hover:text-flexwhite"
                     >
-                        <Menu2Icon className="size-6" />
+                        <SettingsIcon filled className="size-6" />
                         {active && <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-lantern" />}
                     </button>
                     <GooDropdown
@@ -199,11 +215,9 @@ export function TradeFeed() {
                             ),
                         ]}
                     />
-                </div>
-                <div className="flex-1 w-full grid grid-cols-3 gap-1 px-2">
-                    <TokenColumnHeader status="new" tokensCount={columns.new.length} />
-                    <TokenColumnHeader status="migrating" tokensCount={columns.migrating.length} />
-                    <TokenColumnHeader status="migrated" tokensCount={columns.migrated.length} />
+                            </div>
+                        }
+                    />
                 </div>
             </div>
 
