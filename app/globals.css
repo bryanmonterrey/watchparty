@@ -1425,9 +1425,30 @@ input[type="range"].volume-slider::-webkit-slider-thumb {
    page scroll. */
 .overflow-auto:not(.overscroll-chain),
 .overflow-y-auto:not(.overscroll-chain),
-.overflow-x-auto:not(.overscroll-chain),
 .overflow-y-scroll:not(.overscroll-chain) {
   overscroll-behavior: contain;
+}
+
+/* A HORIZONTAL scroller gets the X axis only, and the difference is the whole
+   point of splitting it out.
+
+   `overflow-x: auto` does not leave the other axis alone — CSS computes a
+   `visible` paired with a non-visible to `auto`, so every one of these is
+   silently a vertical scroll container too, with nothing in it to scroll. Give
+   that `overscroll-behavior: contain` and a vertical wheel over the element is
+   at its Y boundary the instant it starts, with chaining to the page forbidden:
+   the page simply stops scrolling wherever the cursor happens to rest. It bites
+   only once the element is genuinely scrollable in X, which is why it reads as
+   random — a rail that fits its content behaves, the same component one item
+   wider does not. Reported on /trade and the coin page; it applies to every
+   horizontal scroller in the app (the rails, the category tabs, the cards and
+   end-screen timelines).
+
+   X stays contained. That axis is the one with somewhere to chain TO, and
+   letting a trackpad's horizontal overscroll through hands it to the browser's
+   back-navigation gesture. */
+.overflow-x-auto:not(.overscroll-chain) {
+  overscroll-behavior-x: contain;
 }
 
 /* ── "Learn more" hover: transitions.dev "learn more hover" ───────────────────
