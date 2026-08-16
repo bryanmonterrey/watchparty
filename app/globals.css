@@ -941,6 +941,81 @@ input[type="range"].volume-slider::-webkit-slider-thumb {
     border-radius: 8px;
   }
 
+  /* ACCORDION EXPAND — transitions.dev, vendored by hand.
+     Class names kept from the source so its provenance is obvious, same as the
+     prompt-kit/beui files. Lives here rather than in one component because
+     motion is a standard in this app, not a per-surface decision (see the
+     sonner toast override above).
+
+     Toggle `data-open` on `.t-acc`.
+
+     The custom properties are scoped to `.t-acc` rather than `:root` as the
+     source had them — identical behaviour, without four more globals in the
+     theme for one component to read. */
+  .t-acc {
+    --acc-expand: 250ms;
+    --acc-collapse: 250ms;
+    --acc-chevron: 250ms;
+    --acc-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* grid-template-rows 0fr -> 1fr animates height with NO JS measurement,
+     which is the whole point: measuring would need a layout read per frame,
+     and animating `height` is a layout property the design principles rule
+     out. The inner element does the clipping. */
+  .t-acc-panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows var(--acc-collapse) var(--acc-ease);
+  }
+  .t-acc[data-open="true"] .t-acc-panel {
+    grid-template-rows: 1fr;
+    transition: grid-template-rows var(--acc-expand) var(--acc-ease);
+  }
+
+  .t-acc-panel-inner {
+    overflow: hidden;
+    opacity: 0;
+    filter: blur(2px);
+    transition:
+      opacity var(--acc-collapse) var(--acc-ease),
+      filter var(--acc-collapse) var(--acc-ease);
+  }
+  .t-acc[data-open="true"] .t-acc-panel-inner {
+    opacity: 1;
+    filter: blur(0);
+    transition:
+      opacity var(--acc-expand) var(--acc-ease),
+      filter var(--acc-expand) var(--acc-ease);
+  }
+
+  /* Flip the chevron vertically to turn the "v" into a "^". scaleY(-1) about
+     the centre passes through a flat line at the midpoint — the same look as a
+     path morph, but it animates in every browser, unlike CSS `d:` morphing
+     which is Chromium-only. The path must be symmetric about the viewBox
+     centre for the flip to land on the "^"; non-scaling-stroke holds the
+     stroke width constant through it. */
+  .t-acc-chevron {
+    display: inline-flex;
+    transform: scaleY(1);
+    transform-origin: center;
+    transition: transform var(--acc-chevron) var(--acc-ease);
+  }
+  .t-acc-chevron path {
+    vector-effect: non-scaling-stroke;
+  }
+  .t-acc[data-open="true"] .t-acc-chevron {
+    transform: scaleY(-1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .t-acc-panel,
+    .t-acc-panel-inner,
+    .t-acc-chevron {
+      transition: none !important;
+    }
+  }
+
   /* Ambient glow video container.
      Per the README, the library inserts a canvas into video.parentElement.
      The container must NOT have overflow:hidden or the glow won't bleed out.
