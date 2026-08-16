@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDownRight01Icon, ArrowUpRight01Icon, StarIcon } from "@hugeicons/core-free-icons";
@@ -344,15 +344,6 @@ export function TrendingTable({ className }: { className?: string }) {
     const rows = useMemo(() => data?.pages.flatMap((p) => p.items) ?? [], [data]);
     const { sentinelRef: labelsSentinel, stuck: labelsStuck } = useStuck();
     const [boardRef, boardWidth] = useElementWidth<HTMLDivElement>();
-    // Render counter for the diagnostic below. If `data-board-width` reads 628
-    // while the wide column set is on screen, the very next question is "did
-    // this component re-render since the resize" — a stale-but-correct state
-    // and a live-but-ignored one look identical without it. Mutating a ref in
-    // render is impure (StrictMode double-invokes, so dev counts run high) and
-    // is acceptable only because nothing reads it for behaviour.
-    const renderCount = useRef(0);
-    renderCount.current += 1;
-
     const showVolume = boardWidth >= XL;
     const showWide = boardWidth >= THREE_XL;
     const columnVisibility = useMemo(
@@ -483,7 +474,6 @@ export function TrendingTable({ className }: { className?: string }) {
             ref={boardRef}
             data-board-width={boardWidth}
             data-board-cols={`${showVolume ? "v" : ""}${showWide ? "w" : ""}` || "narrow"}
-            data-board-renders={renderCount.current}
             className={className}
         >
             {/* The labels pin as the board scrolls under them, so you can still
