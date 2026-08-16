@@ -456,7 +456,25 @@ export function DataTable<TData extends RowData>({
     // `overflow-x-auto` even in page-flow mode: once every column is resized the
     // table switches to `w-max`, and without its own horizontal scroller that
     // would push the whole page sideways.
-    if (!virtualized) return <div className={cn("w-full overflow-x-auto", className)}>{body}</div>;
+    //
+    // ⚠️ EXCEPT when the header is sticky, because the two cannot coexist.
+    // `position: sticky` pins to the nearest SCROLLING ancestor, and
+    // `overflow-x: auto` makes this wrapper exactly that (CSS computes the
+    // other axis to `auto` too). So `stickyTop` stops meaning "below the app
+    // header" and starts meaning "below this div's own top edge" — which
+    // parked the trending board's labels ~116px down, floating over the first
+    // rows, once that table moved to DataTable.
+    //
+    // Skipping the wrapper is safe precisely where it is needed: the
+    // x-scroller only earns its place once columns have been RESIZED and the
+    // table switches to `w-max`. A sticky-header table that isn't `resizable`
+    // stays `min-w-full` and can never overflow horizontally, so it loses
+    // nothing here.
+    if (!virtualized) {
+        return stickyHeader && !resizable
+            ? <div className={cn("w-full", className)}>{body}</div>
+            : <div className={cn("w-full overflow-x-auto", className)}>{body}</div>;
+    }
 
     return (
         <div className={cn("w-full overflow-hidden", className)}>
