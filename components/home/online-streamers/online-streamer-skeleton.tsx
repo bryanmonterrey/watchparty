@@ -19,12 +19,12 @@ export function OnlineStreamerSkeleton() {
                             key={i}
                             className="flex items-center gap-3 border-2 border-[#17171B] bg-gray1/35 rounded-2xl p-1.5 pr-4 min-w-[140px] bg-[#0A0B0D] bg-dot-pattern"
                         >
-                            <Skeleton className="h-9 w-9 rounded-full bg-white/5 shrink-0" />
+                            <Skeleton className="h-9 w-9 rounded-full shrink-0" />
                             <div className="flex flex-col gap-1.5">
-                                <Skeleton className="h-3 w-16 rounded-full bg-white/10" />
+                                <Skeleton className="h-3 w-16 rounded-full" />
                                 <div className="flex items-center gap-1">
                                     <div className="w-1 h-1 rounded-full bg-white/5" />
-                                    <Skeleton className="h-2 w-8 rounded-full bg-white/5" />
+                                    <Skeleton className="h-2 w-8 rounded-full" />
                                 </div>
                             </div>
                         </div>

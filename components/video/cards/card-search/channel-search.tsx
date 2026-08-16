@@ -26,8 +26,8 @@ function ChannelGrid({
             <div className="grid grid-cols-5 gap-4">
                 {Array.from({ length: 10 }).map((_, i) => (
                     <div key={i} className="flex flex-col items-center gap-2">
-                        <Skeleton className="size-16 rounded-full bg-zinc-800" />
-                        <Skeleton className="h-3 w-3/4 rounded bg-zinc-800" />
+                        <Skeleton className="size-16 rounded-full" />
+                        <Skeleton className="h-3 w-3/4 rounded" />
                     </div>
                 ))}
             </div>

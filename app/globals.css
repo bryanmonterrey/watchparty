@@ -913,7 +913,25 @@ input[type="range"].volume-slider::-webkit-slider-thumb {
      nth-child phase offsets that rippled a group, and the reduced-motion
      override (nothing left to disable). Rounding is all that's left to
      configure. */
-  .shimmer-skeleton {
+  /* ONE skeleton colour app-wide, which is what /trade already rendered while
+     the rest of the app drifted: sixteen `<Skeleton>` call sites carried their
+     own `bg-zinc-700` / `bg-white/5` / `bg-zinc-800/50`, and those WON. Both
+     this rule and Tailwind's `bg-*` utilities live in `@layer utilities` and
+     both are single-class selectors, so the winner was decided by source order,
+     not by intent.
+
+     The attribute suffix is what fixes that: `[class]` always matches (every
+     skeleton has a class) and lifts these to specificity (0,2,0), which beats
+     any single utility without reaching for `!important`. `[data-slot=…]`
+     catches the `<Skeleton>` primitive; `.shimmer-skeleton` catches the plain
+     divs that use the class directly, as the trade column does.
+
+     ESCAPE HATCH, because the token's own note above sanctions a per-element
+     override when a skeleton sits on a surface LIGHTER than the canvas and
+     would otherwise read as a hole: use Tailwind's important suffix,
+     `bg-white/5!`. A plain `bg-*` is now inert here by design. */
+  .shimmer-skeleton[class],
+  [data-slot="skeleton"][class] {
     background-color: var(--color-skeleton);
   }
 

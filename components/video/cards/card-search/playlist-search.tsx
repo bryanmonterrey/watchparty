@@ -26,8 +26,8 @@ function PlaylistGrid({
             <div className="grid grid-cols-5 gap-4">
                 {Array.from({ length: 10 }).map((_, i) => (
                     <div key={i} className="flex flex-col gap-2">
-                        <Skeleton className="aspect-video rounded-lg bg-zinc-800" />
-                        <Skeleton className="h-3 w-3/4 rounded bg-zinc-800" />
+                        <Skeleton className="aspect-video rounded-lg" />
+                        <Skeleton className="h-3 w-3/4 rounded" />
                     </div>
                 ))}
             </div>

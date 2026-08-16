@@ -506,11 +506,19 @@ export function HomeCarouselSkeleton() {
                 {/* Active panel: blurred thumbnail with avatar + caption at the bottom. */}
                 <div className="relative h-full w-[min(760px,52vw)] shrink-0 overflow-hidden rounded-[20px] bg-muted">
                     <Skeleton style={activePulse} className="absolute inset-0 size-full rounded-none" />
+                    {/* These three sit ON TOP of the full-bleed skeleton above,
+                        so their backdrop is itself --color-skeleton. At the
+                        shared colour they'd be invisible and the panel would
+                        render as one featureless block, losing the avatar and
+                        caption shapes that make it read as this component.
+                        Hence the `!` — the documented escape hatch from the
+                        app-wide skeleton colour in globals.css, for a skeleton
+                        whose surface is lighter than the canvas. */}
                     <div className="absolute inset-x-0 bottom-0 flex items-end gap-3 p-6">
-                        <Skeleton style={activePulse} className="size-10 shrink-0 rounded-full bg-zinc-700" />
+                        <Skeleton style={activePulse} className="size-10 shrink-0 rounded-full bg-zinc-700!" />
                         <div className="min-w-0 flex-1 space-y-2">
-                            <Skeleton style={activePulse} className="h-5 w-1/2 bg-zinc-700" />
-                            <Skeleton style={activePulse} className="h-3.5 w-1/4 bg-zinc-700" />
+                            <Skeleton style={activePulse} className="h-5 w-1/2 bg-zinc-700!" />
+                            <Skeleton style={activePulse} className="h-3.5 w-1/4 bg-zinc-700!" />
                         </div>
                     </div>
                 </div>

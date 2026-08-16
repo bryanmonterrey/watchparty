@@ -40,7 +40,7 @@ export function DataTableSkeletonRows<TData extends RowData>({
                                 ) : (
                                     <div
                                         className={cn(
-                                            "h-3 rounded-full bg-soft-gray/15",
+                                            "h-3 rounded-full shimmer-skeleton",
                                             meta?.align === "right" ? "ml-auto w-10" : "w-2/3",
                                         )}
                                     />
