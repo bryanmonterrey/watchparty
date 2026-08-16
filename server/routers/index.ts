@@ -4,6 +4,7 @@ import { assistantRouter } from "./assistant";
 import { auditLogRouter } from "./auditLog";
 import { passkeyRouter } from "./passkey";
 import { walletRouter } from "./wallet";
+import { onrampRouter } from "./onramp";
 import { conversationRouter } from "./conversation";
 import { messageRouter } from "./message";
 import { encryptionRouter } from "./encryption";
@@ -63,6 +64,7 @@ export const appRouter = router({
     auditLog: auditLogRouter,
     passkey: passkeyRouter,
     wallet: walletRouter,
+    onramp: onrampRouter,
     conversation: conversationRouter,
     message: messageRouter,
     encryption: encryptionRouter,

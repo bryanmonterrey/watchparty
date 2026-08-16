@@ -146,6 +146,23 @@ export function BuyDialog({
         { enabled: !!coin && isEvm, staleTime: 20_000, retry: false },
     );
 
+    // Card funding. Asked BEFORE drawing the entry point so an unconfigured
+    // deployment renders nothing rather than a button that fails on click.
+    const onramp = trpc.onramp.support.useQuery(
+        { chain: chainId ?? "" },
+        { enabled: !!chainId, staleTime: 300_000, retry: false },
+    );
+    const fundSession = trpc.onramp.createStripeSession.useMutation();
+
+    const addFunds = React.useCallback(async () => {
+        if (!chainId) return;
+        const session = await fundSession.mutateAsync({ chain: chainId }).catch(() => null);
+        // Stripe's hosted page is the whole flow — card entry and KYC cannot
+        // happen in our UI. Unlike the GeckoTerminal redirect this replaced,
+        // there is no in-app equivalent to offer instead.
+        if (session?.redirectUrl) window.open(session.redirectUrl, "_blank", "noopener,noreferrer");
+    }, [chainId, fundSession]);
+
     if (!coin) return null;
 
     const buying = solBuyingId === coin.id || evmBuyingId === coin.id;
@@ -290,6 +307,31 @@ export function BuyDialog({
                         >
                             {buying ? "Buying…" : `Buy ${amount} ${nativeSymbol}`}
                         </button>
+
+                        {/* Funding, for when there is no native coin to spend.
+                            A text action rather than a second filled button —
+                            two stacked CTAs would compete, and this is the
+                            fallback, not the path. Hidden entirely unless the
+                            server says card funding is live for this chain, so
+                            an unconfigured deploy shows nothing at all. */}
+                        {onramp.data?.supported ? (
+                            <button
+                                type="button"
+                                disabled={fundSession.isPending}
+                                onClick={() => void addFunds()}
+                                className="cursor-pointer text-13 font-semibold text-zinc-500 transition-colors hover:text-white disabled:opacity-50"
+                            >
+                                {fundSession.isPending
+                                    ? "Opening…"
+                                    : `Add ${nativeSymbol} with card`}
+                            </button>
+                        ) : null}
+
+                        {fundSession.error ? (
+                            <p className="text-13 font-medium text-pastelred">
+                                {fundSession.error.message}
+                            </p>
+                        ) : null}
                     </>
                 ) : (
                     // On the board but not in the wallet registry: we can show
