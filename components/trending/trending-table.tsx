@@ -460,7 +460,23 @@ export function TrendingTable({ className }: { className?: string }) {
         // Measures ITSELF, not the viewport — home's centre column is narrower
         // than the window by both rails. Square and unpanelled: it sits directly
         // on the column's own fill rather than floating in a card.
-        <div ref={boardRef} className={className}>
+        // data-* mirrors the two values that decide the column set, because the
+        // React state behind them is otherwise unreadable from a live page and
+        // this board is auth-gated (so it can't be driven from a script).
+        //
+        // It exists to settle one question: the board was observed rendering the
+        // >=768 set inside a 628px column. Measuring the ELEMENT proves nothing
+        // — the element was 628 — so what is needed is the state the component
+        // actually decided on. If `data-board-width` reads 628 while Market cap
+        // is present, the width is fine and `columnVisibility` is not being
+        // applied; if it reads >=768, the measurement is stale-high and
+        // use-element-width is the culprit.
+        <div
+            ref={boardRef}
+            data-board-width={boardWidth}
+            data-board-cols={`${showVolume ? "v" : ""}${showWide ? "w" : ""}` || "narrow"}
+            className={className}
+        >
             {/* The labels pin as the board scrolls under them, so you can still
                 read which column is which a hundred rows down.
 
