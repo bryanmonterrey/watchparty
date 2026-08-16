@@ -470,10 +470,27 @@ export function DataTable<TData extends RowData>({
     // table switches to `w-max`. A sticky-header table that isn't `resizable`
     // stays `min-w-full` and can never overflow horizontally, so it loses
     // nothing here.
+    // `overscroll-chain overscroll-x-contain` on the horizontal scroller, and
+    // the pair is the whole point.
+    //
+    // globals.css gives EVERY `.overflow-x-auto` `overscroll-behavior: contain`
+    // — right for a panel that owns its scroll, wrong here. This wrapper only
+    // scrolls sideways, so a vertical wheel over it has nowhere to go, and
+    // `contain` stops that leftover delta chaining to the page: the wheel dies
+    // wherever the cursor is over the table. It only bites once the wrapper is
+    // genuinely scrollable, which is why /trade and the coin page (both
+    // `resizable`, so the table can go `w-max`) were stuck while the home board
+    // — never horizontally overflowing — was fine, and why testing it there
+    // came back clean.
+    //
+    // `.overscroll-chain` is globals.css's own documented opt-out, but it
+    // clears BOTH axes, and letting horizontal overscroll chain invites a
+    // trackpad swipe to trigger back-navigation. So the X axis is contained
+    // explicitly and only Y is allowed to reach the page.
     if (!virtualized) {
         return stickyHeader && !resizable
             ? <div className={cn("w-full", className)}>{body}</div>
-            : <div className={cn("w-full overflow-x-auto", className)}>{body}</div>;
+            : <div className={cn("w-full overflow-x-auto overscroll-chain overscroll-x-contain", className)}>{body}</div>;
     }
 
     return (
