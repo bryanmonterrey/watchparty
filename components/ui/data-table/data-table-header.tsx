@@ -97,7 +97,9 @@ export function DataTableHeader<TData extends RowData>({
                                     // are the same property, so which one wins would come
                                     // down to stylesheet order, not class order.
                                     sticky ? "sticky" : "relative",
-                                    "z-10 border-b border-border p-0 text-base font-semibold text-zinc-400",
+                                    // No rule under the labels — they read as a
+                                    // caption for the rows, not as a boxed header.
+                                    "z-10 p-0 text-base font-semibold text-zinc-400",
                                     meta?.hideClassName,
                                     // Drop indicators for the reorder drag — a hairline on the
                                     // edge the column would land against.
@@ -182,7 +184,7 @@ export function DataTableHeader<TData extends RowData>({
                     <th
                         aria-hidden
                         style={sticky ? { top: stickyTop } : undefined}
-                        className={cn("border-b border-border", sticky && "sticky z-10", className)}
+                        className={cn(sticky && "sticky z-10", className)}
                     />
                 </tr>
             ))}

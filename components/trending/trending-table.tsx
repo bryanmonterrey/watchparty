@@ -512,7 +512,7 @@ export function TrendingTable({ className }: { className?: string }) {
                     stickyHeader
                     stickyTop="var(--board-stick,0px)"
                     headerClassName={cn(
-                        "z-15 border-b-0 text-zinc-500 transition-colors duration-200",
+                        "z-15 text-zinc-500 transition-colors duration-200",
                         CELL_TEXT,
                         labelsStuck && "bg-canvas",
                     )}
