@@ -4,6 +4,7 @@ import React from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Token } from "@/db/schema/content"
+import { CoinImage } from "@/components/coins/coin-image";
 
 // Token chat lives with the creator — their channel chat is where holders
 // talk. The card is one tap into that room.
@@ -20,8 +21,7 @@ export function TokenChatCard({ token, creatorUsername }: { token: Token; creato
         >
             <div className="flex items-center gap-3">
                 <div className="size-10 rounded-full bg-zinc-800 overflow-hidden shrink-0">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    {token.imageUrl && <img src={token.imageUrl} alt={token.name} className="object-cover size-full" />}
+                    <CoinImage src={token.imageUrl} alt={token.name} className="size-full" />
                 </div>
                 <div className="flex flex-col">
                     <span className="text-lg font-bold text-zinc-200">{token.ticker} chat</span>

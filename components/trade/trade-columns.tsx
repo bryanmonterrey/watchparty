@@ -8,6 +8,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
 import { SolanaIcon } from "@/components/icons";
 import { createDataTableColumnHelper, type DataTableFeatures } from "@/components/ui/data-table";
+import { CoinImage } from "@/components/coins/coin-image";
 import type { TradeToken } from "./types";
 
 // The /trade board's columns. Split out of `trade-discover` because they are
@@ -66,10 +67,7 @@ function XIcon({ className }: { className?: string }) {
 function TokenAvatar({ token }: { token: TradeToken }) {
     return (
         <div className="size-12 shrink-0 overflow-hidden rounded-[14px] bg-zinc-800">
-            {token.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={token.imageUrl} alt={token.symbol} className="size-full object-cover" />
-            ) : null}
+            <CoinImage src={token.imageUrl} alt={token.symbol} className="size-full" />
         </div>
     );
 }

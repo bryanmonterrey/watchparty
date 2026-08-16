@@ -7,6 +7,7 @@ import { trpc } from "@/lib/trpc/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GooDropdown } from "@/components/ui/goo-dropdown";
 import { cn } from "@/lib/utils";
+import { CoinImage } from "@/components/coins/coin-image";
 import type { TokenStatus, TradeToken } from "./types";
 
 // Mobile trade from "public/mobile designs/Trade page mobile landing.svg":
@@ -38,10 +39,7 @@ function TokenRow({ token }: { token: TradeToken }) {
             {/* Token image with bonding ring + alert dot, per the design */}
             <div className="relative shrink-0">
                 <div className="size-14 overflow-hidden rounded-xl bg-muted ring-2 ring-lantern">
-                    {token.imageUrl && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={token.imageUrl} alt={token.name} className="size-full object-cover" loading="lazy" />
-                    )}
+                    <CoinImage src={token.imageUrl} alt={token.name} className="size-full" />
                 </div>
                 <span className="absolute -bottom-1 -right-1 size-4 rounded-full bg-pastelred ring-2 ring-card" />
             </div>

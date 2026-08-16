@@ -32,6 +32,7 @@ import { TokenDescription } from "@/components/tokens/token-description";
 import { TokenChatCard } from "@/components/tokens/token-chat-card";
 import type { Token } from "@/db/schema/content";
 import { cn } from "@/lib/utils";
+import { CoinImage } from "@/components/coins/coin-image";
 import { trpc } from "@/lib/trpc/client";
 import { chainLabel, explorerUrl, tradeUrl } from "@/lib/coin-feed/networks";
 import { HomeActionDock } from "@/components/home/home-action-dock";
@@ -145,12 +146,7 @@ function CoinHeader({ coin }: { coin: CoinViewData }) {
                 own name is the last thing that should be squeezed. */}
             <div className="flex min-w-0 shrink-0 items-center gap-3">
                 <div className="relative size-11 shrink-0">
-                    {coin.imageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={coin.imageUrl} alt="" className="size-full rounded-full object-cover" />
-                    ) : (
-                        <div className="size-full rounded-full bg-soft-gray-10" />
-                    )}
+                    <CoinImage src={coin.imageUrl} className="size-full rounded-full" />
                     {/* NO `p-1` here. Tailwind is border-box, so padding comes
                         OUT of the declared size: `size-5 p-1` rendered the chain
                         logo at 20 - 8 = 12px inside a black disc, which is why

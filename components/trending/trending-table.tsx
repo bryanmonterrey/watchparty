@@ -14,6 +14,7 @@ import { useQuickBuy } from "@/hooks/use-quick-buy";
 import { useBurst } from "@/hooks/use-burst";
 import { staggerPulse } from "@/lib/skeleton-stagger";
 import { stableHoverColor } from "@/lib/stable-hover-color";
+import { CoinImage } from "@/components/coins/coin-image";
 import { tradeUrl, trackedTokenId } from "@/lib/coin-feed/networks";
 import { useStuck } from "@/hooks/use-stuck";
 import type { AppRouter } from "@/server/routers";
@@ -256,12 +257,7 @@ function NameCell({ row }: { row: TrendingRow }) {
                 exists on several of them, but the reference's ticker line is
                 bare — a corner badge keeps both. */}
             <span className="relative shrink-0">
-                {row.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={row.imageUrl} alt="" loading="lazy" className="size-9 rounded-full object-cover" />
-                ) : (
-                    <span className="block size-9 rounded-full bg-white/[0.06]" />
-                )}
+                <CoinImage src={row.imageUrl} className="size-9 rounded-full" />
                 <ChainBadge
                     network={row.network}
                     className="absolute -bottom-0.5 rounded-full bg-black p-1 -right-0.5 ring-1 p-0 ring-black"

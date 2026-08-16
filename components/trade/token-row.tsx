@@ -12,6 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useHoverPrefetch } from "@/hooks/use-hover-prefetch";
 import { useInstantNav } from "@/hooks/use-instant-nav";
+import { CoinImage } from "@/components/coins/coin-image";
 import type { TradeToken } from "./types";
 import { SolanaIcon } from "../icons";
 
@@ -35,10 +36,7 @@ function formatCount(count: number): string {
 function TokenAvatar({ token }: { token: TradeToken }) {
     return (
         <div className="size-12 shrink-0 overflow-hidden rounded-[14px] bg-zinc-800">
-            {token.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={token.imageUrl} alt={token.symbol} className="size-full object-cover" />
-            ) : null}
+            <CoinImage src={token.imageUrl} alt={token.symbol} className="size-full" />
         </div>
     );
 }

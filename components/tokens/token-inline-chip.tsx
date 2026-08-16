@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { formatMarketCap } from "./market-cap-chip";
+import { CoinImage } from "@/components/coins/coin-image";
 
 // Compact token chip for identity rows (design brief §2): image + $TICKER +
 // bonding progress inline pre-migration, market cap once migrated. Links to
@@ -30,11 +31,7 @@ export function TokenInlineChip({ token, className }: { token: InlineChipToken; 
                 className,
             )}
         >
-            {token.imageUrl ? (
-                <img src={token.imageUrl} alt="" className="size-6 shrink-0 rounded-full object-cover" />
-            ) : (
-                <span className="size-6 shrink-0 rounded-full bg-lantern/20" />
-            )}
+            <CoinImage src={token.imageUrl} className="size-6 shrink-0 rounded-full" />
             <span className="text-sm font-bold text-white">${token.ticker}</span>
             {migrated ? (
                 token.marketCapUsd != null && (

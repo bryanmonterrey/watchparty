@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Token } from "@/db/schema/content"
 import { SolanaIcon, XIcon, TelegramIcon, GlobeIcon } from "../icons"
 import { CalloutButton } from "./callout-button"
+import { CoinImage } from "@/components/coins/coin-image";
 
 interface TokenHeaderProps {
     token: Token & {
@@ -44,12 +45,7 @@ export function TokenHeader({ token }: TokenHeaderProps) {
                 {/* Image + Info Row */}
                 <div className="flex gap-5 items-start">
                     <div className="size-16 sm:size-20 rounded-2xl bg-zinc-800/85 border border-zinc-700/30 overflow-hidden shrink-0 shadow-md">
-                        {token.imageUrl ? (
-                            <img src={token.imageUrl} alt={token.name} className="object-cover size-full animate-fade-in" />
-                        ) : (
-                            <div className="size-full flex items-center justify-center font-bold text-2xl text-zinc-400 bg-zinc-800">
-                            </div>
-                        )}
+                        <CoinImage src={token.imageUrl} alt={token.name} className="size-full animate-fade-in" />
                     </div>
                     
                     <div className="flex flex-col gap-2">
