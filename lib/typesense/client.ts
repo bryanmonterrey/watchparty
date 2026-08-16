@@ -1,4 +1,5 @@
 import Typesense from "typesense";
+import { sendDiscordAlert } from "@/lib/alerts/discord";
 
 export const typesenseClient = new Typesense.Client({
     nodes: [{
@@ -59,9 +60,26 @@ export function noteTypesenseFailure(err: unknown): void {
     failures += 1;
     if (failures >= TRIP_AFTER && Date.now() >= mutedUntil) {
         mutedUntil = Date.now() + MUTE_MS;
-        console.warn(
-            `[typesense] ${failures} consecutive failures — muting for ${MUTE_MS / 1000}s:`,
-            err instanceof Error ? err.message : err,
-        );
+        const message = err instanceof Error ? err.message : String(err);
+        console.warn(`[typesense] ${failures} consecutive failures — muting for ${MUTE_MS / 1000}s:`, message);
+
+        // Tripping the breaker is exactly the moment worth telling someone
+        // about: search is now returning nothing, and the degrade is designed
+        // to be invisible to the user. The cluster behind TYPESENSE_HOST was
+        // DELETED (NXDOMAIN, found 2026-08-13) and nobody knew — every write
+        // path swallowed the error as "non-critical" by design.
+        //
+        // Deduped an hour in Redis, which matters here because a dead host
+        // fails on every single request.
+        void sendDiscordAlert({
+            key: "typesense:down",
+            title: "Search is down — Typesense unreachable",
+            detail:
+                `${failures} consecutive failures; muted for ${MUTE_MS / 1000}s. Last error: ${message}. ` +
+                `Host ${process.env.TYPESENSE_HOST ?? "(unset)"}. ` +
+                `An ENOTFOUND here means the cluster is gone, not busy — check it still exists before debugging the client.`,
+            severity: "error",
+            windowSeconds: 3600,
+        });
     }
 }

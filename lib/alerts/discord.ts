@@ -13,7 +13,22 @@ import { redis } from "@/lib/cache";
 //   • deduped in Redis, because a quota outage means EVERY request fails and one
 //     alert per request would be thousands of messages in a minute
 
-const WEBHOOK = () => process.env.DISCORD_ALERT_WEBHOOK_URL;
+// ⚠️ Reads BOTH names, and that is not defensive coding — it is the fix for
+// this module having been dead in production since it was written.
+//
+// It only ever read `DISCORD_ALERT_WEBHOOK_URL`, which is set in NO env file
+// and is NOT among the worker's 95 secrets (verified 2026-08-15 against the
+// Cloudflare API). So `url` was always undefined, the guard below returned
+// immediately, and every alert this system could have raised was silently
+// dropped. The webhook that IS configured — a real Discord URL, live on the
+// worker — is called `ALERT_WEBHOOK_URL`, which only
+// app/api/webhooks/helius-treasury ever read.
+//
+// That is why nothing shouted for any of it: the Helius quota (2026-08-09), the
+// Phoenix ranker being down six days, the Typesense cluster being deleted. Each
+// was found by a human tripping over a symptom.
+const WEBHOOK = () =>
+    process.env.DISCORD_ALERT_WEBHOOK_URL ?? process.env.ALERT_WEBHOOK_URL;
 
 export type AlertSeverity = "warn" | "error";
 

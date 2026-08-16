@@ -2,6 +2,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { and, eq, inArray } from "drizzle-orm";
 import { rankCandidates } from "./server";
+import { sendDiscordAlert } from "@/lib/alerts/discord";
 import { getUserHistory } from "./history";
 import { FEED_RANKER_ENABLED } from "./config";
 import { withCache } from "@/lib/cache";
@@ -94,7 +95,36 @@ export async function rankFeedRows<T extends RankableRow>(
             })),
         });
     });
-    if (!ranked) return null; // service down → caller keeps chronological order
+    if (!ranked) {
+        // ── SAY SOMETHING ───────────────────────────────────────────────────
+        //
+        // Falling back to chronological is correct — a dead ranker must not
+        // take the feed down with it. Doing so SILENTLY is not: Phoenix was
+        // down from 2026-08-09 to 2026-08-15 and this branch ran for every
+        // signed-in viewer on every request for six days without producing one
+        // error, one log line, or one alert. It was found only because the
+        // fallback branch itself happened to have a pagination bug.
+        //
+        // The root cause was a closed GCP billing account, which no amount of
+        // retrying would have fixed — so the value here is entirely in the
+        // telling.
+        //
+        // Deduped for an hour in Redis by `sendDiscordAlert`, which matters
+        // precisely because the failure mode is "every request": one alert per
+        // hour, not one per viewer per page.
+        void sendDiscordAlert({
+            key: "feed-ranker:down",
+            title: "Feed ranker is down — serving chronological",
+            detail:
+                `Phoenix returned no ranking for surface "${surface}". ` +
+                `Every signed-in viewer is getting reverse-chronological order. ` +
+                `Check ${process.env.PHOENIX_API_URL ?? "PHOENIX_API_URL (unset)"}/health — ` +
+                `if it 503s, check the GCP billing account is open before debugging the service.`,
+            severity: "error",
+            windowSeconds: 3600,
+        });
+        return null; // caller keeps chronological order
+    }
 
     // Mutual-follow set is fetched fresh (cheap, indexed) because the ranked
     // result is cached across users' follow-graph changes.
