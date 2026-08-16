@@ -26,12 +26,13 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { CoinImage } from "@/components/coins/coin-image";
 import { ChainBadge } from "./chain-badge";
 import { changeTone, compactUsd, percentAbs, tokenPrice } from "./trending-format";
-import { useQuickBuy, QUICK_BUY_PRESETS } from "@/hooks/use-quick-buy";
+import { useQuickBuy } from "@/hooks/use-quick-buy";
 import { useEvmQuickBuy, presetsForSymbol } from "@/hooks/use-evm-quick-buy";
 import { buyableChainId } from "@/lib/coin-feed/networks";
 import { getChain } from "@/lib/chains/registry";
 import { trpc } from "@/lib/trpc/client";
 import { NATIVE_TOKEN } from "@/lib/chains/swap/types";
+import { PayWithSelect, PAY_WITH_CARD, type PayAsset } from "./pay-with-select";
 import { Squircle } from "@/components/ui/squircle";
 import { HoldButton } from "@/components/ui/hold-button";
 import { cn } from "@/lib/utils";
@@ -58,6 +59,12 @@ const amountKey = (symbol: string) => `trade:quickBuy:${symbol}`;
 /** The board's own slippage, stated rather than assumed — wider than a wallet's
  *  default because a board buy is chasing a moving coin. */
 const SLIPPAGE_BPS = 200;
+
+/** Balances report native SOL as the ...111 mint, but Jupiter routes from
+ *  WRAPPED SOL (...112). One digit apart and not interchangeable: quoting
+ *  against the native mint simply finds no route. */
+const SOL_NATIVE_MINT = "So11111111111111111111111111111111111111111";
+const SOL_WSOL_MINT = "So11111111111111111111111111111111111111112";
 
 /**
  * Token counts span from millions of a memecoin to fractions of a blue chip, so
@@ -109,43 +116,101 @@ export function BuyDialog({
 
     // Hooks cannot sit behind a branch, so both mount; neither does any work
     // until it is actually invoked.
-    const { quickBuy, amountSol, setAmountSol, buyingId: solBuyingId } = useQuickBuy();
+    const { quickBuy, buyingId: solBuyingId } = useQuickBuy();
     const { evmBuy, buyingId: evmBuyingId } = useEvmQuickBuy();
 
-    const presets = isSolana ? QUICK_BUY_PRESETS : presetsForSymbol(nativeSymbol);
-    const [evmAmount, setEvmAmount] = React.useState<number>(presets[1]);
+    /** Contract of the token being SPENT: null = the chain's native coin. */
+    const [payWith, setPayWith] = React.useState<string | null>(null);
 
-    // Restore the stored amount for THIS native coin, on the client only —
-    // reading localStorage during render would desync SSR and hydration.
-    React.useEffect(() => {
-        if (!nativeSymbol || isSolana) return;
-        const list = presetsForSymbol(nativeSymbol);
-        const saved = Number(localStorage.getItem(amountKey(nativeSymbol)));
-        setEvmAmount(list.includes(saved) ? saved : list[1]);
-    }, [nativeSymbol, isSolana]);
-
-    const setEvmAmountPersisted = React.useCallback(
-        (v: number) => {
-            setEvmAmount(v);
-            if (nativeSymbol) localStorage.setItem(amountKey(nativeSymbol), String(v));
-        },
-        [nativeSymbol],
+    // Spendable balances. Two sources because Solana's path carries Helius,
+    // NFTs and spam filtering that the generic per-chain providers don't.
+    const solAssets = trpc.wallet.getWalletAssets.useQuery(
+        {},
+        { enabled: !!coin && isSolana, staleTime: 30_000, retry: false },
+    );
+    const evmAssets = trpc.wallet.getChainAssets.useQuery(
+        { chain: chainId ?? "" },
+        { enabled: !!coin && isEvm, staleTime: 30_000, retry: false },
     );
 
-    const amount = isSolana ? amountSol : evmAmount;
+    const assets: PayAsset[] = React.useMemo(() => {
+        if (isSolana) {
+            return (solAssets.data?.tokens ?? [])
+                // Only what can actually pay for something.
+                .filter((t) => (t.balance ?? 0) > 0)
+                .map((t) => ({
+                    // Native SOL is the ...111 mint in balances but Jupiter
+                    // routes from WRAPPED SOL, so it is normalised to `null`
+                    // here and re-expanded to WSOL at execution.
+                    contract: t.mint === SOL_NATIVE_MINT ? null : t.mint,
+                    symbol: t.symbol,
+                    decimals: t.decimals,
+                    balance: t.balance,
+                    usdValue: t.usdValue,
+                    icon: t.icon,
+                }));
+        }
+        if (isEvm) {
+            return (evmAssets.data?.assets ?? [])
+                .filter((a) => a.balance > 0)
+                .map((a) => ({
+                    contract: a.isNative ? null : a.contract,
+                    symbol: a.symbol,
+                    decimals: a.decimals,
+                    balance: a.balance,
+                    usdValue: a.usdValue,
+                    icon: a.icon,
+                }));
+        }
+        return [];
+    }, [isSolana, isEvm, solAssets.data, evmAssets.data]);
 
-    // Live estimate for EVM, keyed by amount so the number on screen is the one
-    // that executes. Solana has no equivalent: Jupiter returns base units with
-    // no decimals to scale them by, so the figure would be a guess.
+    const assetsLoading = isSolana ? solAssets.isLoading : evmAssets.isLoading;
+
+    // Falls back to the native coin, then to whatever is held — a user with
+    // only USDC should not be shown an empty ETH row they cannot spend.
+    const payAsset =
+        payWith === PAY_WITH_CARD
+            ? undefined
+            : assets.find((a) => a.contract === payWith) ??
+              assets.find((a) => a.contract === null) ??
+              assets[0];
+
+    const payingByCard = payWith === PAY_WITH_CARD;
+    const spendSymbol = payAsset?.symbol ?? nativeSymbol;
+    const presets = presetsForSymbol(spendSymbol);
+    const [amount, setAmountState] = React.useState<number>(presets[1]);
+
+    // Restore the stored amount for THIS spent token, on the client only —
+    // reading localStorage during render would desync SSR and hydration.
+    React.useEffect(() => {
+        if (!spendSymbol) return;
+        const list = presetsForSymbol(spendSymbol);
+        const saved = Number(localStorage.getItem(amountKey(spendSymbol)));
+        setAmountState(list.includes(saved) ? saved : list[1]);
+    }, [spendSymbol]);
+
+    const setAmount = React.useCallback(
+        (v: number) => {
+            setAmountState(v);
+            if (spendSymbol) localStorage.setItem(amountKey(spendSymbol), String(v));
+        },
+        [spendSymbol],
+    );
+
+    // Live estimate for EVM, keyed by amount AND by what's being spent, so the
+    // number on screen is the one that executes. Solana has no equivalent:
+    // Jupiter returns base units with no decimals to scale them by, so the
+    // figure would be a guess.
     const quote = trpc.wallet.getEvmSwapQuote.useQuery(
         {
             chain: chainId ?? "",
-            fromToken: NATIVE_TOKEN,
+            fromToken: payAsset?.contract ?? NATIVE_TOKEN,
             toToken: coin?.tokenAddress ?? "",
             amountHuman: String(amount),
             slippageBps: SLIPPAGE_BPS,
         },
-        { enabled: !!coin && isEvm, staleTime: 20_000, retry: false },
+        { enabled: !!coin && isEvm && !payingByCard, staleTime: 20_000, retry: false },
     );
 
     // Card funding. Asked BEFORE drawing the entry point so an unconfigured
@@ -168,19 +233,40 @@ export function BuyDialog({
     if (!coin) return null;
 
     const buying = solBuyingId === coin.id || evmBuyingId === coin.id;
-    const setAmount = isSolana ? setAmountSol : setEvmAmountPersisted;
     const receive = quote.data ? scaleUnits(quote.data.toAmount, quote.data.toDecimals) : null;
+    // You cannot spend what you do not have, and a quote for it just wastes a
+    // round trip — so this gates the CTA rather than only warning.
+    const overBalance = !payingByCard && !!payAsset && amount > payAsset.balance;
 
     const close = () => onOpenChange(false);
 
     const onConfirm = async () => {
+        // Card is funding, not a swap: it puts the native coin in the wallet,
+        // and the user comes back and buys with it. Stripe cannot deliver an
+        // arbitrary memecoin, so this cannot be one uninterrupted flow.
+        if (payingByCard) {
+            await addFunds();
+            return;
+        }
         if (isSolana) {
-            const result = await quickBuy({
-                id: coin.id,
-                tokenAddress: coin.tokenAddress,
-                symbol: coin.symbol,
-                imageUrl: coin.imageUrl,
-            });
+            const result = await quickBuy(
+                {
+                    id: coin.id,
+                    tokenAddress: coin.tokenAddress,
+                    symbol: coin.symbol,
+                    imageUrl: coin.imageUrl,
+                },
+                payAsset
+                    ? {
+                          // Native SOL normalises to `null` in the picker but
+                          // Jupiter routes from WRAPPED SOL — re-expanded here.
+                          mint: payAsset.contract ?? SOL_WSOL_MINT,
+                          decimals: payAsset.decimals,
+                          symbol: payAsset.symbol,
+                          amount,
+                      }
+                    : undefined,
+            );
             // "no-wallet" already opened the wallet drawer; leaving this up
             // would stack two surfaces asking for the same thing.
             if (result === "done" || result === "no-wallet") close();
@@ -191,7 +277,7 @@ export function BuyDialog({
                 { id: coin.id, symbol: coin.symbol, tokenAddress: coin.tokenAddress },
                 chainId,
                 String(amount),
-                nativeSymbol,
+                { token: payAsset?.contract ?? NATIVE_TOKEN, symbol: spendSymbol },
                 SLIPPAGE_BPS,
             );
             if (result === "done") close();
@@ -248,7 +334,7 @@ export function BuyDialog({
 
                             <div className="text-4xl leading-none font-bold tracking-tight tabular-nums text-white">
                                 {amount}
-                                <span className="ml-1.5 text-xl font-bold text-zinc-500">{nativeSymbol}</span>
+                                <span className="ml-1.5 text-xl font-bold text-zinc-500">{spendSymbol}</span>
                             </div>
 
                             <div className="grid w-full grid-cols-4 gap-2">
@@ -258,7 +344,7 @@ export function BuyDialog({
                                         <button
                                             key={p}
                                             type="button"
-                                            disabled={buying}
+                                            disabled={buying || (!!payAsset && p > payAsset.balance)}
                                             onClick={() => setAmount(p)}
                                             // Pills stay rounded-full and are
                                             // never squircled (principles §1).
@@ -276,6 +362,18 @@ export function BuyDialog({
                             </div>
                         </div>
                         </Squircle>
+
+                        {/* What funds it. Under the amount because it changes
+                            what that amount MEANS — the presets, the big number
+                            and the quote all re-key off the selected token. */}
+                        <PayWithSelect
+                            assets={assets}
+                            loading={assetsLoading}
+                            selected={payWith}
+                            onSelect={setPayWith}
+                            cardEnabled={!!onramp.data?.supported}
+                            disabled={buying}
+                        />
 
                         <Squircle asChild radius={24}>
                         <div className="flex flex-col gap-2 bg-white/[0.03] p-4">
@@ -312,31 +410,25 @@ export function BuyDialog({
                             still h-12 as a full-width panel CTA. */}
                         <HoldButton
                             onConfirm={() => void onConfirm()}
-                            disabled={buying || (isEvm && !quote.data)}
+                            disabled={
+                                buying ||
+                                overBalance ||
+                                (isEvm && !payingByCard && !quote.data) ||
+                                (payingByCard && fundSession.isPending)
+                            }
                             fillClassName="bg-black/25"
                             className="h-12 w-full cursor-pointer rounded-full bg-lantern text-base font-bold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
                         >
-                            {buying ? "Buying…" : `Hold to buy ${amount} ${nativeSymbol}`}
+                            {buying
+                                ? "Buying…"
+                                : overBalance
+                                  ? `Not enough ${spendSymbol}`
+                                  : payingByCard
+                                    ? fundSession.isPending
+                                        ? "Opening…"
+                                        : `Hold to add ${nativeSymbol} with card`
+                                    : `Hold to buy ${amount} ${spendSymbol}`}
                         </HoldButton>
-
-                        {/* Funding, for when there is no native coin to spend.
-                            A text action rather than a second filled button —
-                            two stacked CTAs would compete, and this is the
-                            fallback, not the path. Hidden entirely unless the
-                            server says card funding is live for this chain, so
-                            an unconfigured deploy shows nothing at all. */}
-                        {onramp.data?.supported ? (
-                            <button
-                                type="button"
-                                disabled={fundSession.isPending}
-                                onClick={() => void addFunds()}
-                                className="cursor-pointer text-13 font-semibold text-zinc-500 transition-colors hover:text-white disabled:opacity-50"
-                            >
-                                {fundSession.isPending
-                                    ? "Opening…"
-                                    : `Add ${nativeSymbol} with card`}
-                            </button>
-                        ) : null}
 
                         {fundSession.error ? (
                             <p className="text-13 font-medium text-pastelred">

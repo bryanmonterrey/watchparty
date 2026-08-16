@@ -2,11 +2,17 @@
 
 import { useCallback, useState } from "react";
 import { trpc } from "@/lib/trpc/client";
-import { NATIVE_TOKEN } from "@/lib/chains/swap/types";
 import { showSwapToast } from "@/components/wallet/wallet-drawer/views/swap/swap-transaction-toast";
 
+// Re-exported so existing importers keep working; the table itself moved to
+// lib/trade/buy-presets, because presets follow the SPENT token and the
+// pay-with picker can select one no chain calls native.
+export { presetsForSymbol } from "@/lib/trade/buy-presets";
+
 /**
- * Buy a coin on any EVM chain with that chain's native coin.
+ * Buy a coin on any EVM chain, paying with the native coin OR any ERC-20 the
+ * user holds — `executeLifiSwap` handles the allowance when the input is a
+ * token, so the only thing the picker has to supply is which contract.
  *
  * Thin on purpose — `wallet.swapEvm` already owns the hard parts: it resolves
  * the user's derived address, converts the human amount using the token's real
@@ -23,20 +29,6 @@ import { showSwapToast } from "@/components/wallet/wallet-drawer/views/swap/swap
  * ("open your wallet to set one up") instead of a dead button.
  */
 
-/** Presets in each chain's own native coin. A single shared list would mean
- *  wildly different money per chain — 0.05 is ~$95 of ETH and ~$0.02 of POL. */
-const PRESETS_BY_SYMBOL: Record<string, readonly number[]> = {
-    ETH: [0.001, 0.005, 0.01, 0.05],
-    BNB: [0.005, 0.02, 0.05, 0.2],
-    POL: [5, 20, 50, 200],
-    HYPE: [0.2, 1, 2, 10],
-};
-
-const FALLBACK_PRESETS = [0.01, 0.05, 0.1, 0.5] as const;
-
-export const presetsForSymbol = (symbol: string): readonly number[] =>
-    PRESETS_BY_SYMBOL[symbol] ?? FALLBACK_PRESETS;
-
 type EvmBuyToken = {
     id: string;
     symbol: string;
@@ -52,7 +44,7 @@ export function useEvmQuickBuy() {
             token: EvmBuyToken,
             chain: string,
             amountHuman: string,
-            nativeSymbol: string,
+            pay: { token: string; symbol: string },
             slippageBps: number,
         ): Promise<"done" | "failed"> => {
             if (buyingId) return "failed";
@@ -60,7 +52,7 @@ export function useEvmQuickBuy() {
 
             const symbol = token.symbol.replace(/^\$/, "");
             const swapToast = showSwapToast({
-                inputSymbol: nativeSymbol,
+                inputSymbol: pay.symbol,
                 outputSymbol: symbol,
                 inputAmount: amountHuman,
                 outputAmount: "",
@@ -70,7 +62,7 @@ export function useEvmQuickBuy() {
                 swapToast.setStep("signing");
                 const result = await swap.mutateAsync({
                     chain,
-                    fromToken: NATIVE_TOKEN,
+                    fromToken: pay.token,
                     toToken: token.tokenAddress,
                     amountHuman,
                     slippageBps,

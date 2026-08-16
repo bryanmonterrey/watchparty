@@ -19,6 +19,17 @@ type QuickBuyToken = {
     imageUrl?: string | null;
 };
 
+/** What to spend. Any SPL token works as the input — Jupiter routes from any
+ *  mint — so this is not limited to SOL; the picker just needs the decimals to
+ *  build base units and the symbol for the toast. */
+export type QuickBuyPayWith = {
+    mint: string;
+    decimals: number;
+    symbol: string;
+    /** Display units of `mint`, not lamports. */
+    amount: number;
+};
+
 /**
  * One-click buy for board rows: preset SOL amount → Jupiter quote → the shared
  * swap engine (adapter or Swig signing, trade-verify settlement, progress
@@ -51,7 +62,10 @@ export function useQuickBuy() {
 
     const walletAddress = adapterPublicKey?.toBase58() || session?.user?.wallet_address || null;
 
-    const quickBuy = useCallback(async (token: QuickBuyToken): Promise<"done" | "no-wallet" | "no-mint" | "failed"> => {
+    const quickBuy = useCallback(async (
+        token: QuickBuyToken,
+        payWith?: QuickBuyPayWith,
+    ): Promise<"done" | "no-wallet" | "no-mint" | "failed"> => {
         if (!token.tokenAddress) return "no-mint";
         if (!walletAddress) {
             window.dispatchEvent(new Event(OPEN_WALLET_DRAWER_EVENT));
@@ -59,21 +73,34 @@ export function useQuickBuy() {
         }
         if (buyingId) return "failed";
 
+        // Defaults to the stored SOL preset, which is what the in-row buttons
+        // on /trade still pass nothing for. Only the buy dialog, which has a
+        // pay-with picker, supplies anything else.
+        const pay: QuickBuyPayWith = payWith ?? {
+            mint: SOL_WSOL,
+            decimals: 9,
+            symbol: "SOL",
+            amount: amountSol,
+        };
+
         setBuyingId(token.id);
         const symbol = token.symbol.replace(/^\$/, "");
         const swapToast = showSwapToast({
-            inputSymbol: "SOL",
+            inputSymbol: pay.symbol,
             outputSymbol: symbol,
-            inputAmount: String(amountSol),
+            inputAmount: String(pay.amount),
             outputAmount: "",
             outputIcon: token.imageUrl ?? undefined,
         });
 
         try {
             const quote = await getQuoteMutation.mutateAsync({
-                inputMint: SOL_WSOL,
+                inputMint: pay.mint,
                 outputMint: token.tokenAddress,
-                amount: Math.floor(amountSol * 1e9),
+                // Number math is safe ONLY because Solana mints top out at 9
+                // decimals: 1 token is 1e9, far inside 2^53. The EVM side has
+                // to scale on strings for exactly the reason this doesn't.
+                amount: Math.floor(pay.amount * 10 ** pay.decimals),
                 slippageBps: 200, // 2% — board buys prioritize landing
             });
 
