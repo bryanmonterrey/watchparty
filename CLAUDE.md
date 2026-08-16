@@ -74,8 +74,19 @@ Package manager is **bun** (`bun.lock`). Runtime is Next.js 16 (App Router, Turb
 
 - **Type-check (the only verify step; there is no typecheck script):**
   ```bash
-  rm -rf .next/dev/types && NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit
+  rm -rf .next/dev/types && NODE_OPTIONS=--max-old-space-size=4096 npx tsc --noEmit
   ```
+  **4096, not 8192 — this machine has 8GB of RAM.** A heap ceiling equal to
+  total RAM lets Node grow until macOS is swapping, and on 2026-08-15 that was
+  killing runs outright: three consecutive type-checks died with an empty log
+  and no exit marker, which reads exactly like a pass if you only check the
+  exit code. Measured after the fact: 4096 completed in **786s** with the same
+  zero errors.
+  ⚠️ Caveat on that number: ~17GB of disk was freed in the same session (the
+  volume was 98% full, so macOS could not grow swap at all), and no control run
+  at 8192 was done afterwards. So 4096 is proven SUFFICIENT, not proven faster
+  than 8192 on a healthy disk. Keep it anyway — a ceiling at 100% of RAM has no
+  upside, and the default (~2GB here) genuinely does OOM.
   Both parts are load-bearing — a plain `npx tsc --noEmit` **reports success on
   broken code**:
   - **Stale `.next/dev/types`** (left by a previous `next dev`) contains *syntax*
