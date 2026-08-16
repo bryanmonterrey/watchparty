@@ -204,7 +204,7 @@ export function AlertRow({ event }: { event: AlertEvent }) {
     // content at px-2 was almost touching the outline and cutting the corner.
     // `relative` is what the hover tint's inset-0 resolves against.
     const className = cn(
-        "group/alert-hover relative flex w-full items-start gap-2.5 px-3 py-3 text-left transition-colors",
+        "group/alert-hover relative flex w-full items-start gap-2.5 px-4 py-5.5 text-left transition-colors",
         "border-b border-white/[0.06] last:border-b-0",
     );
 

@@ -12,14 +12,20 @@ import { ViewsStat } from "@/components/ui/views-stat";
 // component. Home selects (a button), the others navigate (a link).
 //
 // h-28 rows: a 16:9 thumbnail at that height would be ~199px wide and leave
-// almost nothing for text in a 300px rail, so the thumbnail is fixed at 85px
-// (still 16:9) and the info takes the rest.
+// almost nothing for text in a 300px rail, so the thumbnail is fixed at 125px
+// and the info takes the rest. 125x75 is 5:3, slightly taller than 16:9 (which
+// would be 125x70) — deliberate, to give the thumb more presence in the rail.
+// INFO_INDENT below is derived from this width; change both together.
 export const RAIL_ROW = "flex h-fit p-2 w-full items-start justify-start gap-3 text-left transition-colors";
-export const RAIL_THUMB = "relative h-[45px] w-[85px] shrink-0 overflow-hidden rounded-xs bg-muted";
+export const RAIL_THUMB = "relative h-[75px] w-[125px] shrink-0 overflow-hidden rounded-xs bg-muted";
 
 /** Thumb width + the row's gap-3 — what the extra lines indent to so they sit
- *  under the text column rather than under the thumbnail. */
-const INFO_INDENT = "pl-[97px]";
+ *  under the text column rather than under the thumbnail.
+ *
+ *  DERIVED: keep in sync with RAIL_THUMB's width. 125 + 12 = 137. It was 97
+ *  against an 85px thumb, and a thumb resize that misses this line puts the
+ *  indented lines back UNDER the thumbnail — the one thing it exists to stop. */
+const INFO_INDENT = "pl-[137px]";
 
 interface RailRowProps {
     thumbnailUrl?: string | null;

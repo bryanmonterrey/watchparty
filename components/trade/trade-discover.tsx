@@ -274,14 +274,20 @@ export function TradeDiscover() {
                         drawer's spring, like every other tab strip in the app.
                         `relative` on the track is what the absolutely-positioned
                         pill measures against. */}
-                    <div className="relative flex items-center rounded-full bg-white/5 p-1">
+                    {/* h-11 on the TRACK, not the buttons. The track carries
+                        `p-1`, so an h-11 button made the control 52px — taller
+                        than every other button on the row, which are h-11 per
+                        the button-height standard. The inner buttons are h-9
+                        (44 − 2×4) so the outer measurement is the one that
+                        matches. */}
+                    <div className="relative flex h-11 items-center rounded-full bg-white/5 p-1">
                         {TIMEFRAMES.map((tf) => (
                             <button
                                 key={tf}
                                 onClick={() => setTimeframe(tf)}
                                 className={cn(
-                                    "relative z-10 h-11 cursor-pointer rounded-full px-3 text-base font-bold transition-colors",
-                                    timeframe === tf ? "text-long" : "text-zinc-400 hover:text-white",
+                                    "relative z-10 h-9 cursor-pointer rounded-full px-3 text-base font-bold transition-colors",
+                                    timeframe === tf ? "text-twitter2" : "text-zinc-400 hover:text-white",
                                 )}
                             >
                                 {timeframe === tf && (
