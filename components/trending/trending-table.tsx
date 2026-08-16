@@ -10,12 +10,12 @@ import { trpc } from "@/lib/trpc/client";
 import { trendingSnapshotStore } from "@/lib/snapshot/surfaces";
 import { viewerKey, queryInputKey } from "@/lib/snapshot/keys";
 import { useSnapshot, useSnapshotPlaceholder } from "@/hooks/use-snapshot";
-import { useQuickBuy } from "@/hooks/use-quick-buy";
 import { useBurst } from "@/hooks/use-burst";
 import { staggerPulse } from "@/lib/skeleton-stagger";
 import { stableHoverColor } from "@/lib/stable-hover-color";
 import { CoinImage } from "@/components/coins/coin-image";
-import { tradeUrl, trackedTokenId } from "@/lib/coin-feed/networks";
+import { BuyDialog } from "./buy-dialog";
+import { trackedTokenId } from "@/lib/coin-feed/networks";
 import { useStuck } from "@/hooks/use-stuck";
 import type { AppRouter } from "@/server/routers";
 import type { SortKey } from "@/server/routers/trending";
@@ -46,7 +46,6 @@ import { LoadMore } from "@/components/interior/load-more";
 
 type RouterOutput = inferRouterOutputs<AppRouter>;
 type TrendingRow = RouterOutput["trending"]["list"]["items"][number];
-type QuickBuy = ReturnType<typeof useQuickBuy>["quickBuy"];
 
 type Timeframe = "5m" | "1h" | "6h" | "24h";
 
@@ -158,43 +157,29 @@ function ChangeCell({ pct }: { pct: number | null }) {
     );
 }
 
-/** Buy, for real: Solana routes through the in-app quick-buy (Jupiter quote →
- *  the wallet's swap engine, same as the /trade board), every other chain opens
- *  the pool's venue. A row we can't actually fill would be worse than no cell. */
-function BuyCell({ row, quickBuy, buying }: { row: TrendingRow; quickBuy: QuickBuy; buying: boolean }) {
-    const shared = cn(CELL_TEXT, "text-twitter2 font-bold transition-opacity hover:opacity-80");
-
-    if (row.network === "solana") {
-        return (
-            <button
-                type="button"
-                // relative z-10 clears the name cell's stretched link, which
-                // covers the whole row.
-                className={cn(shared, "relative z-10 w-fit cursor-pointer disabled:opacity-50")}
-                disabled={buying}
-                onClick={() => {
-                    void quickBuy({
-                        id: row.id,
-                        tokenAddress: row.tokenAddress,
-                        symbol: row.symbol,
-                        imageUrl: row.imageUrl,
-                    });
-                }}
-            >
-                {buying ? "Buying…" : "Buy"}
-            </button>
-        );
-    }
-
+/** Buy opens the confirm dialog — it no longer fills anything by itself.
+ *
+ *  It used to do two different things, and neither showed you the purchase
+ *  before it happened: a Solana row fired a swap IMMEDIATELY at whatever preset
+ *  was last stored, and every other chain opened GeckoTerminal, i.e. the button
+ *  named an action and then handed you to another product to perform it. Both
+ *  now route through <BuyDialog>, which shows the coin, the amount and a
+ *  confirm, and executes on BOTH chains. */
+function BuyCell({ row, onBuy }: { row: TrendingRow; onBuy: (row: TrendingRow) => void }) {
     return (
-        <a
-            href={tradeUrl(row.network, row.tokenAddress, row.poolAddress)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(shared, "relative z-10 w-fit")}
+        <button
+            type="button"
+            // relative z-10 clears the name cell's stretched link, which covers
+            // the whole row.
+            className={cn(
+                CELL_TEXT,
+                "text-twitter2 font-bold transition-opacity hover:opacity-80",
+                "relative z-10 w-fit cursor-pointer",
+            )}
+            onClick={() => onBuy(row)}
         >
             Buy
-        </a>
+        </button>
     );
 }
 
@@ -317,10 +302,13 @@ export function TrendingTable({ className }: { className?: string }) {
         [sorting],
     );
 
-    // One quick-buy instance for the whole board, not one per row: the hook
-    // holds four tRPC mutations and the wallet connection, and fifty copies of
-    // that is fifty subscriptions for a button most rows never press.
-    const { quickBuy, buyingId } = useQuickBuy();
+    // The row whose Buy was pressed, or null. The board no longer holds a
+    // quick-buy instance at all: <BuyDialog> owns the wallet hooks, so the four
+    // tRPC mutations and the wallet connection are paid for by the one dialog
+    // instead of by a board that mostly never buys anything. The dialog also
+    // owns the in-flight state, which is why the cell has none — while a buy
+    // runs, the modal is covering the row it started from.
+    const [buyCoin, setBuyCoin] = useState<TrendingRow | null>(null);
 
     const snapshotKey = useMemo(() => viewerKey(null, "trending", queryInputKey(input)), [input]);
     const snapshotPlaceholder = useSnapshotPlaceholder(trendingSnapshotStore.read, snapshotKey);
@@ -437,7 +425,7 @@ export function TrendingTable({ className }: { className?: string }) {
                 enableSorting: false,
                 meta: { width: w.buy, skeleton: (i, c) => bar(i, c, "h-3 w-8") },
                 cell: ({ row }) => (
-                    <BuyCell row={row.original} quickBuy={quickBuy} buying={buyingId === row.original.id} />
+                    <BuyCell row={row.original} onBuy={setBuyCoin} />
                 ),
             }),
             helper.display({
@@ -453,7 +441,9 @@ export function TrendingTable({ className }: { className?: string }) {
                 cell: ({ row }) => <StarCell row={row.original} />,
             }),
         ];
-    }, [boardWidth, quickBuy, buyingId]);
+        // setBuyCoin is a stable setState, so the columns no longer rebuild when
+        // a buy starts or finishes — they used to, on every quick-buy state change.
+    }, [boardWidth]);
 
     return (
         // Measures ITSELF, not the viewport — home's centre column is narrower
@@ -560,6 +550,12 @@ export function TrendingTable({ className }: { className?: string }) {
                     labels={{ end: "End of the list" }}
                 />
             )}
+
+            {/* ONE dialog for the whole board, driven by which row was pressed
+                — not one per row, which would mount fifty copies of the wallet
+                hooks it holds. It renders null until `buyCoin` is set, so a
+                board nobody buys from costs nothing. */}
+            <BuyDialog coin={buyCoin} onOpenChange={(open) => !open && setBuyCoin(null)} />
         </div>
     );
 }
