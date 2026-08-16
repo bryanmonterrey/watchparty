@@ -21,7 +21,7 @@ const formatJoinedDate = (date: Date | null) => {
 
 export function AboutCard({ user }: { user: UserType }) {
     return (
-        <div className="flex flex-col gap-4 rounded-[20px] bg-panel p-6 ring-1 ring-panel">
+        <div className="flex flex-col gap-4 rounded-[20px] bg-panel p-4 ring-1 ring-panel">
             <h2 className="flex items-center gap-2 text-lg font-black tracking-tight text-white">
                 About {user.name}
                 {user.verifiedTier === "verified" && <VerifiedBadgeIcon className="size-5" />}

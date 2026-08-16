@@ -108,7 +108,7 @@ export function StreamWatchPage({ host, onShowProfile }: StreamWatchPageProps) {
                     About tab renders, under the stream the way Twitch does it.
                     Full column width, matching the description block above. */}
                 {!isLoading && (
-                    <div className="mt-4">
+                    <div className="mt-12">
                         <AboutCard user={host} />
                     </div>
                 )}

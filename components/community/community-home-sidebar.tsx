@@ -47,7 +47,7 @@ export function CommunityHomeSidebar() {
     ];
 
     return (
-        <div className="flex flex-col h-full py-4 w-76 shrink-0 border-x border-flexwhite/10 overflow-hidden max-md:w-full">
+        <div className="flex flex-col h-full py-4 w-76 shrink-0 border-l border-flexwhite/10 overflow-hidden max-md:w-full">
             <div className="p-3 -mt-1 px-2 h-12 flex items-center text-lg justify-center">
                 {/* Outlined, not filled. border-border is load-bearing: the
                     globals.css hairline remap is an ATTRIBUTE selector

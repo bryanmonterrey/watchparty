@@ -59,18 +59,23 @@ export async function drawFaviconBadge(count: number, baseIcon: string = BASE_IC
     const y = size - h;
     const r = h / 2;
 
-    // Punch a transparent gutter first so the badge reads as a chip sitting on
-    // the mark rather than blending into it.
-    ctx.save();
-    ctx.globalCompositeOperation = "destination-out";
-    ctx.beginPath();
-    ctx.roundRect(x - 4, y - 4, w + 8, h + 8, r + 4);
-    ctx.fill();
-    ctx.restore();
+    // The ring around the pill used to be punched out with `destination-out`,
+    // i.e. transparent — which on a tab shows the browser's chrome through it
+    // and reads as a stray border in whatever colour that happens to be. It is
+    // the notification red instead, so the badge is one solid shape.
+    //
+    // Clamped to the canvas: the pill is centred and already spans the full
+    // width at three digits, so the ring would otherwise be cropped by the
+    // edges unevenly and pull the badge off centre.
+    const g = 4;
+    const ox = Math.max(0, x - g);
+    const oy = Math.max(0, y - g);
+    const ow = Math.min(size - ox, w + g * 2);
+    const oh = Math.min(size - oy, h + g * 2);
 
     ctx.fillStyle = NOTIFICATION_COLOR;
     ctx.beginPath();
-    ctx.roundRect(x, y, w, h, r);
+    ctx.roundRect(ox, oy, ow, oh, Math.min(r + g, oh / 2));
     ctx.fill();
 
     ctx.fillStyle = BADGE_INK;
