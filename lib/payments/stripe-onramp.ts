@@ -21,10 +21,24 @@ const STRIPE_API = "https://api.stripe.com/v1/crypto/onramp_sessions";
 /**
  * Registry chain id -> Stripe's network + the coin worth delivering there.
  *
- * SHORTER than our chain list, and that is the point: Stripe onramps to
- * Ethereum, Base, Polygon, Solana and Bitcoin, and does NOT support BNB Chain,
- * HyperEVM or Robinhood Chain. Those simply have no card funding path, and
- * saying so beats a session that fails after the user has entered card details.
+ * SHORTER than our chain list, and that is the point. Verified against Stripe's
+ * own currency table on 2026-08-16 (docs.stripe.com/crypto/onramp/stripe-hosted),
+ * which lists: ETH (Ethereum), ETH (Base), SOL, POL, MATIC, BTC, AVAX, XLM, and
+ * USDC on Ethereum/Solana/Polygon/Avalanche/Base/Stellar.
+ *
+ * **BNB Chain is absent from that list entirely**, as are HyperEVM and
+ * Robinhood Chain. There is no card-funding path to them through Stripe at any
+ * price — not a configuration we are missing. A user can still BUY a BNB coin
+ * with BNB they already hold; they just cannot get that BNB here. Funding those
+ * needs a different onramp (MoonPay does cover BNB) or a bridge from a chain
+ * Stripe does support.
+ *
+ * Regional limits that will look like bugs when reported: the onramp is US + EU
+ * only (excluding Hawaii), ETH (Base) and MATIC are NOT available in the EU,
+ * and several USDC variants are unavailable in New York. Stripe returns
+ * `crypto_onramp_unsupported_country` / `crypto_onramp_unsupportable_customer`
+ * for those, which is why `customer_ip_address` is forwarded — it lets Stripe
+ * refuse BEFORE the user starts entering details.
  *
  * The native coin rather than USDC because funding exists here to PAY FOR a
  * swap, and every swap spends gas in the native coin — landing USDC on a chain
@@ -44,6 +58,14 @@ export const stripeOnrampChains = (): string[] => Object.keys(STRIPE_NETWORKS);
 
 export const stripeSupportsChain = (chainId: string): boolean => chainId in STRIPE_NETWORKS;
 
+/**
+ * The one knob. Note that a key alone is NOT sufficient: the Stripe account
+ * must also be APPROVED for the crypto onramp — a separate application in the
+ * dashboard, reviewed in about 48h, and it gates the sandbox as well as live.
+ * Until that clears, a perfectly valid key still returns an error from
+ * `/v1/crypto/onramp_sessions`, which is surfaced verbatim rather than
+ * swallowed so the reason is visible.
+ */
 export const stripeOnrampConfigured = (): boolean => !!process.env.STRIPE_SECRET_KEY?.trim();
 
 export type OnrampSession = {
