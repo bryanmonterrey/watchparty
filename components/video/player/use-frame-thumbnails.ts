@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { previewCaptureSize } from "./preview-size";
 
 /**
  * Scrubber previews drawn from the video itself: a detached <video> + <canvas>
@@ -27,16 +28,24 @@ export function useFrameThumbnails(videoUrl?: string | null) {
         v.src = videoUrl;
         videoRef.current = v;
 
+        // Sized to the card it will be shown in, times the display's pixel
+        // ratio. It was a hardcoded 160x90 rendered into a 280x158 card — on a
+        // retina screen that is 560x316 device pixels drawn from 160x90, so the
+        // browser was inventing ~12x the pixels it had. That is the blur.
+        const { width: capW, height: capH } = previewCaptureSize();
         const c = document.createElement("canvas");
-        c.width = 160;
-        c.height = 90;
+        c.width = capW;
+        c.height = capH;
         canvasRef.current = c;
 
         const onSeeked = () => {
             const ctx = c.getContext("2d");
             if (ctx) {
-                ctx.drawImage(v, 0, 0, 160, 90);
-                setThumbDataUrl(c.toDataURL("image/jpeg", 0.75));
+                ctx.drawImage(v, 0, 0, capW, capH);
+                // 0.85, up from 0.75: at 160x90 the extra bytes were wasted on
+                // a frame too small to show detail, but at full card size the
+                // artefacts are visible and the file is still small.
+                setThumbDataUrl(c.toDataURL("image/jpeg", 0.85));
             }
             seekingRef.current = false;
             // If hover moved while seek was in flight, seek again to latest target

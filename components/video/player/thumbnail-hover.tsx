@@ -2,6 +2,9 @@
 
 import { DoubleArrowUpIcon } from "@/components/icons";
 import type { VttThumb } from "./use-preview-thumbnails";
+// Shared with the frame capture so the card size and the capture size cannot
+// drift apart — see preview-size.
+import { CARD_W, CARD_H } from "./preview-size";
 
 interface ThumbnailHoverProps {
     src: string | null;
@@ -13,8 +16,6 @@ interface ThumbnailHoverProps {
     leftPercent: number; // clamped 5..95
 }
 
-const CARD_W = 280;
-const CARD_H = 158;
 
 export function ThumbnailHover({ src, vttThumb, time, chapterTitle, formatTime, leftPercent }: ThumbnailHoverProps) {
     const clampedLeft = Math.min(Math.max(leftPercent, 5), 95);
