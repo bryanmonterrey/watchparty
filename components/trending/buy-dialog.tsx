@@ -779,8 +779,8 @@ export function BuyDialog({
                             }
                             succeeded={succeeded}
                             fillClassName="bg-twitter/55"
-                            successClassName="h-12 w-full bg-long text-base font-bold text-black"
-                            className="h-12 w-full cursor-pointer bg-white/30 text-base font-bold text-white hover:bg-white/35 disabled:opacity-50"
+                            successClassName="h-14 w-full bg-long text-base font-bold text-black"
+                            className="h-14 w-full cursor-pointer bg-white/30 text-base font-bold text-white hover:bg-white/35 disabled:opacity-50"
                         >
                             {succeeded
                                 ? "Bought"
