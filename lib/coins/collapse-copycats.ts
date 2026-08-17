@@ -31,10 +31,19 @@ export interface Copycat {
     name?: string | null;
     volume?: number | null;
     marketCap?: number | null;
+    /** Measured pool depth in USD, or null/undefined when not yet screened. */
+    liquidity?: number | null;
     /** In-house launches beat external rows of the same identity: they carry
      *  creator, live and curve state the external row does not have. */
     external?: boolean;
 }
+
+/**
+ * Liquidity below which a row is not a real market — mirrors the board's own
+ * floor. Kept as a literal rather than imported from `lib/coin-feed/quality`
+ * so this module stays dependency-free for the /trade callers.
+ */
+const REAL_MARKET_LIQUIDITY_USD = 1_000;
 
 export function collapseCopycats<T extends Copycat>(list: readonly T[]): T[] {
     if (list.length < 2) return [...list];
@@ -54,6 +63,31 @@ export function collapseCopycats<T extends Copycat>(list: readonly T[]): T[] {
         const tInHouse = !t.external;
         if (curInHouse !== tInHouse) {
             if (tInHouse) best.set(key, t);
+            continue;
+        }
+        // LIQUIDITY FIRST, then volume.
+        //
+        // Volume alone picked the wash-traded twin. Measured on the live board
+        // 2026-08-17, four rows of "Z | Gen Z":
+        //
+        //     solana  $0.28 liq   $10.8M vol   <- won on volume
+        //     solana  $0.29 liq    $9.3M vol
+        //     solana  $0.02 liq    $7.0M vol
+        //     bnb   $2,487 liq    $2.0M vol
+        //
+        // $10.8M of volume against $0.28 of liquidity is not a market, it is a
+        // loop. Volume is nearly free to manufacture — wash trading costs only
+        // fees — while liquidity is capital that has to actually sit in the
+        // pool. So when the two disagree about which twin is real, liquidity is
+        // the one to believe, and picking on volume actively REWARDED the fake.
+        //
+        // Only decisive when a row clears the floor and the other does not:
+        // liquidity is null until the per-coin screen runs, and an unmeasured
+        // row must not lose to a measured-but-tiny one just for being newer.
+        const curReal = (cur.liquidity ?? 0) >= REAL_MARKET_LIQUIDITY_USD;
+        const tReal = (t.liquidity ?? 0) >= REAL_MARKET_LIQUIDITY_USD;
+        if (curReal !== tReal) {
+            if (tReal) best.set(key, t);
             continue;
         }
         // Keep the copy traders are actually in.

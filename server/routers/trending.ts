@@ -354,7 +354,15 @@ export const trendingRouter = router({
         // AFTER the gates, not before: collapsing first could keep a spam copy
         // as the survivor and then hide it, losing the legitimate one behind it.
         const deduped = collapseCopycats(
-            clean.map((i) => ({ ...i, volume: i.volume24hUsd ?? 0, marketCap: i.marketCapUsd ?? 0 })),
+            // `liquidity` is what decides between twins now — without it the
+            // comparator falls back to volume, which is the thing a wash trade
+            // manufactures. See collapse-copycats.
+            clean.map((i) => ({
+                ...i,
+                volume: i.volume24hUsd ?? 0,
+                marketCap: i.marketCapUsd ?? 0,
+                liquidity: i.liquidityUsd ?? null,
+            })),
         );
 
         // ── 24h sparkline, one query for the whole page ──────────────────
