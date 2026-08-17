@@ -37,7 +37,7 @@ import {
 } from "@/db/schema/auth";
 import { OAUTH_SCOPE_IDS } from "@/lib/developer/oauth-scopes";
 import { randHex } from "@/lib/api-gate";
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { APIError } from "better-auth/api";
 import { Resend } from "resend";
 
@@ -615,11 +615,58 @@ export const auth = betterAuth({
 
             // Compare case-insensitively: EVM addresses are case-insensitive
             // (checksummed vs lowercase), so a strict !== falsely rejects them.
+            //
+            // `user.wallet_address` only mirrors the PRIMARY wallet, so matching
+            // it is sufficient but NOT necessary. An account may hold up to 15
+            // linked Solana wallets (`linked_wallets`) plus external EVM ones
+            // (better-auth's `walletAddress`), and signing in with any of them
+            // is legitimate — the whole point of the feature.
+            //
+            // Enforcing equality with the single primary column is what broke
+            // extension sign-in: the wallet resolves to the right account, then
+            // gets rejected as "Wallet mismatch" for not being the primary. The
+            // check has to ask "is this wallet THIS USER'S", not "is this wallet
+            // the one we happen to mirror".
             if (
               dbUser.wallet_address &&
               dbUser.wallet_address.toLowerCase() !== String(address).toLowerCase()
             ) {
-              throw new APIError("UNAUTHORIZED", { message: "Wallet mismatch" });
+              const signer = String(address);
+              // Only on the miss, so the common primary-wallet login still
+              // costs nothing extra.
+              const [linkedSol] = await db
+                .select({ id: linkedWallets.id })
+                .from(linkedWallets)
+                .where(
+                  and(
+                    eq(linkedWallets.user_id, sessionData.userId),
+                    // Exact, not lowercased: base58 is case-SENSITIVE, and
+                    // folding case here would let a different valid address
+                    // authenticate as this one.
+                    eq(linkedWallets.address, signer),
+                  ),
+                )
+                .limit(1);
+
+              const [linkedEvm] = linkedSol
+                ? [undefined]
+                : await db
+                    .select({ id: walletAddress.id })
+                    .from(walletAddress)
+                    .where(
+                      and(
+                        eq(walletAddress.userId, sessionData.userId),
+                        // Lowercased HERE only: EVM addresses are hex and
+                        // case-insensitive, so a checksummed signer must still
+                        // match a stored lowercase row.
+                        sql`lower(${walletAddress.address}) = ${signer.toLowerCase()}`,
+                      ),
+                    )
+                    .limit(1);
+
+              if (!linkedSol && !linkedEvm) {
+                throw new APIError("UNAUTHORIZED", { message: "Wallet mismatch" });
+              }
             }
           }
 
