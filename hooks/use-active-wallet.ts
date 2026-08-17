@@ -55,8 +55,16 @@ export function useActiveWallet(enabled = true) {
         setActiveAddress(localStorage.getItem(ACTIVE_KEY));
     }, []);
 
+    // `.wallets`, not the payload itself: the procedure returns
+    // `{ wallets, max }`. This read `(wallets.data ?? []) as LinkedWallet[]`,
+    // which made `list` the OBJECT and crashed every consumer with
+    // "l.map is not a function" — and the `as` cast is what let it compile.
+    //
+    // No cast now, deliberately. tsc had the right answer and was told to be
+    // quiet; asserting a shape you did not check is how a runtime crash gets
+    // through a clean type-check.
     const list: LinkedWallet[] = React.useMemo(
-        () => (wallets.data ?? []) as LinkedWallet[],
+        () => wallets.data?.wallets ?? [],
         [wallets.data],
     );
 
