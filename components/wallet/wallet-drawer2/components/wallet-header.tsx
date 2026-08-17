@@ -18,6 +18,8 @@ import {
 import { useDeviceSessions, MAX_DEVICE_ACCOUNTS } from "@/hooks/use-device-sessions";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { useWallet } from "@solana/wallet-adapter-react";
+import { useActiveWallet } from "@/hooks/use-active-wallet";
+import { shortenWalletAddress } from "@/lib/utils";
 import { WalletReadyState } from "@solana/wallet-adapter-base";
 
 /**
@@ -89,9 +91,22 @@ export function WalletHeader({
         connecting,
     } = useWallet();
 
-    // Only wallets actually present in the browser. Wallet Standard registers
-    // detected extensions; offering ones the user doesn't have installed would
-    // be a dead row.
+    // THE ACCOUNT'S OWN WALLETS, not the browser's.
+    //
+    // This list used to be `adapterWallets` filtered to installed — i.e. every
+    // extension present in the browser, whether or not it had anything to do
+    // with this account. That answers "what could I connect", which is a
+    // different question from "which of my wallets am I using", and it showed
+    // Phantom to someone who had never linked a Phantom wallet.
+    //
+    // `linked_wallets` is the real answer and already includes the embedded
+    // Swig wallet, so one source covers the whole list — the hardcoded
+    // "Watchparty wallet" row is gone with it.
+    const { wallets: linked, active, setActive: setActiveWallet } = useActiveWallet(accountOpen);
+    const adapterAddress = adapterPublicKey?.toBase58() ?? null;
+
+    // Still needed, but only to CONNECT one: an extension wallet can't sign
+    // until its extension is connected, and only the browser knows what's here.
     const installedWallets = adapterWallets.filter(
         (w) => w.readyState === WalletReadyState.Installed,
     );
@@ -183,62 +198,91 @@ export function WalletHeader({
                             Wallet in use
                         </p>
                         <ul>
-                            <li
-                                className={`flex items-center rounded-2xl transition-colors ${usingEmbedded ? "bg-white/[0.06]" : "hover:bg-white/[0.04]"}`}
-                            >
-                                <button
-                                    onClick={() => {
-                                        if (usingEmbedded) { setAccountOpen(false); return; }
-                                        disconnect().catch(() => appToast.error("Couldn't switch wallet"));
-                                        setAccountOpen(false);
-                                    }}
-                                    disabled={connecting}
-                                    className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-2xl px-3 py-2.5 text-left"
-                                >
-                                    <span className="grid size-9 shrink-0 place-items-center rounded-full bg-white/[0.06]">
-                                        <WalletIcon className="size-4 text-zinc-400" />
-                                    </span>
-                                    <span className="min-w-0 flex-1">
-                                        <span className="block truncate text-sm font-semibold text-white">
-                                            Watchparty wallet
-                                        </span>
-                                        <span className="block text-xs font-medium text-zinc-500">Built in</span>
-                                    </span>
-                                    {usingEmbedded && <Check className="size-4 shrink-0 text-white" />}
-                                </button>
-                            </li>
-
-                            {installedWallets.map((w) => {
-                                const isActive = !usingEmbedded && activeAdapter?.adapter.name === w.adapter.name;
+                            {linked.map((w) => {
+                                const isEmbedded = w.source === "swig";
+                                // "In use" is about what SIGNS: the embedded
+                                // wallet is "no adapter connected", any other is
+                                // the adapter whose pubkey matches this row.
+                                const inUse = isEmbedded
+                                    ? usingEmbedded
+                                    : adapterAddress === w.address;
+                                const isActive = active?.address === w.address;
+                                // Its extension's own icon when we can identify
+                                // it (only possible while connected), else a
+                                // generic badge — the DB records that a wallet
+                                // is external, never which product it is.
+                                const icon =
+                                    !isEmbedded && inUse ? activeAdapter?.adapter.icon : undefined;
                                 return (
                                     <li
-                                        key={w.adapter.name}
+                                        key={w.id}
                                         className={`flex items-center rounded-2xl transition-colors ${isActive ? "bg-white/[0.06]" : "hover:bg-white/[0.04]"}`}
                                     >
                                         <button
                                             onClick={() => {
-                                                if (isActive) { setAccountOpen(false); return; }
-                                                // autoConnect is on in SolanaProvider, so
-                                                // selecting is enough — it connects itself.
-                                                select(w.adapter.name);
+                                                setActiveWallet(w.address);
+                                                // Switching TO the embedded
+                                                // wallet is a disconnect; there
+                                                // is no adapter to select.
+                                                if (isEmbedded && !usingEmbedded) {
+                                                    disconnect().catch(() =>
+                                                        appToast.error("Couldn't switch wallet"),
+                                                    );
+                                                } else if (!isEmbedded && !inUse) {
+                                                    // We cannot aim a specific
+                                                    // extension at a specific
+                                                    // address — the user picks
+                                                    // the account inside it — so
+                                                    // connect and let the match
+                                                    // resolve itself.
+                                                    const first = installedWallets[0];
+                                                    if (first) select(first.adapter.name);
+                                                    else
+                                                        appToast.error(
+                                                            "Install the extension that holds this wallet",
+                                                        );
+                                                }
                                                 setAccountOpen(false);
                                             }}
                                             disabled={connecting}
                                             className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-2xl px-3 py-2.5 text-left"
                                         >
-                                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                                            <img
-                                                src={w.adapter.icon}
-                                                alt=""
-                                                className="size-9 shrink-0 rounded-full object-cover"
-                                            />
-                                            <span className="min-w-0 flex-1">
-                                                <span className="block truncate text-sm font-semibold text-white">
-                                                    {w.adapter.name}
+                                            {icon ? (
+                                                /* eslint-disable-next-line @next/next/no-img-element */
+                                                <img
+                                                    src={icon}
+                                                    alt=""
+                                                    className="size-9 shrink-0 rounded-full object-cover"
+                                                />
+                                            ) : (
+                                                <span className="grid size-9 shrink-0 place-items-center rounded-full bg-white/[0.06]">
+                                                    <WalletIcon className="size-4 text-zinc-400" />
                                                 </span>
-                                                <span className="block text-xs font-medium text-zinc-500">Extension</span>
+                                            )}
+                                            <span className="min-w-0 flex-1">
+                                                {/* The ADDRESS identifies the
+                                                    wallet — a label cannot, when
+                                                    several are "Extension".
+                                                    Shortened through the
+                                                    canonical helper, which is
+                                                    the only place allowed to
+                                                    truncate one. */}
+                                                <span className="block truncate text-sm font-semibold text-white">
+                                                    {shortenWalletAddress(w.address)}
+                                                </span>
+                                                <span className="flex items-center gap-1.5 text-xs font-medium text-zinc-500">
+                                                    {isEmbedded ? "Built in" : "Extension"}
+                                                    {w.isPrimary ? (
+                                                        <span className="rounded-full bg-white/[0.06] px-1.5 py-0.5 text-xs font-semibold text-zinc-400">
+                                                            Main
+                                                        </span>
+                                                    ) : null}
+                                                    {!isEmbedded && !inUse ? (
+                                                        <span className="text-zinc-600">· not connected</span>
+                                                    ) : null}
+                                                </span>
                                             </span>
-                                            {isActive && <Check className="size-4 shrink-0 text-white" />}
+                                            {inUse && <Check className="size-4 shrink-0 text-white" />}
                                         </button>
                                     </li>
                                 );
