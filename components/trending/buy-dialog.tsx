@@ -27,6 +27,8 @@ import { CoinImage } from "@/components/coins/coin-image";
 import { ChainBadge } from "./chain-badge";
 import { changeTone, compactUsd, percentAbs, tokenPrice } from "./trending-format";
 import { useQuickBuy } from "@/hooks/use-quick-buy";
+import { useActiveWallet } from "@/hooks/use-active-wallet";
+import { useWallet } from "@solana/wallet-adapter-react";
 import { useEvmQuickBuy, presetsForSymbol } from "@/hooks/use-evm-quick-buy";
 import { buyableChainId } from "@/lib/coin-feed/networks";
 import { getChain } from "@/lib/chains/registry";
@@ -135,12 +137,22 @@ export function BuyDialog({
         setSucceeded(false);
     }, [coin?.id]);
 
+    // WHICH wallet is being spent from. An account can hold several linked
+    // Solana wallets and `user.wallet_address` mirrors only the primary, so
+    // without this the dialog reads the embedded wallet while the money sits in
+    // a linked extension one.
+    const { wallets, active, setActive, hasChoice } = useActiveWallet(!!coin);
+    const { publicKey: adapterPublicKey } = useWallet();
+
     // Spendable balances from EVERY chain, not just the coin's — cross-chain
     // routing means an ETH balance on Base can buy a coin on BNB. Two sources
     // because Solana's path carries Helius, NFTs and spam filtering that the
     // generic per-chain providers don't.
+    //
+    // Explicitly addressed to the ACTIVE wallet rather than defaulting to the
+    // session's primary — that default is the bug this replaces.
     const solAssets = trpc.wallet.getWalletAssets.useQuery(
-        {},
+        active ? { address: active.address } : {},
         { enabled: !!coin, staleTime: 30_000, retry: false },
     );
     const evmAssets = trpc.wallet.getAllChainAssets.useQuery(undefined, {
@@ -348,12 +360,29 @@ export function BuyDialog({
     // Exactly one of the two queries is ever enabled, so this is a selection,
     // not a merge. Keeping it in one place stops the receive line and the CTA
     // gate from disagreeing about which route is live.
-    const active = bridging ? crossQuote : quote;
-    const receive = active.data ? scaleUnits(active.data.toAmount, active.data.toDecimals) : null;
+    const activeQuote = bridging ? crossQuote : quote;
+    const receive = activeQuote.data ? scaleUnits(activeQuote.data.toAmount, activeQuote.data.toDecimals) : null;
     const needsQuote = (isEvm || bridging) && !payingByCard;
     // You cannot spend what you do not have, and a quote for it just wastes a
     // round trip — so this gates the CTA rather than only warning.
     const overBalance = !payingByCard && !!payAsset && amount > payAsset.balance;
+
+    /**
+     * Can the ACTIVE wallet actually sign right now?
+     *
+     * Balances and signing have to agree. `useQuickBuy` signs with the wallet
+     * ADAPTER whenever one is connected and falls back to the embedded key
+     * otherwise — so showing an extension wallet's balances while the adapter
+     * is disconnected would spend from the embedded wallet instead, and showing
+     * the embedded wallet's while an extension is connected would do the
+     * reverse. Either way the money leaves a different wallet than the one on
+     * screen, which is the one outcome this must never do.
+     */
+    const adapter = adapterPublicKey?.toBase58() ?? null;
+    const signerMismatch =
+        !!active &&
+        isSolana &&
+        (active.source === "extension" ? adapter !== active.address : adapter !== null);
 
     const close = () => onOpenChange(false);
 
@@ -529,6 +558,34 @@ export function BuyDialog({
                         </div>
                         </Squircle>
 
+                        {/* WHICH WALLET, above what's in it — the two questions
+                            in the order they're asked. Only when there is more
+                            than one; a switcher over a single wallet is a
+                            control that can only ever confirm itself.
+
+                            Named, never addressed: rendering wallet addresses
+                            is against the house rule, so these are labels and
+                            source names. */}
+                        {hasChoice ? (
+                            <div className="flex flex-wrap gap-2">
+                                {wallets.map((w) => (
+                                    <button
+                                        key={w.id}
+                                        type="button"
+                                        onClick={() => setActive(w.address)}
+                                        className={cn(
+                                            "h-9 cursor-pointer rounded-full px-3.5 text-13 font-bold transition-colors",
+                                            active?.address === w.address
+                                                ? "bg-lantern/15 text-lantern"
+                                                : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white",
+                                        )}
+                                    >
+                                        {w.name}
+                                    </button>
+                                ))}
+                            </div>
+                        ) : null}
+
                         {/* What funds it. Under the amount because it changes
                             what that amount MEANS — the presets, the big number
                             and the quote all re-key off the selected token. */}
@@ -548,13 +605,13 @@ export function BuyDialog({
                             {needsQuote ? (
                                 <>
                                     <Row label="You receive">
-                                        {active.isLoading
+                                        {activeQuote.isLoading
                                             ? "…"
                                             : receive !== null
-                                              ? `${formatTokens(receive)} ${active.data?.toSymbol ?? ""}`
+                                              ? `${formatTokens(receive)} ${activeQuote.data?.toSymbol ?? ""}`
                                               : "—"}
                                     </Row>
-                                    {active.data?.tool ? <Row label="Route">{active.data.tool}</Row> : null}
+                                    {activeQuote.data?.tool ? <Row label="Route">{activeQuote.data.tool}</Row> : null}
                                     {/* Named, because a bridge is not a swap:
                                         the source receipt does not mean the
                                         funds have arrived, and the wait is
@@ -573,8 +630,8 @@ export function BuyDialog({
                         </div>
                         </Squircle>
 
-                        {needsQuote && active.error ? (
-                            <p className="text-13 font-medium text-pastelred">{active.error.message}</p>
+                        {needsQuote && activeQuote.error ? (
+                            <p className="text-13 font-medium text-pastelred">{activeQuote.error.message}</p>
                         ) : null}
                         {crossSwap.error ? (
                             <p className="text-13 font-medium text-pastelred">{crossSwap.error.message}</p>
@@ -606,8 +663,9 @@ export function BuyDialog({
                             onConfirm={() => void onConfirm()}
                             disabled={
                                 buying ||
+                                signerMismatch ||
                                 overBalance ||
-                                (needsQuote && !active.data) ||
+                                (needsQuote && !activeQuote.data) ||
                                 (payingByCard && fundSession.isPending)
                             }
                             succeeded={succeeded}
@@ -617,6 +675,10 @@ export function BuyDialog({
                         >
                             {succeeded
                                 ? "Bought"
+                                : signerMismatch
+                                ? active?.source === "extension"
+                                    ? `Connect ${active.name} to spend from it`
+                                    : "Disconnect your extension to use this wallet"
                                 : buying
                                 ? "Buying…"
                                 : overBalance
