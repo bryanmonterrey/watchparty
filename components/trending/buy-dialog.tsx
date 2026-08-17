@@ -59,6 +59,18 @@ export type BuyDialogCoin = {
  *  ETH, and someone who picked 0.01 ETH on one means it on the others. */
 const amountKey = (symbol: string) => `trade:quickBuy:${symbol}`;
 
+/**
+ * Dollar presets, shared across every token and chain.
+ *
+ * NOT currency-aware yet, deliberately. `currencyAtom` exists in the wallet
+ * settings with nine options, but nothing in the app converts anything — every
+ * price we hold (`usdValue`, `priceUsd`) is USD and there is no FX rate source.
+ * Rendering "€25" over a USD number would be a lie that looks like a feature;
+ * these become currency-aware the day a rate layer exists, and not before.
+ */
+const USD_PRESETS = [10, 25, 50, 100] as const;
+const USD_AMOUNT_KEY = "trade:quickBuyUsd";
+
 /** The board's own slippage, stated rather than assumed — wider than a wallet's
  *  default because a board buy is chasing a moving coin. */
 const SLIPPAGE_BPS = 200;
@@ -287,34 +299,79 @@ export function BuyDialog({
 
     const payingByCard = payWith === PAY_WITH_CARD;
     const spendSymbol = payAsset?.symbol ?? nativeSymbol;
-    const presets = presetsForSymbol(spendSymbol);
-    const [amount, setAmountState] = React.useState<number>(presets[1]);
+    /**
+     * Presets are DOLLARS, not token units.
+     *
+     * "0.05 / 0.1 / 0.5 / 1" asked the user to price the token in their head
+     * before they could pick an amount, and the right numbers differed per
+     * coin — 0.05 is ~$95 of ETH and ~2 cents of POL. $10/$25/$50/$100 means
+     * the same thing whatever is being spent, which is the point.
+     *
+     * The token amount is DERIVED from the dollar amount using the unit price
+     * the holding already implies, so no extra price query and no possibility
+     * of disagreeing with the balance shown beside it.
+     */
+    const unitPrice = payAsset ? unitUsd(payAsset) : null;
+    /** Only when the spent token has a known price — a token we can't price
+     *  cannot be bought in dollars, so it falls back to token presets. */
+    const pricedInUsd = !!unitPrice && unitPrice > 0;
 
-    // Restore the stored amount for THIS spent token, on the client only —
-    // reading localStorage during render would desync SSR and hydration.
+    const tokenPresets = presetsForSymbol(spendSymbol);
+    const [usdAmount, setUsdAmount] = React.useState<number>(USD_PRESETS[1]);
+    const [tokenAmount, setTokenAmount] = React.useState<number>(tokenPresets[1]);
+
+    // Restore on the client only — reading localStorage during render would
+    // desync SSR and hydration. The dollar choice is remembered ACROSS tokens
+    // (it means the same everywhere); the token fallback stays per-symbol.
+    React.useEffect(() => {
+        const savedUsd = Number(localStorage.getItem(USD_AMOUNT_KEY));
+        if ((USD_PRESETS as readonly number[]).includes(savedUsd)) setUsdAmount(savedUsd);
+    }, []);
     React.useEffect(() => {
         if (!spendSymbol) return;
         const list = presetsForSymbol(spendSymbol);
         const saved = Number(localStorage.getItem(amountKey(spendSymbol)));
-        setAmountState(list.includes(saved) ? saved : list[1]);
+        setTokenAmount(list.includes(saved) ? saved : list[1]);
     }, [spendSymbol]);
+
+    const presets: readonly number[] = pricedInUsd ? USD_PRESETS : tokenPresets;
+    const selectedPreset = pricedInUsd ? usdAmount : tokenAmount;
 
     const setAmount = React.useCallback(
         (v: number) => {
-            setAmountState(v);
+            if (pricedInUsd) {
+                setUsdAmount(v);
+                localStorage.setItem(USD_AMOUNT_KEY, String(v));
+                return;
+            }
+            setTokenAmount(v);
             if (spendSymbol) localStorage.setItem(amountKey(spendSymbol), String(v));
         },
-        [spendSymbol],
+        [pricedInUsd, spendSymbol],
     );
 
     /**
-     * What the spend is worth in dollars.
+     * The token amount that actually gets spent.
      *
-     * Derived from the holding (`usdValue / balance` × amount) rather than
-     * fetched: it needs no extra query, and it cannot disagree with the balance
-     * shown beside it the way a separately-quoted price could.
+     * Rounded to the token's own decimals: an unrounded quotient like
+     * 0.11834321098765432 is more precision than the mint can represent, and it
+     * reaches the base-unit conversion as a float that has to be truncated
+     * anyway — better to do it here, where the number shown and the number sent
+     * are the same one.
      */
-    const spendUsd = payAsset ? fmtUsd((unitUsd(payAsset) ?? 0) * amount) : null;
+    const amount = React.useMemo(() => {
+        if (!pricedInUsd || !unitPrice) return tokenAmount;
+        const raw = usdAmount / unitPrice;
+        const dp = Math.min(payAsset?.decimals ?? 9, 9);
+        return Number(raw.toFixed(dp));
+    }, [pricedInUsd, unitPrice, usdAmount, tokenAmount, payAsset?.decimals]);
+
+    /** What the spend is worth, for the secondary line. */
+    const spendUsd = pricedInUsd
+        ? fmtUsd(usdAmount)
+        : payAsset
+          ? fmtUsd((unitUsd(payAsset) ?? 0) * amount)
+          : null;
 
     // Live estimate for EVM, keyed by amount AND by what's being spent, so the
     // number on screen is the one that executes. Solana has no equivalent:
@@ -375,7 +432,10 @@ export function BuyDialog({
     const needsQuote = (isEvm || bridging) && !payingByCard;
     // You cannot spend what you do not have, and a quote for it just wastes a
     // round trip — so this gates the CTA rather than only warning.
-    const overBalance = !payingByCard && !!payAsset && amount > payAsset.balance;
+    const overBalance =
+        !payingByCard &&
+        !!payAsset &&
+        (pricedInUsd ? usdAmount > (payAsset.usdValue ?? 0) : amount > payAsset.balance);
 
     /**
      * Can the ACTIVE wallet actually sign right now?
@@ -542,31 +602,53 @@ export function BuyDialog({
                                 You&apos;re paying
                             </span>
 
+                            {/* DOLLARS lead when we can price the token, with
+                                the token amount as the conversion beneath —
+                                the same order the presets are in, so the number
+                                you picked is the number you see. Falls back to
+                                token-first for anything we can't price. */}
                             <div className="flex flex-col items-center gap-0.5">
                                 <div className="text-4xl leading-none font-bold tracking-tight tabular-nums text-white">
-                                    {amount}
-                                    <span className="ml-1.5 text-xl font-bold text-zinc-500">
-                                        {spendSymbol}
-                                    </span>
+                                    {pricedInUsd ? (
+                                        spendUsd
+                                    ) : (
+                                        <>
+                                            {amount}
+                                            <span className="ml-1.5 text-xl font-bold text-zinc-500">
+                                                {spendSymbol}
+                                            </span>
+                                        </>
+                                    )}
                                 </div>
-                                {/* The conversion, which was the missing half:
-                                    an amount in SOL means nothing to someone
-                                    who thinks in dollars. */}
-                                {spendUsd ? (
-                                    <span className="text-13 font-medium text-zinc-500">
-                                        ≈ {spendUsd}
-                                    </span>
-                                ) : null}
+                                <span className="text-13 font-medium text-zinc-500">
+                                    {pricedInUsd
+                                        ? `≈ ${formatTokens(amount)} ${spendSymbol}`
+                                        : spendUsd
+                                          ? `≈ ${spendUsd}`
+                                          : null}
+                                </span>
                             </div>
 
                             <div className="grid w-full grid-cols-4 gap-2">
                                 {presets.map((p) => {
-                                    const active = p === amount;
+                                    const active = p === selectedPreset;
                                     return (
                                         <button
                                             key={p}
                                             type="button"
-                                            disabled={buying || (!!payAsset && p > payAsset.balance)}
+                                            // Compared in whatever unit the
+                                            // preset is in — dollars against the
+                                            // holding's value, tokens against
+                                            // its balance. Mixing the two was
+                                            // how "$100" got disabled for a
+                                            // wallet holding 2 SOL.
+                                            disabled={
+                                                buying ||
+                                                (!!payAsset &&
+                                                    (pricedInUsd
+                                                        ? p > (payAsset.usdValue ?? 0)
+                                                        : p > payAsset.balance))
+                                            }
                                             onClick={() => setAmount(p)}
                                             // Pills stay rounded-full and are
                                             // never squircled (principles §1).
@@ -577,7 +659,7 @@ export function BuyDialog({
                                                     : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white",
                                             )}
                                         >
-                                            {p}
+                                            {pricedInUsd ? `$${p}` : p}
                                         </button>
                                     );
                                 })}
@@ -712,7 +794,9 @@ export function BuyDialog({
                                     ? fundSession.isPending
                                         ? "Opening…"
                                         : `Hold to add ${nativeSymbol} with card`
-                                    : `Hold to buy ${amount} ${spendSymbol}`}
+                                    : pricedInUsd
+                                      ? `Hold to buy ${spendUsd} of ${coin.symbol}`
+                                      : `Hold to buy ${amount} ${spendSymbol}`}
                         </HoldButton>
                         </div>
                         </Squircle>
