@@ -1,5 +1,16 @@
-// EVM swaps via LI.FI — keyless, and it covers all five of our EVM chains
-// (Ethereum, Base, Polygon, HyperEVM 999, Robinhood Chain 4663).
+// Swaps via LI.FI — keyless, covering all six of our EVM chains (Ethereum,
+// Base, Polygon, BNB, HyperEVM 999, Robinhood Chain 4663) and, CROSS-CHAIN,
+// any destination LI.FI reaches including Solana and Bitcoin.
+//
+// Cross-chain is the same endpoint with a different `toChain`: LI.FI is a
+// bridge aggregator, and a bridged route still comes back as ONE transaction to
+// sign on the SOURCE chain. That is why routing everywhere needs no new signing
+// code here — only the destination changes.
+//
+// The signing half is still EVM-only. A Solana-source route returns a
+// `transactionRequest` of `{ data }` alone — a base64 serialized Solana
+// transaction, not an EVM call — so it needs the Solana signer rather than
+// viem, and `swapSupport` refuses it rather than pretending.
 
 import {
   createPublicClient,
@@ -15,6 +26,24 @@ import type { ChainId } from "../types";
 import { NATIVE_TOKEN, type SwapQuote, type SwapQuoteRequest, type SwapResult } from "./types";
 
 const LIFI_API = "https://li.quest/v1";
+
+/**
+ * LI.FI's own chain ids for the non-EVM chains.
+ *
+ * EVM chains use their real numeric chain id, but Solana and Bitcoin have no
+ * such number, so LI.FI assigns synthetic ones. Verified against
+ * `GET /v1/chains?chainTypes=EVM,SVM,UTXO` on 2026-08-16.
+ */
+const LIFI_NON_EVM_IDS: Record<string, number> = {
+  solana: 1151111081099710,
+  bitcoin: 20000000000001,
+};
+
+/** The id LI.FI knows a chain by, or null when it doesn't reach it at all. */
+function lifiChainId(chain: { id: string; kind: string; chainId?: number }): number | null {
+  if (chain.kind === "evm") return chain.chainId ?? null;
+  return LIFI_NON_EVM_IDS[chain.id] ?? null;
+}
 
 function evmChainOrThrow(id: ChainId) {
   const chain = getChain(id);
@@ -56,19 +85,31 @@ export async function getLifiTokenInfo(
 
 export async function getLifiQuote(
   request: SwapQuoteRequest,
-  fromAddress: string
+  fromAddress: string,
+  /** Destination address. Required when bridging to a chain whose address
+   *  format differs from the source's — an EVM address cannot receive on
+   *  Solana, and LI.FI rejects the route rather than guessing. */
+  toAddress?: string
 ): Promise<SwapQuote> {
   const chain = evmChainOrThrow(request.chain);
+  const destId = request.toChain ?? request.chain;
+  const dest = getChain(destId);
+  if (!dest) throw new Error(`unknown destination chain: ${destId}`);
+  const destLifiId = lifiChainId(dest);
+  if (destLifiId === null) throw new Error(`${dest.name} is not reachable through LI.FI`);
 
   const params = new URLSearchParams({
     fromChain: String(chain.chainId),
-    toChain: String(chain.chainId),
+    toChain: String(destLifiId),
     fromToken: request.fromToken,
     toToken: request.toToken,
     fromAddress,
     fromAmount: request.fromAmount,
     slippage: String(request.slippage ?? 0.005),
   });
+  // Only meaningful when bridging; on a same-chain swap the source address is
+  // already the recipient and sending it changes nothing.
+  if (toAddress && destId !== request.chain) params.set("toAddress", toAddress);
 
   const res = await fetch(`${LIFI_API}/quote?${params}`, {
     headers: { accept: "application/json" },
@@ -92,6 +133,7 @@ export async function getLifiQuote(
 
   return {
     chain: request.chain,
+    toChain: destId,
     fromToken: {
       address: q.action.fromToken.address,
       symbol: q.action.fromToken.symbol,
@@ -163,5 +205,13 @@ export async function executeLifiSwap(
     gas: quote.transactionRequest.gasLimit ? BigInt(quote.transactionRequest.gasLimit) : undefined,
   });
 
-  return { txId: hash, explorerUrl: `${chain.explorer}/tx/${hash}` };
+  // The explorer is the SOURCE chain's: that is the only chain this hash exists
+  // on. On a bridged route the destination transaction is a different hash we
+  // do not have yet, which is exactly why `crossChain` is flagged — the caller
+  // must not report delivery on the strength of this receipt.
+  return {
+    txId: hash,
+    explorerUrl: `${chain.explorer}/tx/${hash}`,
+    crossChain: quote.toChain !== quote.chain,
+  };
 }

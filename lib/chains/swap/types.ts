@@ -4,7 +4,19 @@ import type { ChainId } from "../types";
 export const NATIVE_TOKEN = "0x0000000000000000000000000000000000000000";
 
 export interface SwapQuoteRequest {
+  /** SOURCE chain — the one holding the token being spent, and the only one
+   *  that gets signed on. */
   chain: ChainId;
+  /**
+   * DESTINATION chain. Omit for a same-chain swap.
+   *
+   * LI.FI is a bridge aggregator, not just a DEX aggregator: quoting with a
+   * different `toChain` returns a route through a bridge (Relay, Mayan, …) as
+   * ONE transaction on the source chain. Measured 2026-08-16, all keyless:
+   * Base ETH -> BNB via Relay, Solana SOL -> BNB via Relay, Base ETH -> Solana
+   * SOL via Mayan Swift, every one quoting a ~3s execution.
+   */
+  toChain?: ChainId;
   /** Contract address, or NATIVE_TOKEN for the native coin. */
   fromToken: string;
   toToken: string;
@@ -15,7 +27,10 @@ export interface SwapQuoteRequest {
 }
 
 export interface SwapQuote {
+  /** Source chain — where the transaction is signed and broadcast. */
   chain: ChainId;
+  /** Destination chain. Equal to `chain` for a same-chain swap. */
+  toChain: ChainId;
   fromToken: { address: string; symbol: string; decimals: number };
   toToken: { address: string; symbol: string; decimals: number };
   fromAmount: string;
@@ -39,4 +54,11 @@ export interface SwapQuote {
 export interface SwapResult {
   txId: string;
   explorerUrl?: string;
+  /**
+   * True when the destination differs from the source, i.e. the funds are
+   * bridging and the source receipt does NOT mean delivery. Callers must not
+   * report "done" on the strength of the source hash alone — the tx landing is
+   * the START of a bridge, not the end of it.
+   */
+  crossChain?: boolean;
 }
