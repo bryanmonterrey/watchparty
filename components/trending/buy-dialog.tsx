@@ -31,6 +31,7 @@ import { useEvmQuickBuy, presetsForSymbol } from "@/hooks/use-evm-quick-buy";
 import { buyableChainId } from "@/lib/coin-feed/networks";
 import { getChain } from "@/lib/chains/registry";
 import { trpc } from "@/lib/trpc/client";
+import { OPEN_WALLET_DRAWER_EVENT } from "@/components/wallet/sol-balance-chip";
 import { NATIVE_TOKEN } from "@/lib/chains/swap/types";
 import { PayWithSelect, PAY_WITH_CARD, payAssetKey, type PayAsset } from "./pay-with-select";
 import { Squircle } from "@/components/ui/squircle";
@@ -195,14 +196,31 @@ export function BuyDialog({
                         : { ...a, disabledReason: "can't bridge" };
                 })
                 // Biggest first, and anything unusable last regardless of size.
+                //
+                // USD value decides it when we have prices, but a wallet whose
+                // tokens have no quote would tie EVERY row at 0 and leave the
+                // order to chance, so raw balance breaks the tie. Same coin
+                // count is a worse ranking than dollars, and a better one than
+                // whatever order the providers happened to answer in.
                 .sort((x, y) => {
                     if (!!x.disabledReason !== !!y.disabledReason) return x.disabledReason ? 1 : -1;
-                    return (y.usdValue ?? 0) - (x.usdValue ?? 0);
+                    const byUsd = (y.usdValue ?? 0) - (x.usdValue ?? 0);
+                    return byUsd !== 0 ? byUsd : (y.balance ?? 0) - (x.balance ?? 0);
                 })
         );
     }, [chainId, solAssets.data, evmAssets.data]);
 
     const assetsLoading = solAssets.isLoading || evmAssets.isLoading;
+
+    /**
+     * No derived addresses at all — a DIFFERENT state from "no balances", and
+     * the only one the user can do anything about.
+     *
+     * Worth distinguishing because it is common: of 31 accounts, only 7 have
+     * multichain rows, and an unprovisioned account previously opened an empty
+     * picker that read as a broken feature rather than as a setup step.
+     */
+    const noWallet = evmAssets.data?.noAddresses === true && assets.length === 0;
 
     // Falls back to the target chain's native coin, then to the largest usable
     // balance anywhere — a user holding only USDC on Base should not be shown
@@ -464,6 +482,13 @@ export function BuyDialog({
                             selected={payWith}
                             onSelect={setPayWith}
                             targetChain={chainId ?? undefined}
+                            noWallet={noWallet}
+                            onSetUpWallet={() => {
+                                // The drawer owns setup; this dialog just gets
+                                // out of the way so the two don't stack.
+                                close();
+                                window.dispatchEvent(new Event(OPEN_WALLET_DRAWER_EVENT));
+                            }}
                             cardEnabled={!!onramp.data?.supported}
                             disabled={buying}
                         />
