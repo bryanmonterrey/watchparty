@@ -35,7 +35,7 @@ import { getChain } from "@/lib/chains/registry";
 import { trpc } from "@/lib/trpc/client";
 import { WalletSetupCta } from "@/components/wallet/wallet-drawer2/views/setup/wallet-setup-cta";
 import { NATIVE_TOKEN } from "@/lib/chains/swap/types";
-import { PayWithSelect, PAY_WITH_CARD, payAssetKey, type PayAsset } from "./pay-with-select";
+import { PayWithSelect, PAY_WITH_CARD, payAssetKey, unitUsd, fmtUsd, type PayAsset } from "./pay-with-select";
 import { Squircle } from "@/components/ui/squircle";
 import { HoldButton } from "@/components/ui/hold-button";
 import { cn } from "@/lib/utils";
@@ -284,6 +284,7 @@ export function BuyDialog({
      *  through a bridge rather than a plain swap. */
     const bridging = !!payAsset && !!chainId && payAsset.chain !== chainId;
 
+
     const payingByCard = payWith === PAY_WITH_CARD;
     const spendSymbol = payAsset?.symbol ?? nativeSymbol;
     const presets = presetsForSymbol(spendSymbol);
@@ -305,6 +306,15 @@ export function BuyDialog({
         },
         [spendSymbol],
     );
+
+    /**
+     * What the spend is worth in dollars.
+     *
+     * Derived from the holding (`usdValue / balance` × amount) rather than
+     * fetched: it needs no extra query, and it cannot disagree with the balance
+     * shown beside it the way a separately-quoted price could.
+     */
+    const spendUsd = payAsset ? fmtUsd((unitUsd(payAsset) ?? 0) * amount) : null;
 
     // Live estimate for EVM, keyed by amount AND by what's being spent, so the
     // number on screen is the one that executes. Solana has no equivalent:
@@ -523,13 +533,30 @@ export function BuyDialog({
                         {/* The amount, as the thing the dialog is actually about. */}
                         <Squircle asChild radius={24}>
                         <div className="flex flex-col items-center gap-3 bg-white/[0.03] p-4">
+                            {/* "You're PAYING", not "buying".
+                                The big number is what LEAVES the wallet, and
+                                labelling it "You're buying 1 SOL" said the
+                                opposite of what happens — the coin is what's
+                                being bought, SOL is what it costs. */}
                             <span className="self-start text-13 font-medium text-zinc-500">
-                                You&apos;re buying
+                                You&apos;re paying
                             </span>
 
-                            <div className="text-4xl leading-none font-bold tracking-tight tabular-nums text-white">
-                                {amount}
-                                <span className="ml-1.5 text-xl font-bold text-zinc-500">{spendSymbol}</span>
+                            <div className="flex flex-col items-center gap-0.5">
+                                <div className="text-4xl leading-none font-bold tracking-tight tabular-nums text-white">
+                                    {amount}
+                                    <span className="ml-1.5 text-xl font-bold text-zinc-500">
+                                        {spendSymbol}
+                                    </span>
+                                </div>
+                                {/* The conversion, which was the missing half:
+                                    an amount in SOL means nothing to someone
+                                    who thinks in dollars. */}
+                                {spendUsd ? (
+                                    <span className="text-13 font-medium text-zinc-500">
+                                        ≈ {spendUsd}
+                                    </span>
+                                ) : null}
                             </div>
 
                             <div className="grid w-full grid-cols-4 gap-2">

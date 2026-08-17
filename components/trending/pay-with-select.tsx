@@ -52,6 +52,28 @@ export const payAssetKey = (a: { chain: string; contract: string | null }) =>
 /** Sentinel for the card row — not a contract, so it can never collide with one. */
 export const PAY_WITH_CARD = "__card__";
 
+/**
+ * What one unit is worth, derived from the holding itself.
+ *
+ * `usdValue` is the value of the WHOLE balance, so the unit price falls out of
+ * dividing by it — no price query, and it is guaranteed consistent with the
+ * balance shown right next to it. Null when there is nothing to divide.
+ */
+export function unitUsd(a: { balance: number; usdValue?: number }): number | null {
+    if (!a.usdValue || !a.balance || a.balance <= 0) return null;
+    const per = a.usdValue / a.balance;
+    return Number.isFinite(per) ? per : null;
+}
+
+/** Whole dollars above $1, cents below — "$0" for a real 40-cent holding is
+ *  the kind of rounding that makes a balance look empty. */
+export function fmtUsd(n: number | null | undefined): string | null {
+    if (typeof n !== "number" || !Number.isFinite(n) || n <= 0) return null;
+    if (n >= 1000) return `$${Math.round(n).toLocaleString()}`;
+    if (n >= 1) return `$${n.toFixed(2)}`;
+    return `$${n.toFixed(n >= 0.01 ? 2 : 4)}`;
+}
+
 /** Compact balances: a dust position and a whole-number one both have to read
  *  at a glance in a narrow slot. */
 function fmtBalance(n: number): string {
@@ -219,8 +241,15 @@ export function PayWithSelect({
 
                     <span className="ml-auto flex shrink-0 items-center gap-2">
                         {!isCard && current ? (
-                            <span className="text-13 font-semibold tabular-nums text-zinc-500">
-                                {fmtBalance(current.balance)}
+                            <span className="flex flex-col items-end">
+                                <span className="text-13 font-semibold tabular-nums text-white">
+                                    {fmtBalance(current.balance)}
+                                </span>
+                                {fmtUsd(current.usdValue) ? (
+                                    <span className="text-xs font-medium tabular-nums text-zinc-500">
+                                        {fmtUsd(current.usdValue)}
+                                    </span>
+                                ) : null}
                             </span>
                         ) : null}
                         <AccChevron />
@@ -241,7 +270,7 @@ export function PayWithSelect({
                         {/* Solid, not translucent: it sits over the details card
                             and the CTA, which must not read through it. */}
                         <div className="border border-white/10 bg-[#141414]">
-                        <div className="flex flex-col gap-1 px-2 pb-2">
+                        <div className="flex flex-col gap-1 px-2 pt-1 pb-2">
                             {!loading && assets.length === 0 ? (
                                 <p className="px-3 py-2 text-13 font-medium text-zinc-500">
                                     {emptyReason
@@ -274,9 +303,26 @@ export function PayWithSelect({
                                             ) : undefined
                                         }
                                         right={
-                                            <span className="text-13 font-semibold tabular-nums text-zinc-500">
-                                                {a.disabledReason ?? fmtBalance(a.balance)}
-                                            </span>
+                                            a.disabledReason ? (
+                                                <span className="text-13 font-semibold text-zinc-500">
+                                                    {a.disabledReason}
+                                                </span>
+                                            ) : (
+                                                // Amount and worth, stacked: the
+                                                // count answers "can I afford
+                                                // this", the dollars answer "is
+                                                // it worth using".
+                                                <span className="flex flex-col items-end">
+                                                    <span className="text-13 font-semibold tabular-nums text-white">
+                                                        {fmtBalance(a.balance)}
+                                                    </span>
+                                                    {fmtUsd(a.usdValue) ? (
+                                                        <span className="text-xs font-medium tabular-nums text-zinc-500">
+                                                            {fmtUsd(a.usdValue)}
+                                                        </span>
+                                                    ) : null}
+                                                </span>
+                                            )
                                         }
                                     />
                                 );
