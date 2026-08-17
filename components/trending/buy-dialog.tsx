@@ -380,19 +380,15 @@ export function BuyDialog({
     /**
      * Can the ACTIVE wallet actually sign right now?
      *
-     * Balances and signing have to agree. `useQuickBuy` signs with the wallet
-     * ADAPTER whenever one is connected and falls back to the embedded key
-     * otherwise — so showing an extension wallet's balances while the adapter
-     * is disconnected would spend from the embedded wallet instead, and showing
-     * the embedded wallet's while an extension is connected would do the
-     * reverse. Either way the money leaves a different wallet than the one on
-     * screen, which is the one outcome this must never do.
+     * Only ONE case can't: an extension wallet whose extension isn't connected,
+     * because nothing in the browser can produce that signature. The embedded
+     * wallet is always available, connected extension or not — `quickBuy` is
+     * told which wallet to use rather than defaulting to whichever is plugged
+     * in, so the two coexist and no one is asked to disconnect anything.
      */
     const adapter = adapterPublicKey?.toBase58() ?? null;
-    const signerMismatch =
-        !!active &&
-        isSolana &&
-        (active.source === "extension" ? adapter !== active.address : adapter !== null);
+    const needsExtension =
+        !!active && isSolana && active.source === "extension" && adapter !== active.address;
 
     const close = () => onOpenChange(false);
 
@@ -428,6 +424,10 @@ export function BuyDialog({
                           decimals: payAsset.decimals,
                           symbol: payAsset.symbol,
                           amount,
+                          // Named explicitly so a connected extension can't
+                          // hijack a buy the user aimed at the embedded wallet.
+                          signWith: active?.source === "extension" ? "adapter" : "embedded",
+                          signerAddress: active?.address,
                       }
                     : undefined,
             );
@@ -690,7 +690,7 @@ export function BuyDialog({
                             onConfirm={() => void onConfirm()}
                             disabled={
                                 buying ||
-                                signerMismatch ||
+                                needsExtension ||
                                 overBalance ||
                                 (needsQuote && !activeQuote.data) ||
                                 (payingByCard && fundSession.isPending)
@@ -702,10 +702,8 @@ export function BuyDialog({
                         >
                             {succeeded
                                 ? "Bought"
-                                : signerMismatch
-                                ? active?.source === "extension"
-                                    ? `Connect ${active.name} to spend from it`
-                                    : "Disconnect your extension to use this wallet"
+                                : needsExtension
+                                ? `Connect ${active?.name ?? "that wallet"} to spend from it`
                                 : buying
                                 ? "Buying…"
                                 : overBalance

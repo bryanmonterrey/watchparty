@@ -28,6 +28,22 @@ export type QuickBuyPayWith = {
     symbol: string;
     /** Display units of `mint`, not lamports. */
     amount: number;
+    /**
+     * WHICH wallet signs, when the account has more than one available.
+     *
+     * Without this the adapter won whenever it was connected, so an account
+     * with a connected extension could not spend from its embedded wallet at
+     * all — the UI had to tell people to disconnect the extension first, which
+     * is a limitation of this function rather than of anything real. Both are
+     * usable at once; the caller just has to say which one it means.
+     *
+     * Omitted keeps the old behaviour (adapter if connected), which is what the
+     * in-row buy buttons on /trade still want — they have no wallet picker.
+     */
+    signWith?: "embedded" | "adapter";
+    /** The address expected to sign. Checked against the connected adapter so a
+     *  wallet switch mid-flow cannot spend from the wrong account. */
+    signerAddress?: string;
 };
 
 /**
@@ -60,7 +76,9 @@ export function useQuickBuy() {
         localStorage.setItem(AMOUNT_KEY, String(v));
     }, []);
 
-    const walletAddress = adapterPublicKey?.toBase58() || session?.user?.wallet_address || null;
+    const adapterAddress = adapterPublicKey?.toBase58() ?? null;
+    const embeddedAddress = session?.user?.wallet_address ?? null;
+    const walletAddress = adapterAddress || embeddedAddress || null;
 
     const quickBuy = useCallback(async (
         token: QuickBuyToken,
@@ -82,6 +100,23 @@ export function useQuickBuy() {
             symbol: "SOL",
             amount: amountSol,
         };
+
+        // The account the swap is BUILT for has to be the one that signs it, or
+        // Jupiter returns a transaction the signer cannot fulfil.
+        const useAdapter =
+            pay.signWith === "embedded"
+                ? false
+                : pay.signWith === "adapter"
+                  ? true
+                  : !!adapterPublicKey;
+        const payer = useAdapter ? adapterAddress : embeddedAddress;
+        if (!payer) {
+            window.dispatchEvent(new Event(OPEN_WALLET_DRAWER_EVENT));
+            return "no-wallet";
+        }
+        // A wallet switched between choosing and confirming would otherwise
+        // spend from whichever one happens to be connected now.
+        if (pay.signerAddress && payer !== pay.signerAddress) return "failed";
 
         setBuyingId(token.id);
         const symbol = token.symbol.replace(/^\$/, "");
@@ -106,7 +141,7 @@ export function useQuickBuy() {
 
             const { swapTransaction, tradeId } = await getSwapTxMutation.mutateAsync({
                 quoteResponse: quote,
-                userPublicKey: walletAddress,
+                userPublicKey: payer,
                 wrapAndUnwrapSol: true,
             });
 
@@ -115,7 +150,7 @@ export function useQuickBuy() {
 
             swapToast.setStep("signing");
             let signature: string;
-            if (adapterPublicKey) {
+            if (useAdapter) {
                 signature = await sendTransaction(transaction, connection);
             } else {
                 const result = await signAndSubmit({ transaction: swapTransaction });
@@ -141,7 +176,7 @@ export function useQuickBuy() {
             setBuyingId(null);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [walletAddress, buyingId, amountSol, adapterPublicKey, connection]);
+    }, [walletAddress, adapterAddress, embeddedAddress, buyingId, amountSol, adapterPublicKey, connection]);
 
     return { quickBuy, buyingId, amountSol, setAmountSol };
 }
