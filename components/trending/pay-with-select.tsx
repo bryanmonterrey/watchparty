@@ -248,23 +248,23 @@ export function PayWithSelect({
                         />
                     ) : null}
 
-                    <span className="flex min-w-0 flex-col items-start">
-                        <span className="text-13 font-medium text-zinc-500">Pay with</span>
-                        <span className="flex items-center gap-1.5">
-                            <span className="truncate text-15 font-bold text-white">
-                                {isCard
-                                    ? "Card"
-                                    : loading && !current
-                                      ? "…"
-                                      : (current?.symbol ?? emptyReason ?? "No balances")}
-                            </span>
-                            {/* Only when it differs: a badge on every row would
-                                be noise, but a bridged source has to be visible
-                                before the hold, not after. */}
-                            {bridging && current ? (
-                                <ChainBadge network={current.chain} className="size-3.5 shrink-0" />
-                            ) : null}
+                    {/* The "Pay with" caption lives OUTSIDE this control now
+                        (owner's call) — a section header above it, sharing a row
+                        with the wallet switcher. The trigger is just the token. */}
+                    <span className="flex min-w-0 items-center gap-1.5">
+                        <span className="truncate text-15 font-bold text-white">
+                            {isCard
+                                ? "Card"
+                                : loading && !current
+                                  ? "…"
+                                  : (current?.symbol ?? emptyReason ?? "No balances")}
                         </span>
+                        {/* Only when it differs: a badge on every row would be
+                            noise, but a bridged source has to be visible before
+                            the hold, not after. */}
+                        {bridging && current ? (
+                            <ChainBadge network={current.chain} className="size-3.5 shrink-0" />
+                        ) : null}
                     </span>
 
                     <span className="ml-auto flex shrink-0 items-center gap-2">

@@ -38,6 +38,9 @@ import { NATIVE_TOKEN } from "@/lib/chains/swap/types";
 import { PayWithSelect, PAY_WITH_CARD, payAssetKey, unitUsd, fmtUsd, type PayAsset } from "./pay-with-select";
 import { Squircle } from "@/components/ui/squircle";
 import { SettingsIcon } from "@/components/icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowRight01Icon, ArrowLeft01Icon, Wallet01Icon } from "@hugeicons/core-free-icons";
+import { shortenWalletAddress } from "@/lib/utils";
 import { HoldButton } from "@/components/ui/hold-button";
 import { cn } from "@/lib/utils";
 
@@ -177,8 +180,17 @@ export function BuyDialog({
     // Solana wallets and `user.wallet_address` mirrors only the primary, so
     // without this the dialog reads the embedded wallet while the money sits in
     // a linked extension one.
-    // Read-only here: the drawer owns the choice, this just follows it.
-    const { active } = useActiveWallet(!!coin);
+    const { wallets, active, setActive } = useActiveWallet(!!coin);
+
+    /** Which pane is showing. The wallet list is a PAGE, not a popover: it is a
+     *  full decision with its own list, and layering it over the buy would hide
+     *  the thing being paid for. */
+    const [view, setView] = React.useState<"buy" | "wallets">("buy");
+
+    // A dialog reopened on another coin must start on the buy pane.
+    React.useEffect(() => {
+        setView("buy");
+    }, [coin?.id]);
     const { publicKey: adapterPublicKey } = useWallet();
 
     // Spendable balances from EVERY chain, not just the coin's — cross-chain
@@ -593,6 +605,20 @@ export function BuyDialog({
                     </div>
                 </div>
 
+                {/* Two panes on one track: buy, and the wallet list. Slid with
+                    `translateX`, not by swapping the DOM — the transform stays
+                    on the compositor and the outgoing pane is still there to
+                    animate, which a conditional render cannot do.
+
+                    The coin header above is deliberately OUTSIDE this, so the
+                    thing being bought never leaves the screen while choosing
+                    which wallet pays for it. */}
+                <div className="overflow-hidden">
+                <div
+                    className="flex w-[200%] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+                    style={{ transform: view === "wallets" ? "translateX(-50%)" : "translateX(0)" }}
+                >
+                <div className="flex w-1/2 shrink-0 flex-col gap-3" aria-hidden={view !== "buy"}>
                 {noWallet ? (
                     /* SETUP IN PLACE, not a redirect and not a second modal.
                        The coin header above stays put, so the purchase the user
@@ -734,11 +760,37 @@ export function BuyDialog({
                         </div>
                         </Squircle>
 
-                        {/* NO wallet chooser here — owner's call. The active
-                            wallet is whatever the wallet drawer has selected;
-                            `useActiveWallet` reads the same stored choice, so
-                            the two surfaces agree without this dialog offering
-                            a second place to change it. */}
+                        {/* Caption OUT of the control, sharing its row with the
+                            wallet switcher.
+
+                            The switcher is labelled with the CURRENT wallet, not
+                            with "Switch wallet": an action label tells you what
+                            happens but not where you are, so you would have to
+                            open it just to learn which wallet you are spending
+                            from. Showing the wallet answers that and invites the
+                            change in the same breath. */}
+                        <div className="flex items-center justify-between gap-3">
+                            <span className="text-13 font-medium text-zinc-500">Pay with</span>
+                            {active ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setView("wallets")}
+                                    className="flex cursor-pointer items-center gap-1.5 text-13 font-semibold text-zinc-400 transition-colors hover:text-white"
+                                >
+                                    <HugeiconsIcon
+                                        icon={Wallet01Icon}
+                                        className="size-4 shrink-0"
+                                        strokeWidth={2}
+                                    />
+                                    {active.name}
+                                    <HugeiconsIcon
+                                        icon={ArrowRight01Icon}
+                                        className="size-4 shrink-0"
+                                        strokeWidth={2}
+                                    />
+                                </button>
+                            ) : null}
+                        </div>
                         {/* What funds it. Under the amount because it changes
                             what that amount MEANS — the presets, the big number
                             and the quote all re-key off the selected token. */}
@@ -857,6 +909,69 @@ export function BuyDialog({
                         {coin.network} isn&apos;t buyable in-app yet — no wallet on that chain.
                     </p>
                 )}
+                </div>
+
+                {/* WALLET PANE */}
+                <div className="flex w-1/2 shrink-0 flex-col gap-3" aria-hidden={view !== "wallets"}>
+                    <button
+                        type="button"
+                        onClick={() => setView("buy")}
+                        className="flex w-fit cursor-pointer items-center gap-1.5 text-13 font-semibold text-zinc-400 transition-colors hover:text-white"
+                    >
+                        <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" strokeWidth={2} />
+                        Back
+                    </button>
+
+                    <div className="flex flex-col gap-1">
+                        {wallets.map((w) => {
+                            const isActive = active?.address === w.address;
+                            return (
+                                <Squircle asChild radius={16} key={w.id}>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setActive(w.address);
+                                            // Straight back — choosing IS the
+                                            // action, so a second confirming tap
+                                            // would be ceremony.
+                                            setView("buy");
+                                        }}
+                                        className={cn(
+                                            "flex h-14 w-full cursor-pointer items-center gap-3 px-3.5 text-left transition-colors",
+                                            isActive
+                                                ? "bg-lantern/12 text-lantern"
+                                                : "text-zinc-300 hover:bg-white/[0.06] hover:text-white",
+                                        )}
+                                    >
+                                        <HugeiconsIcon
+                                            icon={Wallet01Icon}
+                                            className="size-5 shrink-0"
+                                            strokeWidth={2}
+                                        />
+                                        <span className="flex min-w-0 flex-col">
+                                            <span className="truncate text-15 font-bold">{w.name}</span>
+                                            {/* The address is what actually
+                                                distinguishes two wallets that
+                                                share a source name. Through the
+                                                canonical shortener — the one
+                                                place allowed to truncate one. */}
+                                            <span className="truncate text-13 font-medium text-zinc-500">
+                                                {shortenWalletAddress(w.address)}
+                                            </span>
+                                        </span>
+                                        {w.isPrimary ? (
+                                            <span className="ml-auto shrink-0 rounded-full bg-white/[0.06] px-2 py-0.5 text-xs font-semibold text-zinc-400">
+                                                Main
+                                            </span>
+                                        ) : null}
+                                    </button>
+                                </Squircle>
+                            );
+                        })}
+                    </div>
+                </div>
+                </div>
+                </div>
             </DialogContent>
         </Dialog>
     );
