@@ -32,7 +32,7 @@ import { buyableChainId } from "@/lib/coin-feed/networks";
 import { getChain } from "@/lib/chains/registry";
 import { trpc } from "@/lib/trpc/client";
 import { NATIVE_TOKEN } from "@/lib/chains/swap/types";
-import { PayWithSelect, PAY_WITH_CARD, type PayAsset } from "./pay-with-select";
+import { PayWithSelect, PAY_WITH_CARD, payAssetKey, type PayAsset } from "./pay-with-select";
 import { Squircle } from "@/components/ui/squircle";
 import { HoldButton } from "@/components/ui/hold-button";
 import { cn } from "@/lib/utils";
@@ -133,59 +133,88 @@ export function BuyDialog({
         setSucceeded(false);
     }, [coin?.id]);
 
-    // Spendable balances. Two sources because Solana's path carries Helius,
-    // NFTs and spam filtering that the generic per-chain providers don't.
+    // Spendable balances from EVERY chain, not just the coin's — cross-chain
+    // routing means an ETH balance on Base can buy a coin on BNB. Two sources
+    // because Solana's path carries Helius, NFTs and spam filtering that the
+    // generic per-chain providers don't.
     const solAssets = trpc.wallet.getWalletAssets.useQuery(
         {},
-        { enabled: !!coin && isSolana, staleTime: 30_000, retry: false },
+        { enabled: !!coin, staleTime: 30_000, retry: false },
     );
-    const evmAssets = trpc.wallet.getChainAssets.useQuery(
-        { chain: chainId ?? "" },
-        { enabled: !!coin && isEvm, staleTime: 30_000, retry: false },
-    );
+    const evmAssets = trpc.wallet.getAllChainAssets.useQuery(undefined, {
+        enabled: !!coin,
+        staleTime: 30_000,
+        retry: false,
+    });
 
     const assets: PayAsset[] = React.useMemo(() => {
-        if (isSolana) {
-            return (solAssets.data?.tokens ?? [])
-                // Only what can actually pay for something.
-                .filter((t) => (t.balance ?? 0) > 0)
-                .map((t) => ({
-                    // Native SOL is the ...111 mint in balances but Jupiter
-                    // routes from WRAPPED SOL, so it is normalised to `null`
-                    // here and re-expanded to WSOL at execution.
-                    contract: t.mint === SOL_NATIVE_MINT ? null : t.mint,
-                    symbol: t.symbol,
-                    decimals: t.decimals,
-                    balance: t.balance,
-                    usdValue: t.usdValue,
-                    icon: t.icon,
-                }));
-        }
-        if (isEvm) {
-            return (evmAssets.data?.assets ?? [])
-                .filter((a) => a.balance > 0)
-                .map((a) => ({
-                    contract: a.isNative ? null : a.contract,
-                    symbol: a.symbol,
-                    decimals: a.decimals,
-                    balance: a.balance,
-                    usdValue: a.usdValue,
-                    icon: a.icon,
-                }));
-        }
-        return [];
-    }, [isSolana, isEvm, solAssets.data, evmAssets.data]);
+        if (!chainId) return [];
 
-    const assetsLoading = isSolana ? solAssets.isLoading : evmAssets.isLoading;
+        const sol: PayAsset[] = (solAssets.data?.tokens ?? [])
+            // Only what can actually pay for something.
+            .filter((t) => (t.balance ?? 0) > 0)
+            .map((t) => ({
+                chain: "solana",
+                // Native SOL is the ...111 mint in balances but Jupiter routes
+                // from WRAPPED SOL, so it is normalised to `null` here and
+                // re-expanded to WSOL at execution.
+                contract: t.mint === SOL_NATIVE_MINT ? null : t.mint,
+                symbol: t.symbol,
+                decimals: t.decimals,
+                balance: t.balance,
+                usdValue: t.usdValue,
+                icon: t.icon,
+            }));
 
-    // Falls back to the native coin, then to whatever is held — a user with
-    // only USDC should not be shown an empty ETH row they cannot spend.
+        const rest: PayAsset[] = (evmAssets.data?.assets ?? [])
+            .filter((a) => a.balance > 0)
+            .map((a) => ({
+                chain: a.chain,
+                contract: a.isNative ? null : a.contract,
+                symbol: a.symbol,
+                decimals: a.decimals,
+                balance: a.balance,
+                usdValue: a.usdValue,
+                icon: a.icon,
+            }));
+
+        return (
+            [...sol, ...rest]
+                .map((a) => {
+                    if (a.chain === chainId) return a;
+                    // Bridging needs to SIGN on the source, and only the EVM
+                    // signer is wired — LI.FI hands back a serialized Solana
+                    // transaction for an SVM source, which viem cannot sign.
+                    // Kept in the list and explained rather than hidden: a
+                    // balance that silently vanishes reads as a bug.
+                    const kind = getChain(a.chain)?.kind;
+                    return kind === "evm"
+                        ? a
+                        : { ...a, disabledReason: "can't bridge yet" };
+                })
+                // Biggest first, and anything unusable last regardless of size.
+                .sort((x, y) => {
+                    if (!!x.disabledReason !== !!y.disabledReason) return x.disabledReason ? 1 : -1;
+                    return (y.usdValue ?? 0) - (x.usdValue ?? 0);
+                })
+        );
+    }, [chainId, solAssets.data, evmAssets.data]);
+
+    const assetsLoading = solAssets.isLoading || evmAssets.isLoading;
+
+    // Falls back to the target chain's native coin, then to the largest usable
+    // balance anywhere — a user holding only USDC on Base should not be shown
+    // an empty SOL row they cannot spend.
     const payAsset =
         payWith === PAY_WITH_CARD
             ? undefined
-            : assets.find((a) => a.contract === payWith) ??
-              assets.find((a) => a.contract === null) ??
-              assets[0];
+            : assets.find((a) => payAssetKey(a) === payWith) ??
+              assets.find((a) => a.chain === chainId && a.contract === null) ??
+              assets.find((a) => !a.disabledReason);
+
+    /** True when the money and the coin are on different chains — this routes
+     *  through a bridge rather than a plain swap. */
+    const bridging = !!payAsset && !!chainId && payAsset.chain !== chainId;
 
     const payingByCard = payWith === PAY_WITH_CARD;
     const spendSymbol = payAsset?.symbol ?? nativeSymbol;
@@ -216,13 +245,29 @@ export function BuyDialog({
     const quote = trpc.wallet.getEvmSwapQuote.useQuery(
         {
             chain: chainId ?? "",
+            fromToken: (bridging ? null : payAsset?.contract) ?? NATIVE_TOKEN,
+            toToken: coin?.tokenAddress ?? "",
+            amountHuman: String(amount),
+            slippageBps: SLIPPAGE_BPS,
+        },
+        { enabled: !!coin && isEvm && !bridging && !payingByCard, staleTime: 20_000, retry: false },
+    );
+
+    // Bridged estimate. Same role as the EVM quote above but across chains, and
+    // mutually exclusive with it — exactly one of the two is ever enabled.
+    const crossQuote = trpc.swap.quote.useQuery(
+        {
+            fromChain: payAsset?.chain ?? "",
+            toChain: chainId ?? "",
             fromToken: payAsset?.contract ?? NATIVE_TOKEN,
             toToken: coin?.tokenAddress ?? "",
             amountHuman: String(amount),
             slippageBps: SLIPPAGE_BPS,
         },
-        { enabled: !!coin && isEvm && !payingByCard, staleTime: 20_000, retry: false },
+        { enabled: !!coin && bridging && !payingByCard && !payAsset?.disabledReason, staleTime: 20_000, retry: false },
     );
+
+    const crossSwap = trpc.swap.execute.useMutation();
 
     // Card funding. Asked BEFORE drawing the entry point so an unconfigured
     // deployment renders nothing rather than a button that fails on click.
@@ -243,8 +288,13 @@ export function BuyDialog({
 
     if (!coin) return null;
 
-    const buying = solBuyingId === coin.id || evmBuyingId === coin.id;
-    const receive = quote.data ? scaleUnits(quote.data.toAmount, quote.data.toDecimals) : null;
+    const buying = solBuyingId === coin.id || evmBuyingId === coin.id || crossSwap.isPending;
+    // Exactly one of the two queries is ever enabled, so this is a selection,
+    // not a merge. Keeping it in one place stops the receive line and the CTA
+    // gate from disagreeing about which route is live.
+    const active = bridging ? crossQuote : quote;
+    const receive = active.data ? scaleUnits(active.data.toAmount, active.data.toDecimals) : null;
+    const needsQuote = (isEvm || bridging) && !payingByCard;
     // You cannot spend what you do not have, and a quote for it just wastes a
     // round trip — so this gates the CTA rather than only warning.
     const overBalance = !payingByCard && !!payAsset && amount > payAsset.balance;
@@ -291,6 +341,25 @@ export function BuyDialog({
             // immediately rather than celebrating something that didn't happen.
             if (result === "no-wallet") close();
             else if (result === "done") settle();
+            return;
+        }
+        // BRIDGED: source chain differs from the coin's, so it routes through
+        // LI.FI's bridge aggregator instead of a plain swap.
+        if (bridging && chainId && payAsset) {
+            try {
+                await crossSwap.mutateAsync({
+                    fromChain: payAsset.chain,
+                    toChain: chainId,
+                    fromToken: payAsset.contract ?? NATIVE_TOKEN,
+                    toToken: coin.tokenAddress,
+                    amountHuman: String(amount),
+                    slippageBps: SLIPPAGE_BPS,
+                });
+                settle();
+            } catch {
+                // The mutation's own error is rendered below; swallowing here
+                // keeps a failed bridge from closing the dialog.
+            }
             return;
         }
         if (isEvm && chainId) {
@@ -392,22 +461,32 @@ export function BuyDialog({
                             loading={assetsLoading}
                             selected={payWith}
                             onSelect={setPayWith}
+                            targetChain={chainId ?? undefined}
                             cardEnabled={!!onramp.data?.supported}
                             disabled={buying}
                         />
 
                         <Squircle asChild radius={24}>
                         <div className="flex flex-col gap-2 bg-white/[0.03] p-4">
-                            {isEvm ? (
+                            {needsQuote ? (
                                 <>
                                     <Row label="You receive">
-                                        {quote.isLoading
+                                        {active.isLoading
                                             ? "…"
                                             : receive !== null
-                                              ? `${formatTokens(receive)} ${quote.data?.toSymbol ?? ""}`
+                                              ? `${formatTokens(receive)} ${active.data?.toSymbol ?? ""}`
                                               : "—"}
                                     </Row>
-                                    {quote.data?.tool ? <Row label="Route">{quote.data.tool}</Row> : null}
+                                    {active.data?.tool ? <Row label="Route">{active.data.tool}</Row> : null}
+                                    {/* Named, because a bridge is not a swap:
+                                        the source receipt does not mean the
+                                        funds have arrived, and the wait is
+                                        real. Better seen before the hold. */}
+                                    {bridging ? (
+                                        <Row label="Bridge">
+                                            {payAsset?.chain} → {chainId}
+                                        </Row>
+                                    ) : null}
                                 </>
                             ) : (
                                 <Row label="Market cap">{compactUsd(coin.marketCapUsd)}</Row>
@@ -417,8 +496,11 @@ export function BuyDialog({
                         </div>
                         </Squircle>
 
-                        {quote.error && isEvm ? (
-                            <p className="text-13 font-medium text-pastelred">{quote.error.message}</p>
+                        {needsQuote && active.error ? (
+                            <p className="text-13 font-medium text-pastelred">{active.error.message}</p>
+                        ) : null}
+                        {crossSwap.error ? (
+                            <p className="text-13 font-medium text-pastelred">{crossSwap.error.message}</p>
                         ) : null}
 
                         {/* HOLD, not click. This button spends real money and
@@ -448,7 +530,7 @@ export function BuyDialog({
                             disabled={
                                 buying ||
                                 overBalance ||
-                                (isEvm && !payingByCard && !quote.data) ||
+                                (needsQuote && !active.data) ||
                                 (payingByCard && fundSession.isPending)
                             }
                             succeeded={succeeded}
