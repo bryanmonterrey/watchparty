@@ -37,6 +37,7 @@ import { WalletSetupCta } from "@/components/wallet/wallet-drawer2/views/setup/w
 import { NATIVE_TOKEN } from "@/lib/chains/swap/types";
 import { PayWithSelect, PAY_WITH_CARD, payAssetKey, unitUsd, fmtUsd, type PayAsset } from "./pay-with-select";
 import { Squircle } from "@/components/ui/squircle";
+import { SettingsIcon } from "@/components/icons";
 import { HoldButton } from "@/components/ui/hold-button";
 import { cn } from "@/lib/utils";
 
@@ -71,9 +72,17 @@ const amountKey = (symbol: string) => `trade:quickBuy:${symbol}`;
 const USD_PRESETS = [10, 25, 50, 100] as const;
 const USD_AMOUNT_KEY = "trade:quickBuyUsd";
 
-/** The board's own slippage, stated rather than assumed — wider than a wallet's
- *  default because a board buy is chasing a moving coin. */
-const SLIPPAGE_BPS = 200;
+/**
+ * Slippage options, in basis points.
+ *
+ * 2% is the default because a board buy is chasing a moving coin and a tighter
+ * bound mostly produces failed transactions. It used to be a constant printed
+ * in a details row, which told the user a number they could not act on —
+ * a setting they can change is worth more than a fact they cannot.
+ */
+const SLIPPAGE_OPTIONS = [50, 100, 200, 500] as const;
+const DEFAULT_SLIPPAGE_BPS = 200;
+const SLIPPAGE_KEY = "trade:slippageBps";
 
 /** Balances report native SOL as the ...111 mint, but Jupiter routes from
  *  WRAPPED SOL (...112). One digit apart and not interchangeable: quoting
@@ -142,6 +151,21 @@ export function BuyDialog({
      *  gesture completing says nothing about whether the swap filled. */
     const [succeeded, setSucceeded] = React.useState(false);
 
+    /** Buy settings, opened from the amount card's corner. Replaces the presets
+     *  in place rather than expanding, so the dialog never changes size. */
+    const [settingsOpen, setSettingsOpen] = React.useState(false);
+    const [slippageBps, setSlippageBpsState] = React.useState<number>(DEFAULT_SLIPPAGE_BPS);
+
+    React.useEffect(() => {
+        const saved = Number(localStorage.getItem(SLIPPAGE_KEY));
+        if ((SLIPPAGE_OPTIONS as readonly number[]).includes(saved)) setSlippageBpsState(saved);
+    }, []);
+
+    const setSlippageBps = React.useCallback((v: number) => {
+        setSlippageBpsState(v);
+        localStorage.setItem(SLIPPAGE_KEY, String(v));
+    }, []);
+
     // A dialog reopened on another coin must not still be showing the last
     // coin's success. Keyed on the coin id rather than on open/closed because
     // the component stays mounted between them.
@@ -153,7 +177,8 @@ export function BuyDialog({
     // Solana wallets and `user.wallet_address` mirrors only the primary, so
     // without this the dialog reads the embedded wallet while the money sits in
     // a linked extension one.
-    const { wallets, active, setActive, hasChoice } = useActiveWallet(!!coin);
+    // Read-only here: the drawer owns the choice, this just follows it.
+    const { active } = useActiveWallet(!!coin);
     const { publicKey: adapterPublicKey } = useWallet();
 
     // Spendable balances from EVERY chain, not just the coin's — cross-chain
@@ -383,7 +408,7 @@ export function BuyDialog({
             fromToken: (bridging ? null : payAsset?.contract) ?? NATIVE_TOKEN,
             toToken: coin?.tokenAddress ?? "",
             amountHuman: String(amount),
-            slippageBps: SLIPPAGE_BPS,
+            slippageBps,
         },
         { enabled: !!coin && isEvm && !bridging && !payingByCard, staleTime: 20_000, retry: false },
     );
@@ -397,7 +422,7 @@ export function BuyDialog({
             fromToken: payAsset?.contract ?? NATIVE_TOKEN,
             toToken: coin?.tokenAddress ?? "",
             amountHuman: String(amount),
-            slippageBps: SLIPPAGE_BPS,
+            slippageBps,
         },
         { enabled: !!coin && bridging && !payingByCard && !payAsset?.disabledReason, staleTime: 20_000, retry: false },
     );
@@ -508,7 +533,7 @@ export function BuyDialog({
                     fromToken: payAsset.contract ?? NATIVE_TOKEN,
                     toToken: coin.tokenAddress,
                     amountHuman: String(amount),
-                    slippageBps: SLIPPAGE_BPS,
+                    slippageBps,
                 });
                 settle();
             } catch {
@@ -523,7 +548,7 @@ export function BuyDialog({
                 chainId,
                 String(amount),
                 { token: payAsset?.contract ?? NATIVE_TOKEN, symbol: spendSymbol },
-                SLIPPAGE_BPS,
+                slippageBps,
             );
             if (result === "done") settle();
         }
@@ -598,9 +623,28 @@ export function BuyDialog({
                                 labelling it "You're buying 1 SOL" said the
                                 opposite of what happens — the coin is what's
                                 being bought, SOL is what it costs. */}
-                            <span className="self-start text-13 font-medium text-zinc-500">
-                                You&apos;re paying
-                            </span>
+                            <div className="flex w-full items-start justify-between">
+                                <span className="text-13 font-medium text-zinc-500">
+                                    {settingsOpen ? "Buy settings" : "You're paying"}
+                                </span>
+                                {/* Opens in the card's own corner rather than a
+                                    separate surface: the thing being configured
+                                    is right here. */}
+                                <button
+                                    type="button"
+                                    aria-label="Buy settings"
+                                    aria-pressed={settingsOpen}
+                                    onClick={() => setSettingsOpen((v) => !v)}
+                                    className={cn(
+                                        "-mt-1 -mr-1 cursor-pointer rounded-full p-1 transition-colors",
+                                        settingsOpen
+                                            ? "text-lantern"
+                                            : "text-zinc-500 hover:text-white",
+                                    )}
+                                >
+                                    <SettingsIcon filled className="size-5" />
+                                </button>
+                            </div>
 
                             {/* DOLLARS lead when we can price the token, with
                                 the token amount as the conversion beneath —
@@ -621,20 +665,39 @@ export function BuyDialog({
                                     )}
                                 </div>
                                 <span className="text-13 font-medium text-zinc-500">
-                                    {pricedInUsd
-                                        ? `≈ ${formatTokens(amount)} ${spendSymbol}`
-                                        : spendUsd
-                                          ? `≈ ${spendUsd}`
-                                          : null}
+                                    {settingsOpen
+                                        ? "Max slippage — how far the price may move before the trade is abandoned"
+                                        : pricedInUsd
+                                          ? `≈ ${formatTokens(amount)} ${spendSymbol}`
+                                          : spendUsd
+                                            ? `≈ ${spendUsd}`
+                                            : null}
                                 </span>
                             </div>
 
                             <div className="grid w-full grid-cols-4 gap-2">
-                                {presets.map((p) => {
+                                {settingsOpen
+                                    ? SLIPPAGE_OPTIONS.map((bps) => (
+                                          <Squircle asChild radius={14} key={bps}>
+                                              <button
+                                                  type="button"
+                                                  onClick={() => setSlippageBps(bps)}
+                                                  className={cn(
+                                                      "h-11 cursor-pointer text-15 font-bold tabular-nums transition-colors",
+                                                      bps === slippageBps
+                                                          ? "bg-lantern/15 text-lantern"
+                                                          : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white",
+                                                  )}
+                                              >
+                                                  {bps / 100}%
+                                              </button>
+                                          </Squircle>
+                                      ))
+                                    : presets.map((p) => {
                                     const active = p === selectedPreset;
                                     return (
+                                        <Squircle asChild radius={14} key={p}>
                                         <button
-                                            key={p}
                                             type="button"
                                             // Compared in whatever unit the
                                             // preset is in — dollars against the
@@ -653,7 +716,10 @@ export function BuyDialog({
                                             // Pills stay rounded-full and are
                                             // never squircled (principles §1).
                                             className={cn(
-                                                "h-11 cursor-pointer rounded-full text-15 font-bold tabular-nums transition-colors disabled:opacity-50",
+                                                // Squircled, not a pill — owner's
+                                                // call. Squircle applies the shape
+                                                // by clip-path, so no rounded-*.
+                                                "h-11 cursor-pointer text-15 font-bold tabular-nums transition-colors disabled:opacity-50",
                                                 active
                                                     ? "bg-lantern/15 text-lantern"
                                                     : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white",
@@ -661,40 +727,18 @@ export function BuyDialog({
                                         >
                                             {pricedInUsd ? `$${p}` : p}
                                         </button>
+                                        </Squircle>
                                     );
                                 })}
                             </div>
                         </div>
                         </Squircle>
 
-                        {/* WHICH WALLET, above what's in it — the two questions
-                            in the order they're asked. Only when there is more
-                            than one; a switcher over a single wallet is a
-                            control that can only ever confirm itself.
-
-                            Named, never addressed: rendering wallet addresses
-                            is against the house rule, so these are labels and
-                            source names. */}
-                        {hasChoice ? (
-                            <div className="flex flex-wrap gap-2">
-                                {wallets.map((w) => (
-                                    <button
-                                        key={w.id}
-                                        type="button"
-                                        onClick={() => setActive(w.address)}
-                                        className={cn(
-                                            "h-9 cursor-pointer rounded-full px-3.5 text-13 font-bold transition-colors",
-                                            active?.address === w.address
-                                                ? "bg-lantern/15 text-lantern"
-                                                : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white",
-                                        )}
-                                    >
-                                        {w.name}
-                                    </button>
-                                ))}
-                            </div>
-                        ) : null}
-
+                        {/* NO wallet chooser here — owner's call. The active
+                            wallet is whatever the wallet drawer has selected;
+                            `useActiveWallet` reads the same stored choice, so
+                            the two surfaces agree without this dialog offering
+                            a second place to change it. */}
                         {/* What funds it. Under the amount because it changes
                             what that amount MEANS — the presets, the big number
                             and the quote all re-key off the selected token. */}
@@ -734,8 +778,6 @@ export function BuyDialog({
                             ) : (
                                 <Row label="Market cap">{compactUsd(coin.marketCapUsd)}</Row>
                             )}
-                            <Row label="24h volume">{compactUsd(coin.volume24hUsd)}</Row>
-                            <Row label="Max slippage">{SLIPPAGE_BPS / 100}%</Row>
                         </div>
                         </Squircle>
 
