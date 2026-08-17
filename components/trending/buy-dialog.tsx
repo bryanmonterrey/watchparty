@@ -38,8 +38,9 @@ import { NATIVE_TOKEN } from "@/lib/chains/swap/types";
 import { PayWithSelect, PAY_WITH_CARD, payAssetKey, unitUsd, fmtUsd, type PayAsset } from "./pay-with-select";
 import { Squircle } from "@/components/ui/squircle";
 import { SettingsIcon } from "@/components/icons";
+import { GooDropdown, gooMenuItem, GOO_PANEL_FILL } from "@/components/ui/goo-dropdown";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon, ArrowLeft01Icon, Wallet01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, ArrowLeft01Icon, Wallet01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { shortenWalletAddress } from "@/lib/utils";
 import { HoldButton } from "@/components/ui/hold-button";
 import { cn } from "@/lib/utils";
@@ -154,9 +155,7 @@ export function BuyDialog({
      *  gesture completing says nothing about whether the swap filled. */
     const [succeeded, setSucceeded] = React.useState(false);
 
-    /** Buy settings, opened from the amount card's corner. Replaces the presets
-     *  in place rather than expanding, so the dialog never changes size. */
-    const [settingsOpen, setSettingsOpen] = React.useState(false);
+    /** Buy settings, in a popover off the amount card's corner. */
     const [slippageBps, setSlippageBpsState] = React.useState<number>(DEFAULT_SLIPPAGE_BPS);
 
     React.useEffect(() => {
@@ -651,25 +650,39 @@ export function BuyDialog({
                                 being bought, SOL is what it costs. */}
                             <div className="flex w-full items-start justify-between">
                                 <span className="text-13 font-medium text-zinc-500">
-                                    {settingsOpen ? "Buy settings" : "You're paying"}
+                                    You&apos;re paying
                                 </span>
                                 {/* Opens in the card's own corner rather than a
                                     separate surface: the thing being configured
                                     is right here. */}
-                                <button
-                                    type="button"
-                                    aria-label="Buy settings"
-                                    aria-pressed={settingsOpen}
-                                    onClick={() => setSettingsOpen((v) => !v)}
-                                    className={cn(
-                                        "-mt-1 -mr-1 cursor-pointer rounded-full p-1 transition-colors",
-                                        settingsOpen
-                                            ? "text-lantern"
-                                            : "text-zinc-500 hover:text-white",
+                                {/* A POPOVER, not a swap of the preset row.
+                                    Settings are a side errand; taking over the
+                                    amount controls to show them made the main
+                                    thing disappear to configure it. */}
+                                <GooDropdown
+                                    align="end"
+                                    width={220}
+                                    gap={8}
+                                    fill={GOO_PANEL_FILL}
+                                    triggerAriaLabel="Buy settings"
+                                    triggerClassName="-mt-1 -mr-1 cursor-pointer rounded-full p-1 text-zinc-500 transition-colors hover:text-white"
+                                    trigger={<SettingsIcon filled className="size-5" />}
+                                    items={SLIPPAGE_OPTIONS.map((bps) =>
+                                        gooMenuItem({
+                                            key: bps,
+                                            label: `${bps / 100}% slippage`,
+                                            onClick: () => setSlippageBps(bps),
+                                            right:
+                                                bps === slippageBps ? (
+                                                    <HugeiconsIcon
+                                                        icon={Tick02Icon}
+                                                        className="size-4 text-white"
+                                                        strokeWidth={2}
+                                                    />
+                                                ) : undefined,
+                                        }),
                                     )}
-                                >
-                                    <SettingsIcon filled className="size-5" />
-                                </button>
+                                />
                             </div>
 
                             {/* DOLLARS lead when we can price the token, with
@@ -691,38 +704,24 @@ export function BuyDialog({
                                     )}
                                 </div>
                                 <span className="text-13 font-medium text-zinc-500">
-                                    {settingsOpen
-                                        ? "Max slippage — how far the price may move before the trade is abandoned"
-                                        : pricedInUsd
-                                          ? `≈ ${formatTokens(amount)} ${spendSymbol}`
-                                          : spendUsd
-                                            ? `≈ ${spendUsd}`
-                                            : null}
+                                    {pricedInUsd
+                                        ? `≈ ${formatTokens(amount)} ${spendSymbol}`
+                                        : spendUsd
+                                          ? `≈ ${spendUsd}`
+                                          : null}
                                 </span>
                             </div>
 
                             <div className="grid w-full grid-cols-4 gap-2">
-                                {settingsOpen
-                                    ? SLIPPAGE_OPTIONS.map((bps) => (
-                                          <Squircle asChild radius={14} key={bps}>
-                                              <button
-                                                  type="button"
-                                                  onClick={() => setSlippageBps(bps)}
-                                                  className={cn(
-                                                      "h-11 cursor-pointer text-15 font-bold tabular-nums transition-colors",
-                                                      bps === slippageBps
-                                                          ? "bg-lantern/15 text-lantern"
-                                                          : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white",
-                                                  )}
-                                              >
-                                                  {bps / 100}%
-                                              </button>
-                                          </Squircle>
-                                      ))
-                                    : presets.map((p) => {
+                                {presets.map((p) => {
                                     const active = p === selectedPreset;
                                     return (
-                                        <Squircle asChild radius={14} key={p}>
+                                        // autoEffects={false}: with it on, Squircle injects a wrapper
+                                        // div that becomes the GRID CHILD, leaving the button
+                                        // inside with no width at all. These have no border
+                                        // for the effects to preserve, so there is nothing to
+                                        // trade away.
+                                        <Squircle asChild autoEffects={false} radius={14} key={p}>
                                         <button
                                             type="button"
                                             // Compared in whatever unit the
