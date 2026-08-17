@@ -20,7 +20,7 @@
 
 import * as React from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { CreditCardIcon, Wallet01Icon } from "@hugeicons/core-free-icons";
+import { CreditCardIcon } from "@hugeicons/core-free-icons";
 import { Squircle } from "@/components/ui/squircle";
 import { CoinImage } from "@/components/coins/coin-image";
 import { ChainBadge } from "./chain-badge";
@@ -137,8 +137,6 @@ export function PayWithSelect({
     selected,
     onSelect,
     targetChain,
-    noWallet,
-    onSetUpWallet,
     cardEnabled,
     disabled,
 }: {
@@ -150,11 +148,6 @@ export function PayWithSelect({
     /** The chain being bought on — rows on any other chain are labelled, since
      *  those route through a bridge and that is worth seeing before committing. */
     targetChain?: string;
-    /** True when the account has no derived addresses at all. A DIFFERENT state
-     *  from "no balances", and the only one the user can act on. */
-    noWallet?: boolean;
-    /** Opens the wallet drawer. Given only when `noWallet`. */
-    onSetUpWallet?: () => void;
     cardEnabled?: boolean;
     disabled?: boolean;
 }) {
@@ -163,9 +156,7 @@ export function PayWithSelect({
     const current = isCard
         ? null
         : assets.find((a) => payAssetKey(a) === selected) ?? assets.find((a) => !a.disabledReason);
-    // Openable whenever there is anything inside — including the "set up your
-    // wallet" row. Only a genuinely empty panel is inert.
-    const empty = !loading && assets.length === 0 && !cardEnabled && !noWallet;
+    const empty = !loading && assets.length === 0 && !cardEnabled;
     const bridging = !!current && !!targetChain && current.chain !== targetChain;
 
     const choose = (value: string | null) => {
@@ -206,11 +197,11 @@ export function PayWithSelect({
                                     ? "Card"
                                     : loading && !current
                                       ? "…"
-                                      : (current?.symbol ??
-                                        // Three different states, and conflating
-                                        // them is what made an unprovisioned
-                                        // account look like a broken picker.
-                                        (noWallet ? "No wallet" : "No balances"))}
+                                      : // The no-WALLET case never reaches this
+                                        // component — the dialog swaps its whole
+                                        // body for setup before rendering a
+                                        // picker there is nothing to pick from.
+                                        (current?.symbol ?? "No balances")}
                             </span>
                             {/* Only when it differs: a badge on every row would
                                 be noise, but a bridged source has to be visible
@@ -236,22 +227,7 @@ export function PayWithSelect({
                 <div className="t-acc-panel">
                     <div className="t-acc-panel-inner">
                         <div className="flex flex-col gap-1 px-2 pb-2">
-                            {noWallet ? (
-                                <OptionRow
-                                    active={false}
-                                    onClick={() => onSetUpWallet?.()}
-                                    icon={
-                                        <HugeiconsIcon
-                                            icon={Wallet01Icon}
-                                            className="size-6 shrink-0"
-                                            strokeWidth={2}
-                                        />
-                                    }
-                                    label="Set up your wallet"
-                                />
-                            ) : null}
-
-                            {!noWallet && !loading && assets.length === 0 ? (
+                            {!loading && assets.length === 0 ? (
                                 <p className="px-3 py-2 text-13 font-medium text-zinc-500">
                                     Nothing to spend yet — add funds to a chain and it&apos;ll show here.
                                 </p>

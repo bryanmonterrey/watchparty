@@ -22,7 +22,16 @@ type Step = 'cta' | 'generating' | 'seed_phrase';
 // `variant="drawer"` (default) is the wallet drawer's full empty state;
 // `variant="inline"` renders ONLY the create button (+ error + seed dialog)
 // so other surfaces (messages encryption gate) can compose their own copy.
-export function WalletSetupCta({ variant = 'drawer' }: { variant?: 'drawer' | 'inline' } = {}) {
+export function WalletSetupCta({
+    variant = 'drawer',
+    onCreated,
+}: {
+    variant?: 'drawer' | 'inline';
+    /** Fired once the phrase is confirmed and the wallet is usable. Lets a
+     *  host surface CONTINUE what the user was doing instead of dead-ending —
+     *  the buy dialog resumes its purchase rather than sending them away. */
+    onCreated?: () => void;
+} = {}) {
     const [step, setStep] = useState<Step>('cta');
     const [mnemonic, setMnemonic] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -74,7 +83,10 @@ export function WalletSetupCta({ variant = 'drawer' }: { variant?: 'drawer' | 'i
         setStep('cta');
         await queryClient.refetchQueries({ queryKey: ['session'] });
         router.refresh();
-    }, [queryClient, router]);
+        // After the session is live, so a host refetching balances sees the new
+        // addresses rather than racing the refresh it depends on.
+        onCreated?.();
+    }, [queryClient, router, onCreated]);
 
     const seedDialog = (
         <Dialog open={step === 'seed_phrase' && !!mnemonic} onOpenChange={() => {}}>

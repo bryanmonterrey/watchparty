@@ -31,7 +31,7 @@ import { useEvmQuickBuy, presetsForSymbol } from "@/hooks/use-evm-quick-buy";
 import { buyableChainId } from "@/lib/coin-feed/networks";
 import { getChain } from "@/lib/chains/registry";
 import { trpc } from "@/lib/trpc/client";
-import { OPEN_WALLET_DRAWER_EVENT } from "@/components/wallet/sol-balance-chip";
+import { WalletSetupCta } from "@/components/wallet/wallet-drawer2/views/setup/wallet-setup-cta";
 import { NATIVE_TOKEN } from "@/lib/chains/swap/types";
 import { PayWithSelect, PAY_WITH_CARD, payAssetKey, type PayAsset } from "./pay-with-select";
 import { Squircle } from "@/components/ui/squircle";
@@ -117,6 +117,7 @@ export function BuyDialog({
 
     // Hooks cannot sit behind a branch, so both mount; neither does any work
     // until it is actually invoked.
+    const utils = trpc.useUtils();
     const { quickBuy, buyingId: solBuyingId } = useQuickBuy();
     const { evmBuy, buyingId: evmBuyingId } = useEvmQuickBuy();
 
@@ -433,7 +434,27 @@ export function BuyDialog({
                     </div>
                 </div>
 
-                {tradeable ? (
+                {noWallet ? (
+                    /* SETUP IN PLACE, not a redirect and not a second modal.
+                       The coin header above stays put, so the purchase the user
+                       started is still visible and still the subject: they are
+                       not told to go somewhere else and come back, and there is
+                       nothing to dismiss. `onCreated` refetches the balances so
+                       this same dialog continues straight into the buy. */
+                    <div className="flex flex-col gap-3">
+                        <p className="text-13 font-medium text-zinc-500">
+                            You&apos;ll need a wallet to buy {coin.symbol}. It takes a second, and
+                            you keep the keys.
+                        </p>
+                        <WalletSetupCta
+                            variant="inline"
+                            onCreated={() => {
+                                void utils.wallet.getAllChainAssets.invalidate();
+                                void utils.wallet.getWalletAssets.invalidate();
+                            }}
+                        />
+                    </div>
+                ) : tradeable ? (
                     <>
                         {/* The amount, as the thing the dialog is actually about. */}
                         <Squircle asChild radius={24}>
@@ -482,13 +503,6 @@ export function BuyDialog({
                             selected={payWith}
                             onSelect={setPayWith}
                             targetChain={chainId ?? undefined}
-                            noWallet={noWallet}
-                            onSetUpWallet={() => {
-                                // The drawer owns setup; this dialog just gets
-                                // out of the way so the two don't stack.
-                                close();
-                                window.dispatchEvent(new Event(OPEN_WALLET_DRAWER_EVENT));
-                            }}
                             cardEnabled={!!onramp.data?.supported}
                             disabled={buying}
                         />
