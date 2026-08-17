@@ -182,15 +182,17 @@ export function BuyDialog({
             [...sol, ...rest]
                 .map((a) => {
                     if (a.chain === chainId) return a;
-                    // Bridging needs to SIGN on the source, and only the EVM
-                    // signer is wired — LI.FI hands back a serialized Solana
-                    // transaction for an SVM source, which viem cannot sign.
-                    // Kept in the list and explained rather than hidden: a
-                    // balance that silently vanishes reads as a bug.
+                    // Bridging signs on the SOURCE, so what matters is whether
+                    // we have a signer for that chain: viem for EVM, and the
+                    // serialized-transaction path for Solana. Bitcoin and Sui
+                    // have neither. Kept in the list and explained rather than
+                    // hidden — a balance that silently vanishes reads as a bug,
+                    // and "you have none" and "we can't use it" are different
+                    // things the user needs to tell apart.
                     const kind = getChain(a.chain)?.kind;
-                    return kind === "evm"
+                    return kind === "evm" || kind === "solana"
                         ? a
-                        : { ...a, disabledReason: "can't bridge yet" };
+                        : { ...a, disabledReason: "can't bridge" };
                 })
                 // Biggest first, and anything unusable last regardless of size.
                 .sort((x, y) => {

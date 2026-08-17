@@ -7,11 +7,13 @@
 //   Sui     → no keyless aggregator currently reachable (7K returns 522).
 //   Bitcoin → no on-chain DEX exists; swapping needs a bridge.
 //
-// CROSS-CHAIN, from an EVM source into anything LI.FI reaches (every EVM chain
-// above, plus Solana and Bitcoin) — see `crossChainSupport`. That is what makes
-// "hold ETH on Base, buy a coin on BNB" one signature instead of a manual
-// bridge, and it needed no new signing code, because a bridged route is still
-// one transaction on the source chain.
+// CROSS-CHAIN, from an EVM **or Solana** source into anything LI.FI reaches
+// (every EVM chain above, plus Solana and Bitcoin) — see `crossChainSupport`.
+// That is what makes "hold ETH on Base, buy a coin on BNB" one signature
+// instead of a manual bridge. A bridged route is still ONE transaction on the
+// source chain, so the only thing that varies is which signer handles it:
+// viem for EVM, `solana-lifi.ts` for the serialized transaction LI.FI returns
+// when the source is Solana.
 //
 // swapSupport() lets the UI disable the action with a real reason instead of
 // offering a button that fails.
@@ -19,6 +21,7 @@
 import { getChain } from "../registry";
 import type { ChainId } from "../types";
 import { executeLifiSwap, getLifiQuote } from "./lifi";
+import { executeLifiSolanaSwap } from "./solana-lifi";
 import type { SwapQuote, SwapQuoteRequest, SwapResult } from "./types";
 
 export * from "./types";
@@ -73,19 +76,22 @@ export function crossChainSupport(fromChain: string, toChain: string): SwapSuppo
   const to = getChain(toChain);
   if (!from || !to) return { supported: false, reason: "Unknown chain" };
 
-  if (from.kind !== "evm") {
-    return {
-      supported: false,
-      reason:
-        from.kind === "solana"
-          ? "Bridging out of Solana isn't wired up yet — swap on Solana, or pay with a token on another chain"
-          : `Can't bridge out of ${from.name}`,
-    };
+  // EVM and Solana sources both sign now — EVM through viem, Solana through
+  // `executeLifiSolanaSwap`, which handles the serialized transaction LI.FI
+  // returns for an SVM source. Bitcoin and Sui have no signer on this path.
+  if (from.kind !== "evm" && from.kind !== "solana") {
+    return { supported: false, reason: `Can't bridge out of ${from.name}` };
   }
   if (!BRIDGEABLE_KINDS.has(to.kind)) {
     return { supported: false, reason: `Can't bridge into ${to.name}` };
   }
   return { supported: true, provider: "lifi" };
+}
+
+/** Solana quoting still goes through LI.FI only when BRIDGING. A same-chain
+ *  Solana swap belongs to Jupiter, which routes its own liquidity better. */
+function lifiHandlesSource(fromChain: string, toChain: string): boolean {
+  return fromChain !== toChain || getChain(fromChain)?.kind === "evm";
 }
 
 export async function getSwapQuote(
@@ -95,16 +101,24 @@ export async function getSwapQuote(
    *  EVM address cannot receive on Solana and vice versa. */
   toAddress?: string
 ): Promise<SwapQuote> {
-  const support = crossChainSupport(request.chain, request.toChain ?? request.chain);
+  const destination = request.toChain ?? request.chain;
+  const support = crossChainSupport(request.chain, destination);
   if (!support.supported) throw new Error(support.reason ?? "Swaps unavailable");
-  if (support.provider !== "lifi") {
-    throw new Error("Solana swaps go through Jupiter, not this route");
+  if (!lifiHandlesSource(request.chain, destination)) {
+    throw new Error("Same-chain Solana swaps go through Jupiter, not this route");
   }
   return getLifiQuote(request, fromAddress, toAddress);
 }
 
 export async function executeSwap(seed: Uint8Array, quote: SwapQuote): Promise<SwapResult> {
-  const support = crossChainSupport(quote.chain, quote.toChain ?? quote.chain);
-  if (support.provider !== "lifi") throw new Error("Unsupported swap route");
+  const destination = quote.toChain ?? quote.chain;
+  const support = crossChainSupport(quote.chain, destination);
+  if (!support.supported) throw new Error(support.reason ?? "Unsupported swap route");
+
+  // Dispatch on the SOURCE chain, because that is the only one being signed on:
+  // an EVM source is an eth_sendTransaction whatever the destination, and a
+  // Solana source is a serialized Solana transaction whatever the destination.
+  const source = getChain(quote.chain);
+  if (source?.kind === "solana") return executeLifiSolanaSwap(seed, quote);
   return executeLifiSwap(seed, quote);
 }
