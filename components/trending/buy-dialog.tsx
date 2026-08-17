@@ -214,14 +214,29 @@ export function BuyDialog({
     const assetsLoading = solAssets.isLoading || evmAssets.isLoading;
 
     /**
-     * No derived addresses at all — a DIFFERENT state from "no balances", and
-     * the only one the user can do anything about.
+     * No wallet at all — a DIFFERENT state from "no balances", and the only one
+     * the user can do anything about.
      *
-     * Worth distinguishing because it is common: of 31 accounts, only 7 have
-     * multichain rows, and an unprovisioned account previously opened an empty
-     * picker that read as a broken feature rather than as a setup step.
+     * Worth distinguishing because it is the common case: of 31 accounts, only
+     * 7 have multichain rows, so an unprovisioned account is what MOST people
+     * open this dialog with.
+     *
+     * Read from two independent signals, because relying on either alone fails
+     * silently into "No balances" — which is exactly what shipped first:
+     *   - `noAddresses` from getAllChainAssets is authoritative, but it is a
+     *     field on a payload, so a failed or slow query makes it `undefined`
+     *     rather than false, and `undefined === true` is quietly not-no-wallet.
+     *   - getWalletAssets THROWS ("No wallet address provided") when the legacy
+     *     Solana column is null, so its error is itself evidence — and it
+     *     survives the case where the first query is the one that failed.
+     *
+     * Gated on both queries having settled, so it can never flash setup at
+     * someone who simply has not loaded yet.
      */
-    const noWallet = evmAssets.data?.noAddresses === true && assets.length === 0;
+    const noWallet =
+        !assetsLoading &&
+        assets.length === 0 &&
+        (evmAssets.data?.noAddresses === true || (solAssets.isError && !evmAssets.data));
 
     // Falls back to the target chain's native coin, then to the largest usable
     // balance anywhere — a user holding only USDC on Base should not be shown
