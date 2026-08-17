@@ -139,6 +139,7 @@ export function PayWithSelect({
     targetChain,
     cardEnabled,
     disabled,
+    emptyReason,
 }: {
     assets: PayAsset[];
     loading?: boolean;
@@ -150,6 +151,10 @@ export function PayWithSelect({
     targetChain?: string;
     cardEnabled?: boolean;
     disabled?: boolean;
+    /** Why the list is empty, when it is. "No balances" was being shown for
+     *  three different reasons — none, unloadable, and no wallet — which is
+     *  what made the last round undiagnosable from the screen alone. */
+    emptyReason?: string;
 }) {
     const [open, setOpen] = React.useState(false);
     const isCard = selected === PAY_WITH_CARD;
@@ -165,8 +170,12 @@ export function PayWithSelect({
     };
 
     return (
-        <Squircle asChild radius={20}>
-            <div className="t-acc w-full bg-white/[0.03]" data-open={open && !disabled && !empty}>
+        // The outer box is `relative` and NOT squircled: the panel below is
+        // absolutely positioned, and a clip-path here would cut it off at the
+        // header's bounds. Each part carries its own squircle instead.
+        <div className="t-acc relative w-full" data-open={open && !disabled && !empty}>
+            <Squircle asChild radius={20}>
+                <div className="w-full bg-white/[0.03]">
                 <button
                     type="button"
                     disabled={disabled || empty}
@@ -197,11 +206,7 @@ export function PayWithSelect({
                                     ? "Card"
                                     : loading && !current
                                       ? "…"
-                                      : // The no-WALLET case never reaches this
-                                        // component — the dialog swaps its whole
-                                        // body for setup before rendering a
-                                        // picker there is nothing to pick from.
-                                        (current?.symbol ?? "No balances")}
+                                      : (current?.symbol ?? emptyReason ?? "No balances")}
                             </span>
                             {/* Only when it differs: a badge on every row would
                                 be noise, but a bridged source has to be visible
@@ -222,14 +227,26 @@ export function PayWithSelect({
                     </span>
                 </button>
 
-                {/* grid-template-rows 0fr -> 1fr; the inner div clips. No height
-                    is ever measured, so nothing here reads layout per frame. */}
-                <div className="t-acc-panel">
-                    <div className="t-acc-panel-inner">
+                </div>
+            </Squircle>
+
+            {/* OVERLAYS the content beneath instead of displacing it.
+                Expanding in flow grew the whole dialog as the list opened,
+                which is wrong for a picker: the modal must be one size whether
+                or not you are choosing. `absolute` keeps the grid-rows reveal
+                (still no measured heights) while taking zero layout space. */}
+            <div className="t-acc-panel absolute inset-x-0 top-full z-30 mt-1">
+                <div className="t-acc-panel-inner">
+                    <Squircle asChild radius={20}>
+                        {/* Solid, not translucent: it sits over the details card
+                            and the CTA, which must not read through it. */}
+                        <div className="border border-white/10 bg-[#141414]">
                         <div className="flex flex-col gap-1 px-2 pb-2">
                             {!loading && assets.length === 0 ? (
                                 <p className="px-3 py-2 text-13 font-medium text-zinc-500">
-                                    Nothing to spend yet — add funds to a chain and it&apos;ll show here.
+                                    {emptyReason
+                                        ? `${emptyReason}.`
+                                        : "Nothing to spend yet — add funds to a chain and it'll show here."}
                                 </p>
                             ) : null}
 
@@ -280,9 +297,10 @@ export function PayWithSelect({
                                 />
                             ) : null}
                         </div>
-                    </div>
+                        </div>
+                    </Squircle>
                 </div>
             </div>
-        </Squircle>
+        </div>
     );
 }

@@ -238,6 +238,26 @@ export function BuyDialog({
         assets.length === 0 &&
         (evmAssets.data?.noAddresses === true || (solAssets.isError && !evmAssets.data));
 
+    /**
+     * Why the list is empty, said out loud.
+     *
+     * "No balances" was being rendered for three different reasons — genuinely
+     * nothing held, the queries failed, and no wallet exists — and collapsing
+     * them is why the last fix could not be diagnosed from the screen. Each
+     * now names itself, so the UI is its own instrument.
+     */
+    const emptyReason = assetsLoading
+        ? undefined
+        : assets.length > 0
+          ? undefined
+          : evmAssets.isError && solAssets.isError
+            ? "Couldn't load balances"
+            : evmAssets.isError
+              ? "Couldn't load other chains"
+              : solAssets.isError && !evmAssets.data
+                ? "Couldn't load balances"
+                : "No balances";
+
     // Falls back to the target chain's native coin, then to the largest usable
     // balance anywhere — a user holding only USDC on Base should not be shown
     // an empty SOL row they cannot spend.
@@ -518,6 +538,7 @@ export function BuyDialog({
                             selected={payWith}
                             onSelect={setPayWith}
                             targetChain={chainId ?? undefined}
+                            emptyReason={emptyReason}
                             cardEnabled={!!onramp.data?.supported}
                             disabled={buying}
                         />
