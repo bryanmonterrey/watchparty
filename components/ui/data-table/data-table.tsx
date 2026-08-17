@@ -112,6 +112,58 @@ export interface DataTableProps<TData extends RowData> {
  * what a copy icon or an external-link chevron should key on rather than
  * wrapping its own group around a single cell.
  */
+/**
+ * One cell's slice of the row hover wash.
+ *
+ * Per cell rather than per row because a positioned `<tr>` is only a containing
+ * block in Chrome and Firefox — Safari ignores it, so a single row-spanning
+ * span escaped to the nearest positioned ancestor and tinted the entire centre
+ * column on hover. `<td>` works everywhere.
+ *
+ * Only the outer corners round, so the tiled slices still read as one pill.
+ * The middle cells skip Squircle entirely: a clip-path with no rounding is a
+ * wrapper and a paint step for nothing, on every cell of every row.
+ */
+function RowHoverWash({
+    radius,
+    color,
+    roundLeft,
+    roundRight,
+}: {
+    radius: number;
+    color?: string;
+    roundLeft: boolean;
+    roundRight: boolean;
+}) {
+    const wash = (
+        <span
+            aria-hidden
+            style={{ backgroundColor: color }}
+            className={cn(
+                "pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover/row:opacity-10",
+                !color && "bg-white group-hover/row:opacity-[0.06]",
+            )}
+        />
+    );
+
+    if (!roundLeft && !roundRight) return wash;
+
+    return (
+        <Squircle
+            asChild
+            autoEffects={false}
+            radius={{
+                topLeft: roundLeft ? radius : 0,
+                bottomLeft: roundLeft ? radius : 0,
+                topRight: roundRight ? radius : 0,
+                bottomRight: roundRight ? radius : 0,
+            }}
+        >
+            {wash}
+        </Squircle>
+    );
+}
+
 export function DataTable<TData extends RowData>({
     data,
     columns,
@@ -401,10 +453,15 @@ export function DataTable<TData extends RowData>({
                                     // the squircled wash is the trending-table look, whose
                                     // rows sit straight on the canvas with no divider and
                                     // no fill, so a hairline under each one would contradict
-                                    // it. `relative` is what the wash's inset-0 resolves
-                                    // against — verified in the browser that a positioned
-                                    // <tr> really does become the containing block for an
-                                    // absolute child of its cells.
+                                    // it.
+                                    //
+                                    // `relative` here is now only for stacking (z-0); the
+                                    // wash resolves against each CELL, not the row. A
+                                    // positioned <tr> is a containing block in Chrome and
+                                    // Firefox but NOT in Safari (long-standing WebKit
+                                    // behaviour), where the absolute child escaped to the
+                                    // nearest positioned ancestor and washed the entire
+                                    // centre column on hover. <td> is reliable everywhere.
                                     hoverRadius != null
                                         ? "group/row relative z-0"
                                         : "border-b border-border/60",
@@ -422,34 +479,51 @@ export function DataTable<TData extends RowData>({
                                             key={cell.id}
                                             className={cn(
                                                 "px-4 align-middle",
+                                                // Containing block for this cell's slice of
+                                                // the hover wash — see the note on the row.
+                                                hoverRadius != null && "relative",
                                                 alignText(meta?.align),
                                                 meta?.hideClassName,
                                                 cellClassName,
                                             )}
                                         >
-                                            {/* Rendered once, from the FIRST cell, because a
-                                                <span> is not valid content for a <tr> — it
-                                                spans the whole row anyway via the row's
-                                                containing block. It paints OVER the cells
-                                                rather than behind them, which is the shipped
+                                            {/* One slice PER CELL, tiled across the row,
+                                                rather than a single span stretched over it.
+                                                Cells are adjacent so the slices meet with no
+                                                seam, and only the outer two round — which is
+                                                what keeps the row's rounded ends.
+
+                                                It was one span in the first cell relying on
+                                                the <tr> as its containing block; Safari does
+                                                not make a positioned <tr> one, so that span
+                                                escaped and washed the whole column. Paints
+                                                OVER the cells, which is the shipped
                                                 trending/alert-rail look, not an accident. */}
-                                            {hoverRadius != null && cellIndex === 0 ? (
-                                                <Squircle asChild radius={hoverRadius} autoEffects={false}>
-                                                    <span
-                                                        aria-hidden
-                                                        style={{ backgroundColor: rowHoverColor?.(row.original) }}
-                                                        className={cn(
-                                                            "pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover/row:opacity-10",
-                                                            !rowHoverColor && "bg-white group-hover/row:opacity-[0.06]",
-                                                        )}
-                                                    />
-                                                </Squircle>
+                                            {hoverRadius != null ? (
+                                                <RowHoverWash
+                                                    radius={hoverRadius}
+                                                    color={rowHoverColor?.(row.original)}
+                                                    roundLeft={cellIndex === 0}
+                                                    roundRight={false}
+                                                />
                                             ) : null}
                                             <table.FlexRender cell={cell} />
                                         </td>
                                     );
                                 })}
-                                <td aria-hidden />
+                                {/* The row's right edge lives in this spacer, so it carries
+                                    the wash's right-rounded end — without it the fill would
+                                    stop short of where the row visibly ends. */}
+                                <td aria-hidden className={hoverRadius != null ? "relative" : undefined}>
+                                    {hoverRadius != null ? (
+                                        <RowHoverWash
+                                            radius={hoverRadius}
+                                            color={rowHoverColor?.(row.original)}
+                                            roundLeft={false}
+                                            roundRight
+                                        />
+                                    ) : null}
+                                </td>
                             </tr>
                         ))}
 
