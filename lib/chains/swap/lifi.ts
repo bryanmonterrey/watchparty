@@ -45,9 +45,28 @@ function lifiChainId(chain: { id: string; kind: string; chainId?: number }): num
   return LIFI_NON_EVM_IDS[chain.id] ?? null;
 }
 
+/**
+ * Any chain LI.FI can ROUTE, EVM or not.
+ *
+ * Quoting and signing have different requirements and conflating them is what
+ * broke Solana: `evmChainOrThrow` was used for both, so asking for a quote FROM
+ * Solana threw "solana does not swap through LI.FI" even though LI.FI quotes it
+ * happily (SOL -> BNB via Relay, measured) and `executeLifiSolanaSwap` can sign
+ * it. Quoting needs only an id LI.FI recognises; only the EVM SIGNER needs an
+ * EVM chain.
+ */
+function routableChainOrThrow(id: ChainId) {
+  const chain = getChain(id);
+  if (!chain) throw new Error(`unknown chain: ${id}`);
+  if (lifiChainId(chain) === null) {
+    throw new Error(`${chain.name} is not reachable through LI.FI`);
+  }
+  return chain;
+}
+
 function evmChainOrThrow(id: ChainId) {
   const chain = getChain(id);
-  if (!chain || chain.kind !== "evm") throw new Error(`${id} does not swap through LI.FI`);
+  if (!chain || chain.kind !== "evm") throw new Error(`${id} cannot be signed as an EVM chain`);
   return chain;
 }
 
@@ -74,8 +93,8 @@ export async function getLifiTokenInfo(
   chainId: ChainId,
   token: string
 ): Promise<{ address: string; symbol: string; name: string; decimals: number; priceUSD?: string }> {
-  const chain = evmChainOrThrow(chainId);
-  const params = new URLSearchParams({ chain: String(chain.chainId), token });
+  const chain = routableChainOrThrow(chainId);
+  const params = new URLSearchParams({ chain: String(lifiChainId(chain)), token });
   const res = await fetch(`${LIFI_API}/token?${params}`, { headers: { accept: "application/json" } });
   if (!res.ok) throw new Error(`Token not found on ${chain.name} (${res.status})`);
   const t = (await res.json()) as any;
@@ -91,7 +110,7 @@ export async function getLifiQuote(
    *  Solana, and LI.FI rejects the route rather than guessing. */
   toAddress?: string
 ): Promise<SwapQuote> {
-  const chain = evmChainOrThrow(request.chain);
+  const chain = routableChainOrThrow(request.chain);
   const destId = request.toChain ?? request.chain;
   const dest = getChain(destId);
   if (!dest) throw new Error(`unknown destination chain: ${destId}`);
@@ -99,7 +118,9 @@ export async function getLifiQuote(
   if (destLifiId === null) throw new Error(`${dest.name} is not reachable through LI.FI`);
 
   const params = new URLSearchParams({
-    fromChain: String(chain.chainId),
+    // The SOURCE id through the same resolver as the destination — Solana's is
+    // synthetic, not `chain.chainId`, which is undefined for it.
+    fromChain: String(lifiChainId(chain)),
     toChain: String(destLifiId),
     fromToken: request.fromToken,
     toToken: request.toToken,

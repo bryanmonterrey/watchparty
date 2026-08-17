@@ -191,11 +191,39 @@ export function PayWithSelect({
         setOpen(false);
     };
 
+    // Close on an outside press or Escape.
+    //
+    // The panel OVERLAYS the dialog's own content, so without this the only way
+    // out was re-pressing the header — and anything the panel covered (the
+    // details card, the buy button) looked clickable while being unreachable.
+    //
+    // `pointerdown`, not `click`: the press should dismiss before whatever is
+    // underneath receives it, so the first tap outside closes the panel instead
+    // of also actioning the control it landed on.
+    const rootRef = React.useRef<HTMLDivElement>(null);
+    React.useEffect(() => {
+        if (!open) return;
+        const onDown = (e: PointerEvent) => {
+            if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+        };
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === "Escape") setOpen(false);
+        };
+        // Capture phase so a stopPropagation inside the dialog can't strand the
+        // panel open.
+        document.addEventListener("pointerdown", onDown, true);
+        document.addEventListener("keydown", onKey);
+        return () => {
+            document.removeEventListener("pointerdown", onDown, true);
+            document.removeEventListener("keydown", onKey);
+        };
+    }, [open]);
+
     return (
         // The outer box is `relative` and NOT squircled: the panel below is
         // absolutely positioned, and a clip-path here would cut it off at the
         // header's bounds. Each part carries its own squircle instead.
-        <div className="t-acc relative w-full" data-open={open && !disabled && !empty}>
+        <div ref={rootRef} className="t-acc relative w-full" data-open={open && !disabled && !empty}>
             <Squircle asChild radius={20}>
                 <div className="w-full bg-white/[0.03]">
                 <button
@@ -241,12 +269,12 @@ export function PayWithSelect({
 
                     <span className="ml-auto flex shrink-0 items-center gap-2">
                         {!isCard && current ? (
-                            <span className="flex flex-col items-end">
+                            <span className="flex items-baseline gap-2">
                                 <span className="text-13 font-semibold tabular-nums text-white">
                                     {fmtBalance(current.balance)}
                                 </span>
                                 {fmtUsd(current.usdValue) ? (
-                                    <span className="text-xs font-medium tabular-nums text-zinc-500">
+                                    <span className="text-13 font-medium tabular-nums text-zinc-500">
                                         {fmtUsd(current.usdValue)}
                                     </span>
                                 ) : null}
@@ -312,12 +340,12 @@ export function PayWithSelect({
                                                 // count answers "can I afford
                                                 // this", the dollars answer "is
                                                 // it worth using".
-                                                <span className="flex flex-col items-end">
+                                                <span className="flex items-baseline gap-2">
                                                     <span className="text-13 font-semibold tabular-nums text-white">
                                                         {fmtBalance(a.balance)}
                                                     </span>
                                                     {fmtUsd(a.usdValue) ? (
-                                                        <span className="text-xs font-medium tabular-nums text-zinc-500">
+                                                        <span className="text-13 font-medium tabular-nums text-zinc-500">
                                                             {fmtUsd(a.usdValue)}
                                                         </span>
                                                     ) : null}
