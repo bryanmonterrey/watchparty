@@ -472,8 +472,9 @@ export function DataTable<TData extends RowData>({
                                     rowClassName,
                                 )}
                             >
-                                {row.getVisibleCells().map((cell, cellIndex) => {
+                                {row.getVisibleCells().map((cell, cellIndex, cells) => {
                                     const meta = cell.column.columnDef.meta as DataTableColumnMeta | undefined;
+                                    const isLastCell = cellIndex === cells.length - 1;
                                     return (
                                         <td
                                             key={cell.id}
@@ -504,26 +505,19 @@ export function DataTable<TData extends RowData>({
                                                     radius={hoverRadius}
                                                     color={rowHoverColor?.(row.original)}
                                                     roundLeft={cellIndex === 0}
-                                                    roundRight={false}
+                                                    roundRight={isLastCell}
                                                 />
                                             ) : null}
                                             <table.FlexRender cell={cell} />
                                         </td>
                                     );
                                 })}
-                                {/* The row's right edge lives in this spacer, so it carries
-                                    the wash's right-rounded end — without it the fill would
-                                    stop short of where the row visibly ends. */}
-                                <td aria-hidden className={hoverRadius != null ? "relative" : undefined}>
-                                    {hoverRadius != null ? (
-                                        <RowHoverWash
-                                            radius={hoverRadius}
-                                            color={rowHoverColor?.(row.original)}
-                                            roundLeft={false}
-                                            roundRight
-                                        />
-                                    ) : null}
-                                </td>
+                                {/* No wash here: this filler is `width: 0` unless every
+                                    column is pixel-fixed (see the colgroup), so anything
+                                    rounded inside it renders in a zero-width box and the
+                                    row appears to end square and cut off. The right edge
+                                    belongs to the last real cell. */}
+                                <td aria-hidden />
                             </tr>
                         ))}
 

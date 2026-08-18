@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { inferRouterOutputs } from "@trpc/server";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDownRight01Icon, ArrowUpRight01Icon, StarIcon } from "@hugeicons/core-free-icons";
@@ -176,7 +177,11 @@ function BuyCell({ row, onBuy }: { row: TrendingRow; onBuy: (row: TrendingRow) =
                 "text-twitter2 font-bold transition-opacity hover:opacity-80",
                 "relative z-10 w-fit cursor-pointer",
             )}
-            onClick={() => onBuy(row)}
+            onClick={(e) => {
+                // The row navigates; this must not do both.
+                e.stopPropagation();
+                onBuy(row);
+            }}
         >
             Buy
         </button>
@@ -187,7 +192,9 @@ function StarCell({ row }: { row: TrendingRow }) {
     const { starred, toggle } = useStar(trackedTokenId(row.network, row.tokenAddress));
     const { bursting, particles, fire } = useBurst();
 
-    const onClick = () => {
+    const onClick = (e: React.MouseEvent) => {
+        // The row navigates to the coin page; starring must not also do that.
+        e.stopPropagation();
         toggle();
         // Celebrate on the way IN only — unstarring just reverses the fill,
         // same rule the like button follows.
@@ -230,10 +237,18 @@ function StarCell({ row }: { row: TrendingRow }) {
     );
 }
 
-/** Coin identity: icon with its chain badge, name, ticker. The name's stretched
- *  ::after covers the WHOLE row — the row is a <tr> with `position: relative`,
- *  so an absolutely-positioned descendant resolves against the row, not the
- *  cell. Buy and star clear it with `relative z-10`. */
+/** Coin identity: icon with its chain badge, name, ticker.
+ *
+ *  The name used to carry a stretched `::after` that covered the whole row, on
+ *  the assumption that a positioned `<tr>` is the containing block for an
+ *  absolute descendant of its cells. Chrome agrees; SAFARI DOES NOT, so the
+ *  row was never really hoverable there — and once the hover wash moved
+ *  per-cell (each `<td>` positioned), the stretch collapsed to the name cell in
+ *  every browser.
+ *
+ *  The row is clickable via `onRowClick` now, which needs no containing block
+ *  and works everywhere. The Link stays for what a real anchor gives that a
+ *  click handler cannot: an href, middle-click, open-in-new-tab. */
 function NameCell({ row }: { row: TrendingRow }) {
     return (
         <span className="flex min-w-0 items-center gap-3">
@@ -254,7 +269,7 @@ function NameCell({ row }: { row: TrendingRow }) {
                     naming the chain skips the resolution step entirely. */}
                 <Link
                     href={`/coin/${row.network}/${row.tokenAddress}`}
-                    className={cn(CELL_TEXT, "cursor-pointer truncate text-left text-white after:absolute after:inset-0 after:content-['']")}
+                    className={cn(CELL_TEXT, "relative z-10 cursor-pointer truncate text-left text-white")}
                 >
                     {row.name ?? row.symbol}
                 </Link>
@@ -308,6 +323,7 @@ export function TrendingTable({ className }: { className?: string }) {
     // instead of by a board that mostly never buys anything. The dialog also
     // owns the in-flight state, which is why the cell has none — while a buy
     // runs, the modal is covering the row it started from.
+    const router = useRouter();
     const [buyCoin, setBuyCoin] = useState<TrendingRow | null>(null);
 
     const snapshotKey = useMemo(() => viewerKey(null, "trending", queryInputKey(input)), [input]);
@@ -363,7 +379,7 @@ export function TrendingTable({ className }: { className?: string }) {
             }),
             helper.accessor("priceUsd", {
                 id: "price",
-                header: "Market price",
+                header: "Price",
                 // No server sort by price, and sorting one loaded page would be
                 // a lie — so this header stays a label.
                 enableSorting: false,
@@ -524,6 +540,10 @@ export function TrendingTable({ className }: { className?: string }) {
                     skeletonRows={12}
                     rowHoverRadius={12}
                     rowHoverColor={(r) => stableHoverColor(r.id)}
+                    // Replaces the stretched ::after: needs no containing block,
+                    // so it works in Safari and survives the cells becoming
+                    // positioned. The name's <Link> stays for href semantics.
+                    onRowClick={(r) => router.push(`/coin/${r.network}/${r.tokenAddress}`)}
                     stickyHeader
                     stickyTop="var(--board-stick,0px)"
                     headerClassName={cn(
