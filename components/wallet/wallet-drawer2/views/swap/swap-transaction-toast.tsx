@@ -38,7 +38,7 @@ function TokenPill({ symbol, icon }: { symbol: string; icon?: string }) {
                 {icon ? (
                     <img src={icon} alt={symbol} className="w-full h-full object-cover" />
                 ) : (
-                    <span className="text-[8px] font-bold text-zinc-400">{symbol.slice(0, 2)}</span>
+                    <span className="text-11 font-bold text-zinc-400">{symbol.slice(0, 2)}</span>
                 )}
             </div>
             <span className="text-12 font-semibold text-white">{symbol}</span>
@@ -60,12 +60,14 @@ function SwapToastContent({
     const activeStepIdx = STEPS.indexOf(step as SwapToastStep);
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 12, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ type: "spring", stiffness: 400, damping: 30 }}
-            className="w-[300px] bg-black1 border border-baseborder/20 rounded-3xl p-4 flex flex-col gap-3"
-        >
+        // A PLAIN div, not a motion one. Toast open/close is owned globally —
+        // `[data-sonner-toast]` in globals.css animates every toast on mount and
+        // removal (350ms in / 250ms out, rise + fade + blur + scale). This
+        // container was springing itself in on top of that, so the drawer's
+        // three toasts entered twice, on two different curves, unlike every
+        // other toast in the app. The state changes INSIDE it stay animated —
+        // those are content, not the toast opening.
+        <div className="flex w-[300px] flex-col gap-3 rounded-3xl border border-baseborder/20 bg-black1 p-4">
             {/* Token pair + dismiss */}
             <div className="flex items-center gap-2">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -120,7 +122,7 @@ function SwapToastContent({
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0, opacity: 0 }}
                             transition={{ type: "spring", stiffness: 500, damping: 22 }}
-                            className="w-4 h-4 rounded-full bg-red-500 flex items-center justify-center shrink-0"
+                            className="w-4 h-4 flex shrink-0 items-center justify-center rounded-full bg-pastelred"
                         >
                             <HugeiconsIcon icon={Cancel01Icon} className="w-2.5 h-2.5 text-black" strokeWidth={3} />
                         </motion.div>
@@ -185,7 +187,7 @@ function SwapToastContent({
                     </motion.div>
                 )}
             </AnimatePresence>
-        </motion.div>
+        </div>
     );
 }
 

@@ -21,8 +21,13 @@ import { cn } from "@/lib/utils";
  *   surface   bg-canvas, the same fill the drawer shell paints — screens never
  *             paint their own black, which is what made the sub-screens read as
  *             a separate sheet stacked on the drawer.
- *   card      rounded-3xl + bg-panel2 + a single baseborder hairline. One radius
- *             for the whole drawer.
+ *   card      rounded-3xl (24px) + bg-panel2 + a single baseborder hairline.
+ *             Two radii exist and only two: 24px for anything that carries a
+ *             FILL (cards, rows, tiles, screens), and rounded-full for pills
+ *             and controls. The one exception is a hover-only list row inside a
+ *             dialog or popover — no fill, no edge, just a wash on hover —
+ *             which uses 16px to match the app's menu rows (gooMenuItem).
+ *             Nothing else. Every `rounded-[Npx]` in the drawer is gone.
  *   rows      SEPARATE cards with `space-y-1` between them, never one card
  *             subdivided by hairlines — house rule is no divider borders.
  *   type      14px bold tracking-tight primary / 12px medium zinc-500 secondary.
@@ -62,7 +67,7 @@ export function DrawerBackButton({
 /**
  * The standard sub-screen: back arrow, centred title, optional right slot, and
  * a scrolling body. Every screen that used to hand-roll
- * `min-h-[56px] … absolute left-3 … text-[17px] font-bold` gets it from here.
+ * `min-h-[56px] … absolute left-3 … text-15 font-bold` gets it from here.
  *
  * The header does not scroll away and does not carry a border — it sits on the
  * same canvas as the body, so the seam is spacing, not a hairline.

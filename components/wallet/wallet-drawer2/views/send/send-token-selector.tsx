@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, Search01Icon } from "@hugeicons/core-free-icons";
+import { Search01Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
 import {
     Dialog,
@@ -77,7 +77,7 @@ export function SendTokenSelector({
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             autoFocus
-                            className="h-[52px] w-full bg-transparent pl-11 pr-4 text-[17px] font-medium placeholder:text-zinc-500 focus:outline-none"
+                            className="h-[52px] w-full bg-transparent pl-11 pr-4 text-15 font-medium placeholder:text-zinc-500 focus:outline-none"
                         />
                     </div>
                 </div>

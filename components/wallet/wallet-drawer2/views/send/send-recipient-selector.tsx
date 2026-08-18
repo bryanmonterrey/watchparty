@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Clock01Icon, Search01Icon } from "@hugeicons/core-free-icons";
+import { Clock01Icon, Search01Icon, Wallet01Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -153,8 +153,8 @@ export function SendRecipientSelector({
                             onClick={() => handleSelect({ address: search.trim(), display: shortenWalletAddress(search.trim()) })}
                             className="cursor-pointer w-full flex items-center gap-3 px-3 py-3 rounded-2xl hover:bg-white/[0.06] transition-colors"
                         >
-                            <div className="w-9 h-9 rounded-full bg-white/[0.08] flex items-center justify-center flex-shrink-0">
-                                <span className="text-11 font-bold text-zinc-400">◎</span>
+                            <div className="grid size-9 shrink-0 place-items-center rounded-full bg-white/[0.08]">
+                                <HugeiconsIcon icon={Wallet01Icon} className="size-4 text-zinc-500" strokeWidth={2} />
                             </div>
                             <div className="flex-1 text-left min-w-0">
                                 <p className="text-13 font-semibold text-white leading-tight">Send to address</p>
@@ -170,7 +170,7 @@ export function SendRecipientSelector({
                                 <span className="text-11 font-semibold text-zinc-500">Users</span>
                             </div>
                             {isFetching && userResults.length === 0 && (
-                                <div className="py-6 text-center text-13 text-zinc-500">Searching...</div>
+                                <div className="py-6 text-center text-13 text-zinc-500">Searching…</div>
                             )}
                             {userResults.map((u) => (
                                 <button
@@ -179,10 +179,9 @@ export function SendRecipientSelector({
                                     disabled={!u.wallet_address || resolvingUserId === u.id}
                                     className={`cursor-pointer w-full flex items-center gap-3 px-3 py-3 rounded-2xl transition-colors ${u.wallet_address ? "hover:bg-white/[0.06]" : "opacity-40 cursor-not-allowed"}`}
                                 >
-                                    <Avatar className="w-9 h-9 flex-shrink-0">
+                                    <Avatar className="size-9 shrink-0">
                                         <AvatarImage src={u.avatar_url ?? undefined} />
-                                        <AvatarFallback className="bg-white/[0.08] text-11">
-                                        </AvatarFallback>
+                                        <AvatarFallback />
                                     </Avatar>
                                     <div className="flex-1 text-left min-w-0">
                                         <p className="text-13 font-semibold text-white leading-tight truncate">
@@ -232,13 +231,12 @@ export function SendRecipientSelector({
                                     className="cursor-pointer w-full flex items-center gap-3 px-3 py-3 rounded-2xl hover:bg-white/[0.06] transition-colors"
                                 >
                                     {r.avatar_url ? (
-                                        <Avatar className="w-9 h-9 flex-shrink-0">
+                                        <Avatar className="size-9 shrink-0">
                                             <AvatarImage src={r.avatar_url} />
-                                            <AvatarFallback className="bg-white/[0.08] text-11">
-                                            </AvatarFallback>
+                                            <AvatarFallback />
                                         </Avatar>
                                     ) : (
-                                        <div className="w-9 h-9 rounded-full bg-white/[0.08] flex items-center justify-center flex-shrink-0">
+                                        <div className="grid size-9 shrink-0 place-items-center rounded-full bg-white/[0.08]">
                                             <HugeiconsIcon icon={Clock01Icon} className="w-4 h-4 text-zinc-500" />
                                         </div>
                                     )}

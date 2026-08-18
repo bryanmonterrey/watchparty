@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Copy01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { Tick02Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
 import { appToast } from "@/components/app-ui/app-toast";
 import { motion, AnimatePresence } from "motion/react";

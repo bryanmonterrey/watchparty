@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, ArrowRight01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, ArrowRight01Icon, InformationCircleIcon, Tick02Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
 import { motion, AnimatePresence, type Variants } from "motion/react";
 import { SettingsIcon, TradeIcon } from "@/components/icons";
@@ -187,8 +187,6 @@ export function SwapSettingsPanel({ settings, onChange }: SwapSettingsPanelProps
                                         </div>
                                     </div>
 
-                                    
-
                                     {/* Trade Options nav row */}
                                     <button
                                         onClick={() => navigate("trade")}
@@ -222,28 +220,33 @@ export function SwapSettingsPanel({ settings, onChange }: SwapSettingsPanelProps
                                         <span className="text-13 font-semibold text-zinc-200">Trade options</span>
                                     </div>
 
-                                    {/* Default routing option */}
-                                    <div className="px-5 py-4 space-y-3">
+                                    {/* Default routing option.
+
+                                        The control here used to be a SWITCH —
+                                        a decorative div, permanently on, that
+                                        nothing could toggle because Default is
+                                        the only routing mode. A switch promises
+                                        a second state. This is the same tick the
+                                        currency and language pickers use, which
+                                        says the true thing: one option, chosen. */}
+                                    <div className="space-y-3 px-5 py-4">
                                         <div className="flex items-start justify-between gap-3">
-                                            <div className="space-y-1 flex-1">
+                                            <div className="flex-1 space-y-1">
                                                 <div className="flex items-center gap-1.5">
                                                     <span className="text-13 font-semibold text-zinc-200">Default</span>
-                                                    <div className="w-3.5 h-3.5 rounded-full bg-white/[0.08] flex items-center justify-center flex-shrink-0">
-                                                        <span className="text-zinc-400 text-[9px] font-bold leading-none">i</span>
-                                                    </div>
+                                                    <HugeiconsIcon
+                                                        icon={InformationCircleIcon}
+                                                        className="size-3.5 shrink-0 text-zinc-500"
+                                                        strokeWidth={2}
+                                                    />
                                                 </div>
-                                                <p className="text-11 text-zinc-500 leading-relaxed">
+                                                <p className="text-11 leading-relaxed text-zinc-500">
                                                     Identifies the most efficient route for your swap.
                                                 </p>
                                             </div>
-                                            {/* Toggle — always on for now (Default is the only mode) */}
-                                            <div className="flex-shrink-0 mt-0.5">
-                                                <div className="w-11 h-6 bg-zinc-200 rounded-full flex items-center justify-end pr-0.5 shadow-inner">
-                                                    <div className="w-5 h-5 bg-panel2 rounded-full flex items-center justify-center shadow">
-                                                        <HugeiconsIcon icon={Tick02Icon} className="w-3 h-3 text-zinc-200" />
-                                                    </div>
-                                                </div>
-                                            </div>
+                                            <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-white text-black">
+                                                <HugeiconsIcon icon={Tick02Icon} className="size-3" strokeWidth={3} />
+                                            </span>
                                         </div>
                                     </div>
                                 </motion.div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDataTransferVerticalIcon, ArrowDown01Icon, Cancel01Icon, InformationCircleIcon, Search01Icon } from "@hugeicons/core-free-icons";
+import { ArrowDataTransferVerticalIcon, ArrowDown01Icon, Search01Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { TokenIcon } from "../../components/token-icon";
@@ -104,7 +104,7 @@ export function TokenSelectorModal({
                         <HugeiconsIcon icon={ArrowDown01Icon} className="w-5 h-5 text-zinc-400" />
                     </button>
                 ) : (
-                    <button className="flex items-center gap-2 bg-white/[0.06] hover:bg-white/[0.10] text-white px-4 py-2 rounded-full text-[17px] font-bold outline-none transition-colors border border-baseborder/20">
+                    <button className="flex items-center gap-2 bg-white/[0.06] hover:bg-white/[0.10] text-white px-4 py-2 rounded-full text-15 font-bold outline-none transition-colors border border-baseborder/20">
                         <span>Select coin</span>
                         <HugeiconsIcon icon={ArrowDown01Icon} className="w-5 h-5 text-zinc-400" />
                     </button>
@@ -118,7 +118,7 @@ export function TokenSelectorModal({
 
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 pt-5 pb-3">
-                    <span className="font-semibold text-[17px]">Select a coin</span>
+                    <span className="font-semibold text-15">Select a coin</span>
                 </div>
 
                 {/* Search Bar */}
@@ -130,7 +130,7 @@ export function TokenSelectorModal({
                             placeholder="Search coins"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="h-[52px] w-full bg-transparent pl-11 pr-[80px] text-[17px] font-medium placeholder:text-zinc-500 focus:outline-none"
+                            className="h-[52px] w-full bg-transparent pl-11 pr-[80px] text-15 font-medium placeholder:text-zinc-500 focus:outline-none"
                         />
                     </div>
                 </div>

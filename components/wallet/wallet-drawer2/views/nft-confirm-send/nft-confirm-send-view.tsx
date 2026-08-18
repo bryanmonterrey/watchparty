@@ -1,8 +1,6 @@
 "use client";
 
 import { DrawerHeader } from "../../components/drawer-chrome";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
 import { NFT } from "../../types";
 import { cn } from "@/lib/utils";
@@ -54,7 +52,7 @@ export function NFTConfirmSendView({
                 <button
                     onClick={onBack}
                     disabled={isSending}
-                    className="flex-1 h-14 rounded-full bg-white/[0.05] text-[17px] font-bold text-white hover:bg-white/[0.10] transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+                    className="flex-1 h-14 rounded-full bg-white/[0.05] text-15 font-bold text-white hover:bg-white/[0.10] transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
                 >
                     Cancel
                 </button>
@@ -62,7 +60,7 @@ export function NFTConfirmSendView({
                     onClick={onSend}
                     disabled={isSending}
                     className={cn(
-                        "flex-1 h-14 rounded-full text-[17px] font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer",
+                        "flex-1 h-14 rounded-full text-15 font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer",
                         "bg-white/90 text-black hover:bg-white"
                     )}
                 >

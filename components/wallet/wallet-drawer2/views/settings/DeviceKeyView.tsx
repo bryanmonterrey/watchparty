@@ -76,7 +76,7 @@ export function DeviceKeyView({ onBack }: DeviceKeyViewProps) {
                         strokeWidth={2}
                     />
                 </div>
-                <p className="text-[17px] font-bold tracking-tight text-white">{cfg.title}</p>
+                <p className="text-15 font-bold tracking-tight text-white">{cfg.title}</p>
                 {cfg.description && (
                     <p className="max-w-[280px] text-12 font-medium leading-relaxed text-zinc-500">
                         {cfg.description}

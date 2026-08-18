@@ -170,13 +170,12 @@ export function SendRecipient({ value, displayValue, onChange, recents, variant 
                             className="cursor-pointer w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.06] transition-colors"
                         >
                             {r.avatar_url ? (
-                                <Avatar className="w-9 h-9 flex-shrink-0">
+                                <Avatar className="size-9 shrink-0">
                                     <AvatarImage src={r.avatar_url} />
-                                    <AvatarFallback className="bg-white/[0.08] text-11">
-                                    </AvatarFallback>
+                                    <AvatarFallback />
                                 </Avatar>
                             ) : (
-                                <div className="w-9 h-9 rounded-full bg-white/[0.08] flex items-center justify-center flex-shrink-0">
+                                <div className="grid size-9 shrink-0 place-items-center rounded-full bg-white/[0.08]">
                                     <HugeiconsIcon icon={Clock01Icon} className="w-4 h-4 text-zinc-500" />
                                 </div>
                             )}
@@ -201,7 +200,7 @@ export function SendRecipient({ value, displayValue, onChange, recents, variant 
             {showUserResults && (
                 <>
                     {isFetching && userResults.length === 0 && (
-                        <div className="px-4 py-4 text-12 text-zinc-500">Searching...</div>
+                        <div className="px-4 py-4 text-12 text-zinc-500">Searching…</div>
                     )}
                     {userResults.map((u) => (
                         <button
@@ -211,10 +210,9 @@ export function SendRecipient({ value, displayValue, onChange, recents, variant 
                             className={`cursor-pointer w-full flex items-center gap-3 px-4 py-3 transition-colors ${u.wallet_address ? "hover:bg-white/[0.06]" : "opacity-40 cursor-not-allowed"
                                 }`}
                         >
-                            <Avatar className="w-9 h-9 flex-shrink-0">
+                            <Avatar className="size-9 shrink-0">
                                 <AvatarImage src={u.avatar_url ?? undefined} />
-                                <AvatarFallback className="bg-white/[0.08] text-11">
-                                </AvatarFallback>
+                                <AvatarFallback />
                             </Avatar>
                             <div className="flex-1 text-left min-w-0">
                                 <p className="text-13 font-semibold text-white leading-tight">
@@ -295,7 +293,10 @@ export function SendRecipient({ value, displayValue, onChange, recents, variant 
                     />
                 </div>
                 {(isValid || isInvalid) && (
-                    <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${isValid ? "bg-emerald-400" : "bg-red-400"}`} />
+                    // Address valid / invalid IS semantic, so it keeps a
+                    // colour — but the app's two, not emerald-400 and red-400,
+                    // which appear nowhere else in the drawer.
+                    <div className={`mt-2 size-2 shrink-0 rounded-full ${isValid ? "bg-lantern" : "bg-pastelred"}`} />
                 )}
             </div>
 

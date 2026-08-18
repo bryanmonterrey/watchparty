@@ -83,7 +83,7 @@ export function ReceiveView({
                     <ReceiveQrCode walletAddress={walletAddress} />
                 ) : missingAddress ? (
                     <div className="mb-8 flex justify-center">
-                        <div className="flex size-[224px] flex-col items-center justify-center gap-3 rounded-[32px] border border-baseborder/20 px-6 text-center">
+                        <div className="flex size-[224px] flex-col items-center justify-center gap-3 rounded-3xl border border-baseborder/20 px-6 text-center">
                             <p className="text-12 font-medium text-zinc-400">
                                 No {config.name} address yet
                             </p>
@@ -99,7 +99,7 @@ export function ReceiveView({
                     </div>
                 ) : (
                     <div className="mb-8 flex justify-center">
-                        <div className="size-[224px] rounded-[32px] border border-baseborder/20 shimmer-skeleton" />
+                        <div className="size-[224px] rounded-3xl border border-baseborder/20 shimmer-skeleton" />
                     </div>
                 )}
 

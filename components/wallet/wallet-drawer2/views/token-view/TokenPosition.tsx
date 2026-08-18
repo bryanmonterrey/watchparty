@@ -22,7 +22,7 @@ export function TokenPosition({ token, hideBalances }: TokenPositionProps) {
     // Labels are sentence case at 12px zinc-500 — they were uppercase with
     // tracking-wide, the one uppercase run left in the drawer.
     const label = "text-12 font-medium text-zinc-500";
-    const value = "text-[17px] font-bold tabular-nums leading-none tracking-tight text-white";
+    const value = "text-15 font-bold tabular-nums leading-none tracking-tight text-white";
 
     return (
         <section className="space-y-1">

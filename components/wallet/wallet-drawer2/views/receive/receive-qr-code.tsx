@@ -74,7 +74,7 @@ export function ReceiveQrCode({ walletAddress }: ReceiveQrCodeProps) {
         // Add rounded corners to the SVG
         const svg = qrCodeRef.current.querySelector("svg");
         if (svg) {
-            svg.style.borderRadius = "32px"; // matching new card radii
+            svg.style.borderRadius = "24px"; // the drawer's one card radius (rounded-3xl)
             // Remove the hardcoded inline background to let the options handle it cleanly
             svg.style.backgroundColor = "transparent";
         }
@@ -84,7 +84,7 @@ export function ReceiveQrCode({ walletAddress }: ReceiveQrCodeProps) {
         <div className="flex justify-center mb-8">
             <div
                 ref={qrCodeRef}
-                className="bg-white/[0.02] p-1/2 rounded-[32px] border border-baseborder/20"
+                className="rounded-3xl border border-baseborder/20 bg-white/[0.02] p-2"
             />
         </div>
     );

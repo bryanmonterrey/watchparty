@@ -1,8 +1,6 @@
 "use client";
 
 import { DrawerHeader } from "../../components/drawer-chrome";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
 import { NFT } from "../../types";
 import { TokenIcon } from "../../components/token-icon";

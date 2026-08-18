@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, Wallet01Icon } from "@hugeicons/core-free-icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { shortenWalletAddress } from "@/lib/utils";
 
@@ -22,13 +22,11 @@ export function NFTRecipientTrigger({ recipient, recipientDisplay, recipientMeta
                 recipientMeta?.avatar_url ? (
                     <Avatar className="w-8 h-8 flex-shrink-0">
                         <AvatarImage src={recipientMeta.avatar_url} />
-                        <AvatarFallback className="bg-white/[0.08] text-[10px]">
-                            
-                        </AvatarFallback>
+                        <AvatarFallback />
                     </Avatar>
                 ) : (
-                    <div className="w-8 h-8 rounded-full bg-white/[0.08] flex items-center justify-center flex-shrink-0">
-                        <span className="text-[10px] font-bold text-zinc-400">◎</span>
+                    <div className="grid size-8 shrink-0 place-items-center rounded-full bg-white/[0.08]">
+                        <HugeiconsIcon icon={Wallet01Icon} className="size-4 text-zinc-500" strokeWidth={2} />
                     </div>
                 )
             ) : null}

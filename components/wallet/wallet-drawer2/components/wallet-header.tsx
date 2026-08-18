@@ -164,7 +164,7 @@ export function WalletHeader({
                         >
                             <Avatar className="h-10 w-10 shrink-0">
                                 <AvatarImage src={avatarUrl} alt={username} className="object-cover" />
-                                <AvatarFallback></AvatarFallback>
+                                <AvatarFallback />
                             </Avatar>
                             {/* Username and its badge, no address: the address was
                                 the only thing making this two lines, and rendering

@@ -58,7 +58,7 @@ export function SwapStatus({ step, inputSymbol, outputSymbol, inputAmount, outpu
                 {/* Status row */}
                 <div className="flex items-center gap-3">
                     {isPending && (
-                        <div className="w-2 h-2 rounded-full bg-lantern animate-pulse shrink-0" />
+                        <div className="size-2 shrink-0 animate-pulse rounded-full bg-white/60" />
                     )}
                     {isSuccess && (
                         <HugeiconsIcon icon={CheckmarkCircle02Icon} className="w-5 h-5 text-lantern shrink-0" />
@@ -87,7 +87,7 @@ export function SwapStatus({ step, inputSymbol, outputSymbol, inputAmount, outpu
                                 key={s}
                                 className={`h-1 rounded-full transition-all duration-300 ${
                                     step === s
-                                        ? "w-6 bg-lantern"
+                                        ? "w-6 bg-white"
                                         : s === "building" || (s === "signing" && (step === "confirming"))
                                         ? "w-2 bg-zinc-600"
                                         : "w-2 bg-white/[0.12]"

@@ -2,7 +2,7 @@
 
 import { DrawerHeader } from "../../components/drawer-chrome";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, ArrowLeft01Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, Wallet01Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import {
@@ -451,15 +451,13 @@ export function SendView({
                 >
                     {recipient ? (
                         recipientMeta?.avatar_url ? (
-                            <Avatar className="w-9 h-9 flex-shrink-0">
+                            <Avatar className="size-9 shrink-0">
                                 <AvatarImage src={recipientMeta.avatar_url} />
-                                <AvatarFallback className="bg-white/[0.08] text-11">
-                                   
-                                </AvatarFallback>
+                                <AvatarFallback />
                             </Avatar>
                         ) : (
-                            <div className="w-9 h-9 rounded-full bg-white/[0.08] flex items-center justify-center flex-shrink-0">
-                                <span className="text-11 font-bold text-zinc-400">◎</span>
+                            <div className="grid size-9 shrink-0 place-items-center rounded-full bg-white/[0.08]">
+                                <HugeiconsIcon icon={Wallet01Icon} className="size-4 text-zinc-500" strokeWidth={2} />
                             </div>
                         )
                     ) : null}

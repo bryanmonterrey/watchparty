@@ -1,8 +1,6 @@
 "use client";
 
 import { DrawerHeader, DrawerEmptyState as EmptyState } from "../../components/drawer-chrome";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { NFTCollection } from "../../types";

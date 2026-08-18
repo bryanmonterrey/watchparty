@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { motion } from "motion/react";
 import { Token } from "../../types";
 import { trpc } from "@/lib/trpc/client";
 import { TokenHeader } from "./TokenHeader";
