@@ -58,6 +58,7 @@ export type BuyDialogCoin = {
     priceChange24h?: number | null;
     marketCapUsd?: number | null;
     volume24hUsd?: number | null;
+    liquidityUsd?: number | null;
 };
 
 /** Keyed by native symbol, not by chain: Base, Ethereum and Robinhood all spend
@@ -405,6 +406,11 @@ export function BuyDialog({
     /** What the spend is worth, numerically — the headline when we can price it. */
     const spendUsdValue = pricedInUsd ? usdAmount : (unitUsd(payAsset ?? { balance: 0 }) ?? 0) * amount;
     const spendUsd = fmtUsd(spendUsdValue);
+
+    /** How much of the pool this trade is. A large fraction moves the price
+     *  against you and is hard to exit; a small one is noise. */
+    const depthRatio =
+        coin?.liquidityUsd && coin.liquidityUsd > 0 ? spendUsdValue / coin.liquidityUsd : 0;
 
 
     // Live estimate for EVM, keyed by amount AND by what's being spent, so the
@@ -827,9 +833,41 @@ export function BuyDialog({
 
                         <Squircle asChild radius={24}>
                         <div className="flex flex-col gap-2 bg-white/[0.03] p-4">
+                            {/* LIQUIDITY, always.
+                                Market cap was context, not a decision — it does
+                                not change whether to press the button. Depth
+                                does: it is what says whether this can be sold
+                                again, it is the number behind every junk row we
+                                filter, and unlike a quote it exists on every
+                                chain, so Solana is not left with an empty card.
+
+                                Tinted against THIS trade, not an absolute bar —
+                                $25 is nothing in a $2M pool and most of a $400
+                                one. */}
+                            {typeof coin.liquidityUsd === "number" ? (
+                                <Row label="Liquidity">
+                                    <span className={cn(depthRatio > 0.05 && "text-pastelred", depthRatio > 0.02 && depthRatio <= 0.05 && "text-sunset")}>
+                                        {compactUsd(coin.liquidityUsd)}
+                                    </span>
+                                </Row>
+                            ) : null}
                             {needsQuote ? (
                                 <>
-                                    {activeQuote.data?.tool ? <Row label="Route">{activeQuote.data.tool}</Row> : null}
+                                    {/* The floor, not the estimate: what lands
+                                        even if the price moves the full slippage
+                                        allowance. The headline above is the
+                                        expectation; this is the guarantee. */}
+                                    {activeQuote.data?.toAmountMin ? (
+                                        <Row label="At least">
+                                            {formatTokens(
+                                                scaleUnits(
+                                                    activeQuote.data.toAmountMin,
+                                                    activeQuote.data.toDecimals,
+                                                ),
+                                            )}{" "}
+                                            {activeQuote.data.toSymbol}
+                                        </Row>
+                                    ) : null}
                                     {/* Named, because a bridge is not a swap:
                                         the source receipt does not mean the
                                         funds have arrived, and the wait is
@@ -840,9 +878,7 @@ export function BuyDialog({
                                         </Row>
                                     ) : null}
                                 </>
-                            ) : (
-                                <Row label="Market cap">{compactUsd(coin.marketCapUsd)}</Row>
-                            )}
+                            ) : null}
                         </div>
                         </Squircle>
 
