@@ -3,7 +3,8 @@
 import * as React from "react";
 import { Transaction, Token } from "../../types";
 import { TokenIcon } from "../../components/token-icon";
-import { ChevronRight } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { trpc } from "@/lib/trpc/client";
 
 interface SwapDetailsProps {
@@ -95,60 +96,60 @@ export function SwapDetails({ transaction, onSwapWith, tokens }: SwapDetailsProp
             {/* Main Visual */}
             <div className="flex items-center justify-center mb-6">
                 <div className="relative flex items-center">
-                    <div className="w-16 h-16 rounded-full bg-zinc-900 border-2 border-black flex items-center justify-center z-10 -mr-4 overflow-hidden">
+                    <div className="z-10 -mr-4 flex size-16 items-center justify-center overflow-hidden rounded-full border-4 border-canvas bg-white/[0.04]">
                         <TokenIcon src={paidIcon} symbol={paidToken.symbol} size="lg" />
                     </div>
-                    <div className="w-16 h-16 rounded-full bg-zinc-900 border border-white/5 flex items-center justify-center z-0 overflow-hidden">
+                    <div className="z-0 flex size-16 items-center justify-center overflow-hidden rounded-full bg-white/[0.04]">
                         <TokenIcon src={receivedIcon} symbol={receivedToken.symbol} size="lg" />
                     </div>
                 </div>
             </div>
 
             {/* Amount Title */}
-            <h1 className="text-[32px] font-extrabold tracking-tight mb-8 text-center px-4 uppercase">
+            <h1 className="mb-8 px-4 text-center text-[32px] font-bold tracking-tight text-white">
                 {paidSymbol} → {receivedSymbol}
             </h1>
 
             {/* Info Card */}
-            <div className="w-full bg-zinc-900/50 border border-white/5 rounded-3xl overflow-hidden mb-8">
+            <div className="mb-8 w-full overflow-hidden rounded-3xl border border-baseborder/20 bg-panel2">
                 <DetailRow label="Date" value={dateStr} />
                 <DetailRow
                     label="Status"
                     value={transaction.status === "success" ? "Succeeded" : "Failed"}
-                    valueClassName={transaction.status === "success" ? "text-[#00ED89]" : "text-red-400"}
+                    valueClassName={transaction.status === "success" ? "text-lantern" : "text-pastelred"}
                 />
                 <DetailRow label="Network" value="Solana" />
                 {transaction.networkFee != null && (
                     <DetailRow
-                        label="Network Fee"
+                        label="Network fee"
                         value={`-${transaction.networkFee.toLocaleString(undefined, { maximumFractionDigits: 8 })} SOL`}
                     />
                 )}
             </div>
 
             {/* Swap Details Section */}
-            <div className="w-full space-y-3">
-                <h3 className="text-[15px] font-semibold text-zinc-400 px-1">Swap Details</h3>
-                <div className="w-full bg-zinc-900/50 border border-white/5 rounded-3xl overflow-hidden">
+            <div className="w-full space-y-1">
+                <h3 className="px-1.5 text-13 font-semibold text-zinc-500">Swap details</h3>
+                <div className="w-full overflow-hidden rounded-3xl border border-baseborder/20 bg-panel2">
                     <DetailRow
                         label="Provider"
-                        value={<div className="flex items-center gap-1.5"><div className="w-4 h-4 rounded-full bg-[#AB9FF2]" /><span className="text-white/90">{transaction.source || "Jupiter"}</span></div>}
+                        value={<div className="flex items-center gap-1.5"><span className="text-white">{transaction.source || "Jupiter"}</span></div>}
                     />
                     <InteractiveRow
-                        label="You Paid"
+                        label="You paid"
                         value={`-${amountInStr} ${paidSymbol}`}
-                        valueClassName="text-white/90"
+                        valueClassName="text-white"
                         onClick={() => onSwapWith?.(paidToken)}
                     />
                     <InteractiveRow
-                        label="You Received"
+                        label="You received"
                         value={`+${amountOutStr} ${receivedSymbol}`}
-                        valueClassName="text-[#00ED89]"
+                        valueClassName="text-lantern"
                         onClick={() => onSwapWith?.(receivedToken)}
                     />
                     <button
                         onClick={() => window.open(`https://orbmarkets.io/tx/${transaction.signature}`, '_blank')}
-                        className="w-full cursor-pointer py-4 text-white font-medium text-[15px] hover:bg-white/5 transition-colors border-t border-white/5"
+                        className="mt-1 w-full cursor-pointer py-3.5 text-14 font-semibold text-zinc-400 transition-colors hover:bg-white/[0.04] hover:text-white"
                     >
                         View on Orb
                     </button>
@@ -158,30 +159,30 @@ export function SwapDetails({ transaction, onSwapWith, tokens }: SwapDetailsProp
     );
 }
 
-function DetailRow({ label, value, valueClassName = "text-white/90" }: { label: string; value: React.ReactNode; valueClassName?: string }) {
+function DetailRow({ label, value, valueClassName = "text-white" }: { label: string; value: React.ReactNode; valueClassName?: string }) {
     return (
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/5 last:border-0">
-            <span className="text-[15px] text-zinc-500 font-medium">{label}</span>
+        <div className="flex items-center justify-between gap-4 px-5 py-3">
+            <span className="shrink-0 text-13 font-medium text-zinc-500">{label}</span>
             {typeof value === 'string' ? (
-                <span className={`text-[15px] font-medium ${valueClassName}`}>{value}</span>
+                <span className={`min-w-0 truncate text-14 font-semibold ${valueClassName}`}>{value}</span>
             ) : value}
         </div>
     );
 }
 
-function InteractiveRow({ label, value, valueClassName = "text-white/90", onClick }: {
+function InteractiveRow({ label, value, valueClassName = "text-white", onClick }: {
     label: string; value: string; valueClassName?: string; onClick?: () => void;
 }) {
     return (
         <button
             onClick={onClick}
-            className="w-full flex items-center justify-between px-5 py-4 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex w-full items-center justify-between gap-4 px-5 py-3 transition-colors hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-50"
             disabled={!onClick}
         >
-            <span className="text-[15px] text-zinc-500 font-medium">{label}</span>
+            <span className="shrink-0 text-13 font-medium text-zinc-500">{label}</span>
             <div className="flex items-center gap-1">
-                <span className={`text-[15px] font-semibold ${valueClassName}`}>{value}</span>
-                <ChevronRight className="w-4 h-4 text-zinc-600" />
+                <span className={`min-w-0 truncate text-14 font-semibold ${valueClassName}`}>{value}</span>
+                <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0 text-zinc-600" strokeWidth={2.5} />
             </div>
         </button>
     );

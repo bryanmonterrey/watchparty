@@ -1,4 +1,3 @@
-import { LucideIcon } from "lucide-react";
 import type { ChainId } from "@/lib/chains/types";
 
 export interface TokenLink {
@@ -90,5 +89,4 @@ export type DrawerView = "main" | "receive" | "send" | "swap" | "buy" | "setting
 export interface TabType {
     id: TabId;
     name: string;
-    icon: LucideIcon;
 }

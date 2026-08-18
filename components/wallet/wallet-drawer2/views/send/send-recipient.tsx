@@ -1,12 +1,13 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Clock01Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { trpc } from "@/lib/trpc/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { shortenWalletAddress } from "@/lib/utils";
-import { Clock } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -154,40 +155,40 @@ export function SendRecipient({ value, displayValue, onChange, recents, variant 
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.98 }}
             transition={{ type: "spring", stiffness: 380, damping: 28 }}
-            className="bg-[#1b1b1c] border border-zinc-800/60 rounded-[20px] overflow-hidden shadow-2xl"
+            className="bg-panel2 border border-baseborder/20 rounded-3xl overflow-hidden"
         >
             {/* Recents */}
             {showRecents && (
                 <>
                     <div className="px-4 pt-3 pb-1.5">
-                        <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">Recents</span>
+                        <span className="text-11 font-semibold text-zinc-500 uppercase tracking-wider">Recents</span>
                     </div>
                     {recents.slice(0, 5).map((r) => (
                         <button
                             key={r.address}
                             onMouseDown={(e) => { e.preventDefault(); selectRecent(r); }}
-                            className="cursor-pointer w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/40 transition-colors"
+                            className="cursor-pointer w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.10]/40 transition-colors"
                         >
                             {r.avatar_url ? (
                                 <Avatar className="w-9 h-9 flex-shrink-0">
                                     <AvatarImage src={r.avatar_url} />
-                                    <AvatarFallback className="bg-zinc-700 text-[11px]">
+                                    <AvatarFallback className="bg-white/[0.08] text-11">
                                     </AvatarFallback>
                                 </Avatar>
                             ) : (
-                                <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center flex-shrink-0">
-                                    <Clock className="w-4 h-4 text-zinc-500" />
+                                <div className="w-9 h-9 rounded-full bg-white/[0.08] flex items-center justify-center flex-shrink-0">
+                                    <HugeiconsIcon icon={Clock01Icon} className="w-4 h-4 text-zinc-500" />
                                 </div>
                             )}
                             <div className="flex-1 text-left min-w-0">
-                                <p className="text-[14px] font-semibold text-white leading-tight">
+                                <p className="text-14 font-semibold text-white leading-tight">
                                     {r.username ? `@${r.username}` : shortenWalletAddress(r.address)}
                                 </p>
                                 {r.username && (
-                                    <p className="text-[12px] text-zinc-500 leading-tight">{shortenWalletAddress(r.address)}</p>
+                                    <p className="text-12 text-zinc-500 leading-tight">{shortenWalletAddress(r.address)}</p>
                                 )}
                             </div>
-                            <span className="text-[12px] text-zinc-500 flex-shrink-0">
+                            <span className="text-12 text-zinc-500 flex-shrink-0">
                                 {r.sendCount} {r.sendCount === 1 ? "transfer" : "transfers"}
                             </span>
                         </button>
@@ -200,39 +201,39 @@ export function SendRecipient({ value, displayValue, onChange, recents, variant 
             {showUserResults && (
                 <>
                     {isFetching && userResults.length === 0 && (
-                        <div className="px-4 py-4 text-[13px] text-zinc-500">Searching...</div>
+                        <div className="px-4 py-4 text-13 text-zinc-500">Searching...</div>
                     )}
                     {userResults.map((u) => (
                         <button
                             key={u.id}
                             onMouseDown={(e) => { e.preventDefault(); if (u.wallet_address) selectUser(u); }}
                             disabled={!u.wallet_address}
-                            className={`cursor-pointer w-full flex items-center gap-3 px-4 py-3 transition-colors ${u.wallet_address ? "hover:bg-zinc-800/40" : "opacity-40 cursor-not-allowed"
+                            className={`cursor-pointer w-full flex items-center gap-3 px-4 py-3 transition-colors ${u.wallet_address ? "hover:bg-white/[0.10]/40" : "opacity-40 cursor-not-allowed"
                                 }`}
                         >
                             <Avatar className="w-9 h-9 flex-shrink-0">
                                 <AvatarImage src={u.avatar_url ?? undefined} />
-                                <AvatarFallback className="bg-zinc-700 text-[11px]">
+                                <AvatarFallback className="bg-white/[0.08] text-11">
                                 </AvatarFallback>
                             </Avatar>
                             <div className="flex-1 text-left min-w-0">
-                                <p className="text-[14px] font-semibold text-white leading-tight">
+                                <p className="text-14 font-semibold text-white leading-tight">
                                     {u.name || u.username}
                                 </p>
-                                <p className="text-[12px] text-zinc-500 leading-tight">
+                                <p className="text-12 text-zinc-500 leading-tight">
                                     {u.username ? `@${u.username}` : ""}
                                     {!u.wallet_address && " · no wallet"}
                                 </p>
                             </div>
                             {u.wallet_address && (
-                                <span className="text-[12px] text-zinc-600 flex-shrink-0">
+                                <span className="text-12 text-zinc-600 flex-shrink-0">
                                     {shortenWalletAddress(u.wallet_address)}
                                 </span>
                             )}
                         </button>
                     ))}
                     {!isFetching && userResults.length === 0 && (
-                        <div className="px-4 py-4 text-[13px] text-zinc-500">No users found</div>
+                        <div className="px-4 py-4 text-13 text-zinc-500">No users found</div>
                     )}
                     <div className="h-2" />
                 </>
@@ -244,7 +245,7 @@ export function SendRecipient({ value, displayValue, onChange, recents, variant 
         return (
             <div ref={containerRef} className="w-full relative group">
                 <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none">
-                    <div className="w-8 h-8 rounded-full bg-zinc-800/80 flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-full bg-white/[0.08] flex items-center justify-center">
                         <span className="text-zinc-400 text-sm font-bold">@</span>
                     </div>
                 </div>
@@ -257,7 +258,7 @@ export function SendRecipient({ value, displayValue, onChange, recents, variant 
                     placeholder="Recipient's Solana address"
                     spellCheck={false}
                     autoComplete="off"
-                    className="w-full h-14 bg-zinc-900/50 border border-white/5 rounded-xl px-4 pr-14 text-[15px] text-white placeholder:text-zinc-600 outline-none focus:border-zinc-700/50 transition-all shadow-inner"
+                    className="w-full h-14 rounded-3xl border border-baseborder/20 bg-panel2 rounded-xl px-4 pr-14 text-15 text-white placeholder:text-zinc-600 outline-none focus:border-baseborder/20 transition-all shadow-inner"
                 />
                 
                 <AnimatePresence>
@@ -276,11 +277,11 @@ export function SendRecipient({ value, displayValue, onChange, recents, variant 
             {/* Input card */}
             <div
                 onClick={() => inputRef.current?.focus()}
-                className={`bg-[#1b1b1c] border cursor-pointer transition-colors rounded-[24px] px-5 py-4 flex items-start gap-3 ${focused ? "border-zinc-700/80" : "border-zinc-800/60"
+                className={`bg-panel2 border cursor-pointer transition-colors rounded-3xl px-5 py-4 flex items-start gap-3 ${focused ? "border-zinc-700/80" : "border-baseborder/20"
                     }`}
             >
                 <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-medium text-zinc-500 mb-1">To</p>
+                    <p className="text-13 font-medium text-zinc-500 mb-1">To</p>
                     <input
                         ref={inputRef}
                         type="text"
@@ -290,7 +291,7 @@ export function SendRecipient({ value, displayValue, onChange, recents, variant 
                         placeholder="@username or wallet address"
                         spellCheck={false}
                         autoComplete="off"
-                        className="bg-transparent cursor-pointer text-[14px] font-medium text-white placeholder-zinc-600 outline-none w-full"
+                        className="bg-transparent cursor-pointer text-14 font-medium text-white placeholder-zinc-600 outline-none w-full"
                     />
                 </div>
                 {(isValid || isInvalid) && (

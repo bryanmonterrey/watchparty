@@ -84,7 +84,7 @@ export function ReceiveQrCode({ walletAddress }: ReceiveQrCodeProps) {
         <div className="flex justify-center mb-8">
             <div
                 ref={qrCodeRef}
-                className="bg-zinc-900/5 p-1/2 rounded-[32px] border border-zinc-800/60 shadow-xl"
+                className="bg-white/[0.02] p-1/2 rounded-[32px] border border-baseborder/20"
             />
         </div>
     );

@@ -3,13 +3,14 @@
 import * as React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Check, ChevronDown } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import {
     SettingsIcon, PowerIcon, WalletIcon, CopyIcon, LogoutIcon,
     VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon,
 } from "@/components/icons";
 import { appToast } from "@/components/app-ui/app-toast";
-import { GooDropdown } from "@/components/ui/goo-dropdown";
+import { GooDropdown, gooMenuItem } from "@/components/ui/goo-dropdown";
 import {
     MorphPopover,
     MorphPopoverContent,
@@ -176,7 +177,9 @@ export function WalletHeader({
                                     hidden={activeUser?.hideVerifiedBadge}
                                 />
                             </div>
-                            <ChevronDown
+                            <HugeiconsIcon
+                                icon={ArrowDown01Icon}
+                                strokeWidth={2.5}
                                 className={`size-4 shrink-0 text-zinc-500 transition-transform duration-200 ${accountOpen ? "rotate-180" : ""}`}
                             />
                         </button>
@@ -282,7 +285,7 @@ export function WalletHeader({
                                                     ) : null}
                                                 </span>
                                             </span>
-                                            {inUse && <Check className="size-4 shrink-0 text-white" />}
+                                            {inUse && <HugeiconsIcon icon={Tick02Icon} className="size-4 shrink-0 text-white" strokeWidth={3} />}
                                         </button>
                                     </li>
                                 );
@@ -348,7 +351,7 @@ export function WalletHeader({
                                                     </span>
                                                 )}
                                             </span>
-                                            {isActive && <Check className="size-4 shrink-0 text-white" />}
+                                            {isActive && <HugeiconsIcon icon={Tick02Icon} className="size-4 shrink-0 text-white" strokeWidth={3} />}
                                         </button>
                                         {/* Per-account log out. `revoke` drops just this
                                             session; signOut() would clear every account
@@ -359,7 +362,7 @@ export function WalletHeader({
                                                 onClick={() => revoke.mutate(a.session.token)}
                                                 disabled={revoke.isPending}
                                                 aria-label={`log out ${handle}`}
-                                                className="cursor-pointer rounded-full p-1.5 text-zinc-600 transition-colors hover:text-red-400"
+                                                className="cursor-pointer rounded-full p-1.5 text-zinc-600 transition-colors hover:text-pastelred"
                                             >
                                                 <LogoutIcon className="size-4" />
                                             </button>
@@ -417,42 +420,28 @@ export function WalletHeader({
                     triggerClassName={`flex h-11 w-11 items-center justify-center rounded-full transition-colors ${isOpen ? "bg-input1 text-white" : "bg-black text-flexwhite/50 hover:text-white"}`}
                     trigger={<PowerIcon className="w-6 h-6" strokeWidth={2} />}
                     items={[
-                        {
+                        gooMenuItem({
                             key: "copy",
+                            icon: <CopyIcon />,
+                            label: "Copy address",
                             onClick: handleCopyAddress,
-                            className: "gap-3 px-4 cursor-pointer text-lg font-medium text-zinc-300 hover:bg-white/5 hover:text-white group",
-                            label: (
-                                <>
-                                    <CopyIcon className="w-5 h-5 text-zinc-500 group-hover:text-zinc-300 transition-colors shrink-0" />
-                                    Copy Address
-                                </>
-                            ),
-                        },
-                        {
+                        }),
+                        gooMenuItem({
                             key: "change-wallet",
+                            icon: <WalletIcon />,
+                            label: "Change wallet",
                             onClick: () => onChangeWallet?.(),
-                            className: "gap-3 px-4 cursor-pointer text-lg font-medium text-zinc-300 hover:bg-white/5 hover:text-white group",
-                            label: (
-                                <>
-                                    <WalletIcon className="w-5 h-5 text-zinc-500 group-hover:text-zinc-300 transition-colors shrink-0" />
-                                    Change Wallet
-                                </>
-                            ),
-                        },
-                        {
+                        }),
+                        gooMenuItem({
                             key: "disconnect",
-                            onClick: onSignOut,
-                            className: "gap-3 px-4 cursor-pointer text-lg font-medium text-red-400/90 hover:bg-red-500/10 hover:text-red-400",
+                            icon: <LogoutIcon />,
                             // signOut() clears every _multi- cookie, so with
                             // several accounts signed in this is all of them.
                             // Logging out one is in the account switcher.
-                            label: (
-                                <>
-                                    <LogoutIcon className="w-5 h-5 shrink-0" />
-                                    {accounts.length > 1 ? "Log out all" : "Disconnect"}
-                                </>
-                            ),
-                        },
+                            label: accounts.length > 1 ? "Log out all" : "Disconnect",
+                            variant: "danger",
+                            onClick: onSignOut,
+                        }),
                     ]}
                 />
             </div>

@@ -15,8 +15,11 @@ interface WalletBalanceProps {
 export function WalletBalance({ totalUsdBalance, usdChange24h = 0, pctChange24h = 0, hideBalances, onToggleHideBalances, loading }: WalletBalanceProps) {
     const isPositive = usdChange24h > 0;
     const isNegative = usdChange24h < 0;
-    const changeColor = isPositive ? "text-[#75ba80]" : isNegative ? "text-[#e07d6f]" : "text-zinc-500";
-    const changeBg = isPositive ? "bg-[#75ba80]/20 text-[#75ba80]" : isNegative ? "bg-[#e07d6f]/20 text-[#e07d6f]" : "bg-zinc-800 text-zinc-500";
+    // lantern / pastelred, the app's two semantic colours — these were #75ba80
+    // and #e07d6f, minted here and repeated by hand in the coin row, the token
+    // header and the 24h performance card.
+    const changeColor = isPositive ? "text-lantern" : isNegative ? "text-pastelred" : "text-zinc-500";
+    const changeBg = isPositive ? "bg-lantern/15 text-lantern" : isNegative ? "bg-pastelred/15 text-pastelred" : "bg-white/[0.06] text-zinc-500";
 
     return (
         <div className="px-5 pt-3 pb-3 bg-canvas">
@@ -59,7 +62,7 @@ export function WalletBalance({ totalUsdBalance, usdChange24h = 0, pctChange24h 
                 ) : hideBalances ? (
                     <p className="text-6xl font-bold text-white tracking-[0.2em] leading-none">••••••</p>
                 ) : (
-                    <p className="text-6xl font-bold text-white">
+                    <p className="text-6xl font-bold tracking-tight text-white">
                         <PopNumber
                             value={`$${totalUsdBalance !== null ? totalUsdBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}`}
                         />
@@ -74,20 +77,20 @@ export function WalletBalance({ totalUsdBalance, usdChange24h = 0, pctChange24h 
                     // sentence and then split in half on load.
                     <>
                         <div className="h-[15px] w-20 rounded-full shimmer-skeleton" />
-                        <div className="h-6 w-14 rounded-md shimmer-skeleton" />
+                        <div className="h-6 w-14 rounded-full shimmer-skeleton" />
                     </>
                 ) : hideBalances ? (
                     // Masked to the same height as the pills, so revealing doesn't
                     // shift the rows below it.
-                    <span className="text-[15px] font-bold leading-none tracking-[0.3em] text-zinc-600">•••••</span>
+                    <span className="text-15 font-bold leading-none tracking-[0.3em] text-zinc-600">•••••</span>
                 ) : (
                     <>
-                        <span className={cn("text-[15px] font-bold", changeColor)}>
+                        <span className={cn("text-15 font-bold tabular-nums", changeColor)}>
                             <PopNumber
                                 value={`${isPositive ? "+" : isNegative ? "-" : ""}$${Math.abs(usdChange24h).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                             />
                         </span>
-                        <div className={cn("px-2 py-0.5 rounded-md text-[13px] font-bold", changeBg)}>
+                        <div className={cn("rounded-full px-2 py-0.5 text-13 font-bold tabular-nums", changeBg)}>
                             <PopNumber value={`${isPositive ? "+" : ""}${pctChange24h.toFixed(2)}%`} />
                         </div>
                     </>

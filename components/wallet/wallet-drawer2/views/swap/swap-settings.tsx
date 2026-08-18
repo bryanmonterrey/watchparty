@@ -1,9 +1,10 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowLeft01Icon, ArrowRight01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
-import { motion, AnimatePresence, type Variants } from "framer-motion";
+import { motion, AnimatePresence, type Variants } from "motion/react";
 import { SettingsIcon, TradeIcon } from "@/components/icons";
-import { ChevronLeft, ChevronRight, Check } from "lucide-react";
 import Image from "next/image";
 
 export interface SwapSettings {
@@ -89,7 +90,7 @@ export function SwapSettingsPanel({ settings, onChange }: SwapSettingsPanelProps
             {/* Gear trigger */}
             <button
                 onClick={() => { setOpen(v => !v); setView("main"); }}
-                className={`cursor-pointer p-1.5 rounded-full transition-all duration-150 ${open ? "bg-zinc-700/70 text-white" : "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/70"
+                className={`cursor-pointer p-1.5 rounded-full transition-all duration-150 ${open ? "bg-white/[0.12] text-white" : "text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.08]"
                     }`}
                 aria-label="Swap settings"
             >
@@ -104,7 +105,7 @@ export function SwapSettingsPanel({ settings, onChange }: SwapSettingsPanelProps
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: -6 }}
                         transition={{ type: "spring", stiffness: 420, damping: 30 }}
-                        className="absolute right-0 top-full mt-2.5 w-[290px] z-50 bg-[#1b1b1c] border border-zinc-800/60 rounded-[22px] shadow-2xl overflow-hidden"
+                        className="absolute right-0 top-full mt-2.5 w-[290px] z-50 bg-panel2 border border-baseborder/20 rounded-3xl overflow-hidden"
                     >
                         {/* Inner animated view */}
                         <AnimatePresence mode="popLayout" custom={direction} initial={false}>
@@ -121,17 +122,17 @@ export function SwapSettingsPanel({ settings, onChange }: SwapSettingsPanelProps
                                     {/* Max Slippage */}
                                     <div className="px-5 pt-5 pb-4 space-y-3">
                                         <div className="flex items-center justify-between">
-                                            <span className="text-[14px] font-semibold text-zinc-200">Max slippage</span>
-                                            <span className="text-[13px] font-medium text-zinc-400">{slippageLabel}</span>
+                                            <span className="text-14 font-semibold text-zinc-200">Max slippage</span>
+                                            <span className="text-13 font-medium text-zinc-400">{slippageLabel}</span>
                                         </div>
                                         <div className="flex items-center gap-1.5">
                                             {SLIPPAGE_PRESETS.map(preset => (
                                                 <button
                                                     key={preset}
                                                     onClick={() => handleSlippagePreset(preset)}
-                                                    className={`cursor-pointer flex-1 py-1.5 rounded-full text-[12px] font-semibold transition-all duration-150 ${isSlippagePreset(preset)
+                                                    className={`cursor-pointer flex-1 py-1.5 rounded-full text-12 font-semibold transition-all duration-150 ${isSlippagePreset(preset)
                                                             ? "bg-zinc-200 text-zinc-900"
-                                                            : "bg-zinc-800/80 text-zinc-400 hover:bg-zinc-700/80 hover:text-zinc-200"
+                                                            : "bg-white/[0.06] text-zinc-400 hover:bg-white/[0.14] hover:text-zinc-200"
                                                         }`}
                                                 >
                                                     {preset === "auto" ? "Auto" : `${preset}%`}
@@ -142,31 +143,31 @@ export function SwapSettingsPanel({ settings, onChange }: SwapSettingsPanelProps
                                                     type="number" min="0" max="50" step="0.1" placeholder="—"
                                                     value={customSlippage}
                                                     onChange={e => handleCustomSlippage(e.target.value)}
-                                                    className={`cursor-text w-full py-1.5 rounded-full text-[12px] font-semibold text-center outline-none border transition-all duration-150 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${customSlippage
+                                                    className={`cursor-text w-full py-1.5 rounded-full text-12 font-semibold text-center outline-none border transition-all duration-150 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${customSlippage
                                                             ? "bg-zinc-200 text-zinc-900 border-transparent"
-                                                            : "bg-zinc-800/80 text-zinc-400 border-zinc-700/40 hover:bg-zinc-700/80 hover:text-zinc-200"
+                                                            : "bg-white/[0.06] text-zinc-400 border-zinc-700/40 hover:bg-white/[0.14] hover:text-zinc-200"
                                                         }`}
                                                 />
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="mx-5 border-t border-zinc-800/50" />
+                                    <div className="mx-5 border-t border-baseborder/20" />
 
                                     {/* Swap Deadline */}
                                     <div className="px-5 pt-4 pb-4 space-y-3">
                                         <div className="flex items-center justify-between">
-                                            <span className="text-[14px] font-semibold text-zinc-200">Swap deadline</span>
-                                            <span className="text-[13px] font-medium text-zinc-400">{customDeadline || settings.deadline} min</span>
+                                            <span className="text-14 font-semibold text-zinc-200">Swap deadline</span>
+                                            <span className="text-13 font-medium text-zinc-400">{customDeadline || settings.deadline} min</span>
                                         </div>
                                         <div className="flex items-center gap-1.5">
                                             {DEADLINE_PRESETS.map(val => (
                                                 <button
                                                     key={val}
                                                     onClick={() => handleDeadlinePreset(val)}
-                                                    className={`cursor-pointer flex-1 py-1.5 rounded-full text-[12px] font-semibold transition-all duration-150 ${settings.deadline === val && !customDeadline
+                                                    className={`cursor-pointer flex-1 py-1.5 rounded-full text-12 font-semibold transition-all duration-150 ${settings.deadline === val && !customDeadline
                                                             ? "bg-zinc-200 text-zinc-900"
-                                                            : "bg-zinc-800/80 text-zinc-400 hover:bg-zinc-700/80 hover:text-zinc-200"
+                                                            : "bg-white/[0.06] text-zinc-400 hover:bg-white/[0.14] hover:text-zinc-200"
                                                         }`}
                                                 >
                                                     {val}m
@@ -177,26 +178,26 @@ export function SwapSettingsPanel({ settings, onChange }: SwapSettingsPanelProps
                                                     type="number" min="1" max="4320" step="1" placeholder="—"
                                                     value={customDeadline}
                                                     onChange={e => handleCustomDeadline(e.target.value)}
-                                                    className={`cursor-text w-full py-1.5 rounded-full text-[12px] font-semibold text-center outline-none border transition-all duration-150 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${customDeadline
+                                                    className={`cursor-text w-full py-1.5 rounded-full text-12 font-semibold text-center outline-none border transition-all duration-150 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${customDeadline
                                                             ? "bg-zinc-200 text-zinc-900 border-transparent"
-                                                            : "bg-zinc-800/80 text-zinc-400 border-zinc-700/40 hover:bg-zinc-700/80 hover:text-zinc-200"
+                                                            : "bg-white/[0.06] text-zinc-400 border-zinc-700/40 hover:bg-white/[0.14] hover:text-zinc-200"
                                                         }`}
                                                 />
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="mx-5 border-t border-zinc-800/50" />
+                                    <div className="mx-5 border-t border-baseborder/20" />
 
                                     {/* Trade Options nav row */}
                                     <button
                                         onClick={() => navigate("trade")}
-                                        className="cursor-pointer w-full px-5 py-4 flex items-center justify-between hover:bg-zinc-800/30 transition-colors"
+                                        className="cursor-pointer w-full px-5 py-4 flex items-center justify-between hover:bg-white/[0.04] transition-colors"
                                     >
-                                        <span className="text-[14px] font-semibold text-zinc-200">Trade options</span>
+                                        <span className="text-14 font-semibold text-zinc-200">Trade options</span>
                                         <div className="flex items-center gap-1.5 text-zinc-400">
-                                            <span className="text-[13px] font-medium">Default</span>
-                                            <ChevronRight className="w-3.5 h-3.5" />
+                                            <span className="text-13 font-medium">Default</span>
+                                            <HugeiconsIcon icon={ArrowRight01Icon} className="w-3.5 h-3.5" />
                                         </div>
                                     </button>
                                 </motion.div>
@@ -211,14 +212,14 @@ export function SwapSettingsPanel({ settings, onChange }: SwapSettingsPanelProps
                                     transition={{ type: "spring", stiffness: 380, damping: 30 }}
                                 >
                                     {/* Trade Options header */}
-                                    <div className="px-4 pt-4 pb-3 flex items-center gap-2 border-b border-zinc-800/50">
+                                    <div className="px-4 pt-4 pb-3 flex items-center gap-2 border-b border-baseborder/20">
                                         <button
                                             onClick={() => navigate("main")}
-                                            className="cursor-pointer p-1 rounded-full text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 transition-colors"
+                                            className="cursor-pointer p-1 rounded-full text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.08] transition-colors"
                                         >
-                                            <ChevronLeft className="w-4 h-4" />
+                                            <HugeiconsIcon icon={ArrowLeft01Icon} className="w-4 h-4" />
                                         </button>
-                                        <span className="text-[14px] font-semibold text-zinc-200">Trade options</span>
+                                        <span className="text-14 font-semibold text-zinc-200">Trade options</span>
                                     </div>
 
                                     {/* Default routing option */}
@@ -226,20 +227,20 @@ export function SwapSettingsPanel({ settings, onChange }: SwapSettingsPanelProps
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="space-y-1 flex-1">
                                                 <div className="flex items-center gap-1.5">
-                                                    <span className="text-[14px] font-semibold text-zinc-200">Default</span>
-                                                    <div className="w-3.5 h-3.5 rounded-full bg-zinc-700 flex items-center justify-center flex-shrink-0">
+                                                    <span className="text-14 font-semibold text-zinc-200">Default</span>
+                                                    <div className="w-3.5 h-3.5 rounded-full bg-white/[0.08] flex items-center justify-center flex-shrink-0">
                                                         <span className="text-zinc-400 text-[9px] font-bold leading-none">i</span>
                                                     </div>
                                                 </div>
-                                                <p className="text-[12px] text-zinc-500 leading-relaxed">
+                                                <p className="text-12 text-zinc-500 leading-relaxed">
                                                     Identifies the most efficient route for your swap.
                                                 </p>
                                             </div>
                                             {/* Toggle — always on for now (Default is the only mode) */}
                                             <div className="flex-shrink-0 mt-0.5">
                                                 <div className="w-11 h-6 bg-zinc-200 rounded-full flex items-center justify-end pr-0.5 shadow-inner">
-                                                    <div className="w-5 h-5 bg-[#1b1b1c] rounded-full flex items-center justify-center shadow">
-                                                        <Check className="w-3 h-3 text-zinc-200" />
+                                                    <div className="w-5 h-5 bg-panel2 rounded-full flex items-center justify-center shadow">
+                                                        <HugeiconsIcon icon={Tick02Icon} className="w-3 h-3 text-zinc-200" />
                                                     </div>
                                                 </div>
                                             </div>

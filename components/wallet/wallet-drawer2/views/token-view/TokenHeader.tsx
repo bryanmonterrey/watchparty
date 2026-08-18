@@ -42,7 +42,7 @@ export function TokenHeader({ token, hoveredValue, periodStartValue }: TokenHead
 
     return (
         <div className="px-5 pt-2 pb-4 flex flex-col items-center">
-            <h1 className="text-4xl font-bold text-white mb-1">
+            <h1 className="mb-1 text-4xl font-bold tabular-nums tracking-tight text-white">
                 ${displayValue.toLocaleString(undefined, {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 6,
@@ -50,14 +50,14 @@ export function TokenHeader({ token, hoveredValue, periodStartValue }: TokenHead
             </h1>
             <div className="flex items-center gap-2">
                 <span className={cn(
-                    "text-[15px] font-bold",
-                    isPositive ? "text-[#75ba80]" : isNegative ? "text-[#e07d6f]" : "text-zinc-500"
+                    "text-15 font-bold tabular-nums",
+                    isPositive ? "text-lantern" : isNegative ? "text-pastelred" : "text-zinc-500"
                 )}>
                     {isPositive ? "+" : isNegative ? "-" : ""}${formatChangeAmount(usdChange)}
                 </span>
                 <div className={cn(
-                    "px-2 py-0.5 rounded-md text-[13px] font-bold",
-                    isPositive ? "bg-[#75ba80]/20 text-[#75ba80]" : isNegative ? "bg-[#e07d6f]/20 text-[#e07d6f]" : "bg-zinc-800 text-zinc-500"
+                    "rounded-full px-2 py-0.5 text-13 font-bold tabular-nums",
+                    isPositive ? "bg-lantern/15 text-lantern" : isNegative ? "bg-pastelred/15 text-pastelred" : "bg-white/[0.06] text-zinc-500"
                 )}>
                     {isPositive ? "+" : ""}{pctChange.toFixed(2)}%
                 </div>

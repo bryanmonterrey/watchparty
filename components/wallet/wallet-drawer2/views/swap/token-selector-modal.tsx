@@ -1,10 +1,9 @@
 "use client";
 
-"use client";
-
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDataTransferVerticalIcon, ArrowDown01Icon, Cancel01Icon, InformationCircleIcon, Search01Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Search, ChevronDown, Info, X, ArrowDownUp } from "lucide-react";
 import { TokenIcon } from "../../components/token-icon";
 import { TokenSelectorSkeleton } from "../../components/wallet-skeletons";
 import { trpc } from "@/lib/trpc/client";
@@ -94,7 +93,7 @@ export function TokenSelectorModal({
         >
             <DialogTrigger asChild>
                 {selectedToken ? (
-                    <button className="flex items-center gap-2 bg-[#1b1b1b] hover:bg-zinc-800 text-white px-3 py-1.5 rounded-full text-lg font-semibold outline-none transition-colors border border-zinc-700/50 shadow-sm">
+                    <button className="flex items-center gap-2 bg-white/[0.06] hover:bg-white/[0.10] text-white px-3 py-1.5 rounded-full text-lg font-semibold outline-none transition-colors border border-baseborder/20">
                         <TokenIcon
                             src={selectedToken.logoURI}
                             symbol={selectedToken.symbol}
@@ -102,17 +101,17 @@ export function TokenSelectorModal({
                             type="token"
                         />
                         <span>{selectedToken.symbol}</span>
-                        <ChevronDown className="w-5 h-5 text-zinc-400" />
+                        <HugeiconsIcon icon={ArrowDown01Icon} className="w-5 h-5 text-zinc-400" />
                     </button>
                 ) : (
-                    <button className="flex items-center gap-2 bg-[#1b1b1b] hover:bg-zinc-800 text-white px-4 py-2 rounded-full text-[17px] font-bold outline-none transition-colors border border-zinc-700/50 shadow-sm">
+                    <button className="flex items-center gap-2 bg-white/[0.06] hover:bg-white/[0.10] text-white px-4 py-2 rounded-full text-[17px] font-bold outline-none transition-colors border border-baseborder/20">
                         <span>Select coin</span>
-                        <ChevronDown className="w-5 h-5 text-zinc-400" />
+                        <HugeiconsIcon icon={ArrowDown01Icon} className="w-5 h-5 text-zinc-400" />
                     </button>
                 )}
             </DialogTrigger>
             <DialogContent
-                className="sm:max-w-md rounded-3xl text-white p-0 overflow-hidden flex flex-col h-[85vh] sm:h-[650px] shadow-2xl"
+                className="sm:max-w-md rounded-3xl text-white p-0 overflow-hidden flex flex-col h-[85vh] sm:h-[650px]"
                 style={{ animationDuration: '0.2s' }}
             >
                 <DialogTitle className="sr-only">Select a coin</DialogTitle>
@@ -124,8 +123,8 @@ export function TokenSelectorModal({
 
                 {/* Search Bar */}
                 <div className="px-4 pb-3">
-                    <div className="relative flex items-center bg-[#1b1b1b] rounded-2xl border border-zinc-800 focus-within:border-zinc-700 transition-colors">
-                        <Search className="absolute left-4 w-[18px] h-[18px] text-zinc-400" />
+                    <div className="relative flex items-center bg-white/[0.06] rounded-2xl border border-baseborder/20 focus-within:border-zinc-700 transition-colors">
+                        <HugeiconsIcon icon={Search01Icon} className="absolute left-4 w-[18px] h-[18px] text-zinc-400" />
                         <input
                             type="text"
                             placeholder="Search coins"
@@ -142,7 +141,7 @@ export function TokenSelectorModal({
                             <button
                                 key={`popular-${token.address}`}
                                 onClick={() => handleSelect(token as Token)}
-                                className="flex items-center gap-2.5 px-3 py-3 bg-transparent border border-zinc-800 hover:bg-zinc-800/80 rounded-2xl transition-colors"
+                                className="flex items-center gap-2.5 px-3 py-3 bg-transparent border border-baseborder/20 hover:bg-white/[0.08] rounded-2xl transition-colors"
                             >
                                 <TokenIcon
                                     src={token.logoURI}
@@ -151,7 +150,7 @@ export function TokenSelectorModal({
                                     showChainBadge
                                     type="token"
                                 />
-                                <span className="font-semibold text-[15px]">{token.symbol}</span>
+                                <span className="font-semibold text-15">{token.symbol}</span>
                             </button>
                         ))}
                     </div>
@@ -159,9 +158,9 @@ export function TokenSelectorModal({
 
                 {/* Divider Title */}
                 {!searchQuery && (
-                    <div className="px-5 pb-2 pt-1 border-t border-zinc-800/50 mt-1">
-                        <span className="text-[14px] font-medium text-zinc-400 flex items-center gap-2">
-                            <ArrowDownUp className="w-3.5 h-3.5" />
+                    <div className="px-5 pb-2 pt-1 border-t border-baseborder/20 mt-1">
+                        <span className="text-14 font-medium text-zinc-400 flex items-center gap-2">
+                            <HugeiconsIcon icon={ArrowDataTransferVerticalIcon} className="w-3.5 h-3.5" />
                             Tokens by 24H volume
                         </span>
                     </div>
@@ -171,7 +170,7 @@ export function TokenSelectorModal({
                     {isLoadingTokens || isSearching ? (
                         <TokenSelectorSkeleton />
                     ) : filteredTokens.length === 0 ? (
-                        <div className="flex items-center justify-center p-8 text-zinc-500 text-[15px]">
+                        <div className="flex items-center justify-center p-8 text-zinc-500 text-15">
                             No tokens found.
                         </div>
                     ) : (
@@ -180,7 +179,7 @@ export function TokenSelectorModal({
                                 <button
                                     key={token.address}
                                     onClick={() => handleSelect(token)}
-                                    className="w-full flex items-center justify-between p-3 px-4 hover:bg-zinc-800/50 rounded-2xl transition-colors text-left group"
+                                    className="w-full flex items-center justify-between p-3 px-4 hover:bg-white/[0.06] rounded-2xl transition-colors text-left group"
                                 >
                                     <div className="flex items-center gap-3.5">
                                         <TokenIcon
@@ -191,8 +190,8 @@ export function TokenSelectorModal({
                                             type="token"
                                         />
                                         <div className="flex flex-col">
-                                            <span className="font-semibold text-[16px] text-zinc-100">{token.name}</span>
-                                            <span className="font-medium text-[13px] text-zinc-500 truncate max-w-[160px] sm:max-w-xs">{token.symbol}</span>
+                                            <span className="font-semibold text-16 text-zinc-100">{token.name}</span>
+                                            <span className="font-medium text-13 text-zinc-500 truncate max-w-[160px] sm:max-w-xs">{token.symbol}</span>
                                         </div>
                                     </div>
                                 </button>

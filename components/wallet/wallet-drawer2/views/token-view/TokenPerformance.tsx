@@ -3,6 +3,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Token } from "../../types";
+import { DrawerCard, DrawerDataRow } from "../../components/drawer-chrome";
 
 interface TokenPerformanceProps {
     token: Token;
@@ -15,18 +16,18 @@ export function TokenPerformance({ token }: TokenPerformanceProps) {
 
     const rows = [
         {
-            label: "24h Change",
+            label: "24h change",
             value: `${isPositive ? "+" : ""}${priceChange.toFixed(2)}%`,
-            valueClass: isPositive ? "text-[#75ba80]" : isNegative ? "text-[#e07d6f]" : "text-zinc-200",
+            valueClass: isPositive ? "text-lantern" : isNegative ? "text-pastelred" : "text-white",
         },
         ...(token.marketCap ? [{
-            label: "Market Cap",
+            label: "Market cap",
             value: token.marketCap >= 1e9
                 ? `$${(token.marketCap / 1e9).toFixed(2)}B`
                 : token.marketCap >= 1e6
                     ? `$${(token.marketCap / 1e6).toFixed(2)}M`
                     : `$${token.marketCap.toLocaleString()}`,
-            valueClass: "text-zinc-200",
+            valueClass: "text-white",
         }] : []),
         ...(token.fdv ? [{
             label: "FDV",
@@ -35,24 +36,17 @@ export function TokenPerformance({ token }: TokenPerformanceProps) {
                 : token.fdv >= 1e6
                     ? `$${(token.fdv / 1e6).toFixed(2)}M`
                     : `$${token.fdv.toLocaleString()}`,
-            valueClass: "text-zinc-200",
+            valueClass: "text-white",
         }] : []),
     ];
 
     return (
-        <div className="bg-gray1 rounded-[22px] overflow-hidden">
-            {rows.map((row, i) => (
-                <div
-                    key={row.label}
-                    className={cn(
-                        "flex items-center justify-between px-5 py-4",
-                        i !== rows.length - 1 && "border-b border-white/5"
-                    )}
-                >
-                    <span className="text-lg font-bold text-zinc-500">{row.label}</span>
-                    <span className={cn("text-lg font-bold", row.valueClass)}>{row.value}</span>
-                </div>
+        <DrawerCard className="py-1.5">
+            {rows.map((row) => (
+                <DrawerDataRow key={row.label} label={row.label}>
+                    <span className={cn("tabular-nums", row.valueClass)}>{row.value}</span>
+                </DrawerDataRow>
             ))}
-        </div>
+        </DrawerCard>
     );
 }

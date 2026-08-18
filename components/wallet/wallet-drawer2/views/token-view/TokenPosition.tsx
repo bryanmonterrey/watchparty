@@ -3,6 +3,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Token } from "../../types";
+import { DRAWER_CARD } from "../../components/drawer-chrome";
 
 interface TokenPositionProps {
     token: Token;
@@ -12,28 +13,33 @@ interface TokenPositionProps {
 export function TokenPosition({ token, hideBalances }: TokenPositionProps) {
     const priceChange = token.priceChange24h ?? 0;
     const currentVal = token.usdValue ?? 0;
-    
+
     // Calculate USD change
     const usdChange = (priceChange !== 0 && priceChange > -100)
         ? currentVal - (currentVal / (1 + priceChange / 100))
         : (priceChange <= -100 ? -currentVal : 0);
 
+    // Labels are sentence case at 13px zinc-500 — they were uppercase with
+    // tracking-wide, the one uppercase run left in the drawer.
+    const label = "text-13 font-medium text-zinc-500";
+    const value = "text-[17px] font-bold tabular-nums leading-none tracking-tight text-white";
+
     return (
-        <div className="space-y-3">
-            <h3 className="text-lg font-bold text-white/90">Position</h3>
-            <div className="grid grid-cols-2 gap-2">
-                <div className="bg-gray1 p-4 rounded-2xl flex flex-col gap-1">
-                    <span className="text-[13px] font-bold text-zinc-500 uppercase tracking-wide">Balance</span>
-                    <span className="text-[17px] font-bold text-white leading-none">
+        <section className="space-y-1">
+            <p className="px-1.5 pb-0.5 text-13 font-semibold text-zinc-500">Position</p>
+            <div className="grid grid-cols-2 gap-1">
+                <div className={cn(DRAWER_CARD, "flex flex-col gap-1.5 p-4")}>
+                    <span className={label}>Balance</span>
+                    <span className={value}>
                         {hideBalances ? "••••••" : token.balance.toLocaleString(undefined, {
                             minimumFractionDigits: 0,
                             maximumFractionDigits: 4,
                         })}
                     </span>
                 </div>
-                <div className="bg-gray1 p-4 rounded-2xl flex flex-col gap-1 text-right">
-                    <span className="text-[13px] font-bold text-zinc-500 uppercase tracking-wide">Value</span>
-                    <span className="text-[17px] font-bold text-white leading-none">
+                <div className={cn(DRAWER_CARD, "flex flex-col gap-1.5 p-4 text-right")}>
+                    <span className={label}>Value</span>
+                    <span className={value}>
                         {hideBalances ? "••••••" : `$${currentVal.toLocaleString(undefined, {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
@@ -41,14 +47,14 @@ export function TokenPosition({ token, hideBalances }: TokenPositionProps) {
                     </span>
                 </div>
             </div>
-            <div className="bg-gray1 p-4 rounded-2xl flex items-center justify-between">
-                <span className="text-[13px] font-bold text-zinc-500 uppercase tracking-wide">24h Return</span>
+            <div className={cn(DRAWER_CARD, "flex items-center justify-between p-4")}>
+                <span className={label}>24h return</span>
                 {hideBalances ? (
-                    <span className="text-[15px] font-bold leading-none text-zinc-500">••••</span>
+                    <span className="text-15 font-bold leading-none text-zinc-500">••••</span>
                 ) : (
                     <span className={cn(
-                        "text-[15px] font-bold leading-none",
-                        usdChange > 0 ? "text-[#75ba80]" : usdChange < 0 ? "text-[#e07d6f]" : "text-zinc-500"
+                        "text-15 font-bold tabular-nums leading-none",
+                        usdChange > 0 ? "text-lantern" : usdChange < 0 ? "text-pastelred" : "text-zinc-500"
                     )}>
                         {usdChange > 0 ? "+" : usdChange < 0 ? "-" : ""}${Math.abs(usdChange).toLocaleString(undefined, {
                             minimumFractionDigits: 2,
@@ -57,6 +63,6 @@ export function TokenPosition({ token, hideBalances }: TokenPositionProps) {
                     </span>
                 )}
             </div>
-        </div>
+        </section>
     );
 }

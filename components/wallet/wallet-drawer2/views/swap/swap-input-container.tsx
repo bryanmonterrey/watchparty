@@ -3,7 +3,7 @@
 import * as React from "react";
 import { TokenSelectorModal, Token } from "./token-selector-modal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { motion, AnimatePresence, type Variants } from "framer-motion";
+import { motion, AnimatePresence, type Variants } from "motion/react";
 import { TokenIcon } from "../../components/token-icon";
 
 interface SwapInputContainerProps {
@@ -75,7 +75,7 @@ export function SwapInputContainer({
 
     return (
         <div
-            className="group bg-[#1b1b1c] hover:bg-[#1f1f20] cursor-pointer transition-colors border border-zinc-800/60 rounded-[24px] p-4 flex flex-col gap-1.5 focus-within:border-zinc-700 relative overflow-hidden"
+            className="group relative flex cursor-pointer flex-col gap-1.5 overflow-hidden rounded-3xl border border-baseborder/20 bg-panel2 p-4 transition-colors hover:bg-white/[0.05]"
             onClick={() => inputRef.current?.focus()}
             onMouseEnter={() => {
                 if (label === "Sell") setIsSellHovered(true);
@@ -87,7 +87,7 @@ export function SwapInputContainer({
             }}
         >
             <div className="flex justify-between items-center text-zinc-400 px-1">
-                <span className="text-[14px] font-medium">{label}</span>
+                <span className="text-14 font-medium">{label}</span>
                 {label === "Sell" && (
                     <div className="flex items-center gap-2 relative h-6 w-40 justify-end">
                         <AnimatePresence>
@@ -103,7 +103,7 @@ export function SwapInputContainer({
                                         <motion.button
                                             key={percent}
                                             variants={itemVariants}
-                                            className="cursor-pointer px-2 py-0.5 text-[12px] font-medium text-zinc-300 bg-zinc-800/80 hover:bg-zinc-700/80 hover:text-white rounded-full transition-colors border border-zinc-700/50"
+                                            className="cursor-pointer rounded-full bg-white/[0.08] px-2 py-0.5 text-12 font-semibold text-zinc-300 transition-colors hover:bg-white/[0.16] hover:text-white"
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 if (!balance || !onAmountChange) return;
@@ -157,7 +157,7 @@ export function SwapInputContainer({
                                                             e.stopPropagation();
                                                             onTokenSelect(popularToken);
                                                         }}
-                                                        className="cursor-pointer w-7 h-7 min-w-[28px] shrink-0 rounded-full overflow-hidden hover:scale-110 hover:ring-2 hover:ring-white/20 transition-all shadow-sm bg-[#1b1b1c] flex items-center justify-center p-[2px]"
+                                                        className="cursor-pointer w-7 h-7 min-w-[28px] shrink-0 rounded-full overflow-hidden hover:scale-110 hover:ring-2 hover:ring-white/20 transition-all flex items-center justify-center bg-white/[0.06] p-[2px]"
                                                     >
                                                         <TokenIcon
                                                             src={popularToken.logoURI}
@@ -167,7 +167,7 @@ export function SwapInputContainer({
                                                         />
                                                     </motion.button>
                                                 </TooltipTrigger>
-                                                <TooltipContent className="bg-[#2b2b2d] border border-zinc-800 text-zinc-200 text-xs px-2 py-1.5 relative z-50 shadow-xl">
+                                                <TooltipContent className="relative z-50 border border-baseborder/20 bg-grokdropdown px-2 py-1.5 text-xs text-zinc-200">
                                                     {popularToken.symbol}
                                                 </TooltipContent>
                                             </Tooltip>
@@ -192,11 +192,11 @@ export function SwapInputContainer({
             </div>
 
             <div className="flex justify-between items-center px-1 pt-0.5 opacity-80 h-5">
-                <div className="text-[14px] text-zinc-500 font-medium">
+                <div className="text-14 text-zinc-500 font-medium">
                     {usdValue ? `$${usdValue}` : "$0.00"}
                 </div>
                 {balance && (
-                    <div className="text-[14px] text-zinc-500 font-medium">
+                    <div className="text-14 text-zinc-500 font-medium">
                         {balance}
                     </div>
                 )}

@@ -1,7 +1,8 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDataTransferVerticalIcon, ArrowDown01Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
-import { ArrowUpDown, ChevronDown } from "lucide-react";
 import { SendToken, SendTokenSelector } from "./send-token-selector";
 import { TokenIcon } from "../../components/token-icon";
 import { getChainOrDefault } from "@/lib/chains/registry";
@@ -63,12 +64,12 @@ export function SendAmountInput({
     return (
         <>
             <div
-                className="bg-[#1b1b1c] cursor-pointer border border-zinc-800/60 rounded-[24px] overflow-hidden select-none"
+                className="bg-panel2 cursor-pointer border border-baseborder/20 rounded-3xl overflow-hidden select-none"
                 onClick={focusInput}
             >
                 {/* Amount section */}
                 <div className="px-5 pt-5 pb-4">
-                    <p className="text-[13px] font-medium text-zinc-500 mb-5">You're sending</p>
+                    <p className="text-13 font-medium text-zinc-500 mb-5">You're sending</p>
 
                     {/* Large amount display */}
                     <div className="flex items-center justify-center min-h-[72px] relative overflow-hidden">
@@ -99,24 +100,24 @@ export function SendAmountInput({
 
                     {/* Secondary amount + toggle */}
                     <div className="flex items-center justify-center gap-1.5 mt-3">
-                        <span className="text-[14px] font-medium text-zinc-500">{secondaryAmount}</span>
+                        <span className="text-14 font-medium text-zinc-500">{secondaryAmount}</span>
                         <button
                             onClick={(e) => { e.stopPropagation(); onToggleMode(); }}
                             className="cursor-pointer p-0.5 rounded-full text-zinc-500 hover:text-zinc-300 transition-colors"
                             aria-label="Toggle input mode"
                         >
-                            <ArrowUpDown className="w-3.5 h-3.5" />
+                            <HugeiconsIcon icon={ArrowDataTransferVerticalIcon} className="w-3.5 h-3.5" />
                         </button>
                     </div>
                 </div>
 
                 {/* Divider */}
-                <div className="border-t border-zinc-800/60" />
+                <div className="border-t border-baseborder/20" />
 
                 {/* Token selector row */}
                 <button
                     onClick={(e) => { e.stopPropagation(); setSelectorOpen(true); }}
-                    className="cursor-pointer w-full flex items-center gap-3 px-5 py-4 hover:bg-zinc-800/20 transition-colors"
+                    className="cursor-pointer w-full flex items-center gap-3 px-5 py-4 hover:bg-white/[0.10]/20 transition-colors"
                 >
                     {/* Logo, badged with its network — which asset is selected
                         decides which chain the send goes out on. */}
@@ -131,17 +132,17 @@ export function SendAmountInput({
 
                     {/* Name + balance */}
                     <div className="flex-1 text-left min-w-0">
-                        <p className="text-[15px] font-semibold text-white leading-tight">
+                        <p className="text-15 font-semibold text-white leading-tight">
                             {token?.symbol ?? "—"}
                             {network && <span className="text-zinc-500 font-medium"> on {network}</span>}
                         </p>
-                        <p className="text-[12px] text-zinc-500 leading-tight">
+                        <p className="text-12 text-zinc-500 leading-tight">
                             Balance: {balanceStr}
                             {balanceUsd !== undefined && ` ($${balanceUsd.toFixed(2)})`}
                         </p>
                     </div>
 
-                    <ChevronDown className="w-4 h-4 text-zinc-500 flex-shrink-0" />
+                    <HugeiconsIcon icon={ArrowDown01Icon} className="w-4 h-4 text-zinc-500 flex-shrink-0" />
                 </button>
             </div>
 

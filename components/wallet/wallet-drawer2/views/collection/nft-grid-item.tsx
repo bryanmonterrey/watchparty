@@ -11,18 +11,18 @@ interface NFTGridItemProps {
 export function NFTGridItem({ nft, onClick }: NFTGridItemProps) {
     return (
         <div
-            className="group relative aspect-square overflow-hidden rounded-2xl border-2 border-white/5 hover:border-white/10 transition-all cursor-pointer bg-zinc-900/40"
+            className="group relative aspect-square cursor-pointer overflow-hidden rounded-3xl bg-white/[0.04] transition-colors hover:bg-white/[0.08]"
             onClick={() => onClick(nft)}
         >
             <TokenIcon
                 src={nft.image}
                 symbol={nft.name}
-                className="w-full h-full object-cover"
-                innerClassName="rounded-xl"
+                className="size-full object-cover"
+                innerClassName="rounded-none"
                 type="nft"
             />
-            <div className="absolute inset-x-2 bottom-2 p-2 bg-black/90 backdrop-blur-md rounded-md border border-white/5 opacity-0 group-hover:opacity-100 transition-all transform translate-y-1 group-hover:translate-y-0">
-                <p className="text-[12px] font-bold text-white line-clamp-1 text-center">
+            <div className="absolute inset-x-2 bottom-2 translate-y-1 rounded-2xl bg-black/70 p-2 opacity-0 backdrop-blur-md transition-all group-hover:translate-y-0 group-hover:opacity-100">
+                <p className="text-12 font-bold text-white line-clamp-1 text-center">
                     {nft.name}
                 </p>
             </div>

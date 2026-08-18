@@ -1,7 +1,9 @@
 "use client";
 
+import { DrawerHeader } from "../../components/drawer-chrome";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
-import { ArrowLeft } from "lucide-react";
 import { NFT } from "../../types";
 import { TokenIcon } from "../../components/token-icon";
 import { cn } from "@/lib/utils";
@@ -38,24 +40,17 @@ export function SendNFTView({ nft, onBack, onNext }: SendNFTViewProps) {
     }, []);
 
     return (
-        <div className="flex flex-col h-full bg-[#0A0A0A] rounded-2xl overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 sticky top-0 bg-[#0A0A0A]/80 backdrop-blur-md z-10">
-                <button
-                    onClick={onBack}
-                    className="p-2 rounded-full hover:bg-white/5 transition-colors cursor-pointer"
-                >
-                    <ArrowLeft className="w-5 h-5 text-white" />
-                </button>
-                <h2 className="text-[17px] font-bold text-white flex-1 text-center mr-8">
-                    {nft.name}
-                </h2>
-            </div>
+        <div className="flex flex-col h-full bg-canvas rounded-2xl overflow-hidden">
+            <DrawerHeader
+                title={nft.name}
+                onBack={onBack}
+                className="sticky top-0 z-10 bg-canvas/80 backdrop-blur-md"
+            />
 
             <div className="flex-1 px-6 flex flex-col items-center">
                 <div className="w-full max-w-[320px] pt-4 space-y-8 flex flex-col items-center">
                     {/* Image */}
-                    <div className="relative aspect-square w-full rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+                    <div className="relative aspect-square w-full rounded-2xl overflow-hidden">
                         <TokenIcon
                             src={nft.image}
                             symbol={nft.name}
@@ -88,7 +83,7 @@ export function SendNFTView({ nft, onBack, onNext }: SendNFTViewProps) {
             <div className="p-6 pb-8 flex gap-3 z-10">
                 <button
                     onClick={onBack}
-                    className="flex-1 h-14 rounded-2xl bg-zinc-900/80 text-[17px] font-bold text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+                    className="flex-1 h-14 rounded-2xl bg-white/[0.08] text-15 font-bold text-white hover:bg-white/[0.14] transition-colors cursor-pointer"
                 >
                     Cancel
                 </button>
@@ -98,8 +93,8 @@ export function SendNFTView({ nft, onBack, onNext }: SendNFTViewProps) {
                     className={cn(
                         "flex-1 h-14 rounded-2xl text-[17px] font-bold transition-all cursor-pointer",
                         recipient
-                            ? "bg-zinc-900 text-white hover:bg-zinc-800"
-                            : "bg-zinc-900/40 text-zinc-600 cursor-not-allowed"
+                            ? "bg-white/[0.08] text-white hover:bg-white/[0.14]"
+                            : "bg-white/[0.04] text-zinc-600 cursor-not-allowed"
                     )}
                 >
                     Next

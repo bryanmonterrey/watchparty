@@ -1,10 +1,9 @@
 "use client";
 
 import { motion } from "motion/react";
-import { AlertTriangle } from "lucide-react";
 import { Token } from "../../types";
 import { TokenIcon } from "../../components/token-icon";
-import { cn } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
 
 interface TokenToggleItemProps {
     token: Token;
@@ -13,50 +12,38 @@ interface TokenToggleItemProps {
 }
 
 export function TokenToggleItem({ token, shown, onToggle }: TokenToggleItemProps) {
-    const isRisky = token.name.toLowerCase().includes("trump") || token.name.toLowerCase().includes("gme");
-
     return (
         <motion.div
             layout
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-[#1C1C1E] rounded-[22px] p-4 flex items-center justify-between border border-white/5 group hover:bg-zinc-800/50 transition-colors"
+            className="group flex items-center justify-between rounded-3xl border border-baseborder/20 bg-panel2 p-4 transition-colors hover:bg-white/[0.05]"
         >
             <div className="flex items-center gap-4">
                 <TokenIcon
                     src={token.icon}
                     symbol={token.symbol}
-                    className="w-[48px] h-[48px] rounded-full shadow-lg"
+                    className="size-12 rounded-full"
                     showChainBadge={true}
                 />
                 <div className="flex flex-col gap-0.5">
                     <div className="flex items-center gap-1.5">
-                        <h3 className="text-[17px] font-bold text-white tracking-tight leading-tight truncate max-w-[140px]">
+                        <h3 className="max-w-[160px] truncate text-15 font-bold leading-tight tracking-tight text-white">
                             {token.name}
                         </h3>
-                        {isRisky && <AlertTriangle className="w-4 h-4 text-lantern" />}
                     </div>
-                    <p className="text-[15px] font-medium text-zinc-500">
+                    <p className="text-13 font-medium tabular-nums text-zinc-500">
                         {token.balance.toLocaleString(undefined, { maximumFractionDigits: 5 })} {token.symbol}
                     </p>
                 </div>
             </div>
 
-            <button
-                onClick={() => onToggle(token.mint)}
-                className={cn(
-                    "relative w-[52px] h-[32px] rounded-full transition-colors duration-200 outline-none flex items-center px-1",
-                    shown ? "bg-lantern" : "bg-zinc-700"
-                )}
-            >
-                <motion.div
-                    layout
-                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                    className="w-6 h-6 bg-white rounded-full shadow-md"
-                    animate={{ x: shown ? 20 : 0 }}
-                />
-            </button>
+            {/* The app's Switch, not a hand-rolled one. This was a 52x32 pill
+                that turned LANTERN when on — the app's positive-value green
+                used as an interactive state, which is exactly the colour rule
+                the design system reserves. */}
+            <Switch checked={shown} onCheckedChange={() => onToggle(token.mint)} />
         </motion.div>
     );
 }

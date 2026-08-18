@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { ArrowUpRight, ArrowDownToLine, Check, X } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowUpRight01Icon, ArrowDownLeft01Icon, Tick02Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { Transaction, Token } from "../types";
 import { TokenIcon } from "./token-icon";
@@ -13,10 +14,14 @@ interface TransactionItemProps {
     onClick?: () => void;
 }
 
+// Same chrome as TokenListItem — panel2 fill, one baseborder hairline, 24px
+// radius. The activity row used to be zinc-900 with a zinc-500/5 border, i.e. a
+// visibly different card from the coin row directly above it in the same drawer.
 export function TransactionItem({ tx, tokens = [], hideBalances, onClick }: TransactionItemProps) {
     const isSwap = tx.type === "SWAP";
     const isTransfer = tx.type === "TRANSFER";
     const isAppInteraction = !isSwap && !isTransfer;
+    const failed = isAppInteraction && tx.status !== "success";
 
     const shortDesc = tx.description || tx.source || "App interaction";
     const label = isAppInteraction
@@ -42,89 +47,92 @@ export function TransactionItem({ tx, tokens = [], hideBalances, onClick }: Tran
     return (
         <button
             onClick={onClick}
-            className="w-full flex items-center justify-between p-3 rounded-3xl bg-zinc-900 border-zinc-500/5 border hover:bg-zinc-800/70 transition-all group cursor-pointer text-left gap-4"
+            className="group w-full cursor-pointer rounded-3xl border border-baseborder/20 bg-panel2 p-3.5 text-left transition-colors hover:bg-white/[0.05]"
         >
-            {/* Icon */}
-            <div className="relative flex-shrink-0">
-                {isAppInteraction ? (
-                    <div className={cn(
-                        "w-11 h-11 rounded-full flex items-center justify-center"
-                        
-                    )}>
-                        {tx.status === "success" ? (
-                            <div className="w-8 h-8 rounded-full bg-[#1C3B2F] flex items-center justify-center">
-                                <Check className="w-5 h-5 text-[#00ED89] stroke-[3]" />
+            <div className="flex items-center gap-3">
+                <div className="relative shrink-0">
+                    {isAppInteraction ? (
+                        // Success/failure is semantic, so it keeps its colour —
+                        // lantern and pastelred, the app's two, instead of the
+                        // one-off #1C3B2F / #3B1C1C discs this used to mix.
+                        <div
+                            className={cn(
+                                "grid size-10 place-items-center rounded-full",
+                                failed ? "bg-pastelred/15 text-pastelred" : "bg-lantern/15 text-lantern",
+                            )}
+                        >
+                            <HugeiconsIcon
+                                icon={failed ? Cancel01Icon : Tick02Icon}
+                                className="size-5"
+                                strokeWidth={2.5}
+                            />
+                        </div>
+                    ) : isSwap && secondaryTokenSymbol ? (
+                        <div className="relative size-10">
+                            <TokenIcon
+                                src={tx.tokenIcon}
+                                symbol={tokenSymbol}
+                                size="md"
+                                className="absolute left-0 top-0 z-10 size-7 rounded-full"
+                                innerClassName="w-full h-full"
+                                type="token"
+                            />
+                            <TokenIcon
+                                src={tx.secondaryTokenIcon}
+                                symbol={secondaryTokenSymbol}
+                                size="md"
+                                className="absolute bottom-0 right-0 z-0 size-7 opacity-75"
+                                innerClassName="w-full h-full"
+                                type="token"
+                            />
+                        </div>
+                    ) : (
+                        <>
+                            <TokenIcon src={tx.tokenIcon} symbol={tokenSymbol} size="lg" type="token" />
+                            {/* Direction badge. Neutral now — it was violet-600,
+                                a colour that exists nowhere else in the app, and
+                                direction is already stated by the label and the
+                                sign on the amount. */}
+                            <div className="absolute -bottom-0.5 -right-0.5 grid size-[18px] place-items-center rounded-full border-2 border-canvas bg-white/15 text-white">
+                                <HugeiconsIcon
+                                    icon={tx.isOutgoing ? ArrowUpRight01Icon : ArrowDownLeft01Icon}
+                                    className="size-2.5"
+                                    strokeWidth={3}
+                                />
                             </div>
-                        ) : (
-                            <div className="w-8 h-8 rounded-full bg-[#3B1C1C] flex items-center justify-center">
-                                <X className="w-5 h-5 text-red-500 stroke-[3]" />
-                            </div>
+                        </>
+                    )}
+                </div>
+
+                <div className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate text-15 font-bold tracking-tight text-white">{label}</span>
+                    <span className="line-clamp-1 text-13 font-medium text-zinc-500">{shortDesc}</span>
+                </div>
+
+                {hideBalances ? (
+                    <span className="shrink-0 text-15 font-bold tracking-tight text-white">••••••</span>
+                ) : (amountSol || (isSwap && secondaryAmount)) ? (
+                    <div className="flex shrink-0 flex-col items-end gap-0.5">
+                        {amountSol && (
+                            <span
+                                className={cn(
+                                    "text-15 font-bold tabular-nums tracking-tight",
+                                    // Incoming value is the only thing worth a
+                                    // colour here; sends stay white.
+                                    (isSwap || !tx.isOutgoing) ? "text-lantern" : "text-white",
+                                )}
+                            >
+                                {isSwap ? "+" : (tx.isOutgoing ? "-" : "+")}{amountSol} {tokenSymbol}
+                            </span>
+                        )}
+                        {isSwap && secondaryAmount && (
+                            <span className="text-13 font-medium tabular-nums text-zinc-500">
+                                -{secondaryAmount} {secondaryTokenSymbol}
+                            </span>
                         )}
                     </div>
-                ) : isSwap && secondaryTokenSymbol ? (
-                    <div className="relative w-11 h-11">
-                        <TokenIcon
-                            src={tx.tokenIcon}
-                            symbol={tokenSymbol}
-                            size="md"
-                            className="absolute top-0 left-0 z-10 w-7 h-7 rounded-full"
-                            innerClassName="w-full h-full"
-                            type="token"
-                        />
-                        <TokenIcon
-                            src={tx.secondaryTokenIcon}
-                            symbol={secondaryTokenSymbol}
-                            size="md"
-                            className="absolute bottom-0 right-0 z-0 w-7 h-7 opacity-75"
-                            innerClassName="w-full h-full"
-                            type="token"
-                        />
-                    </div>
-                ) : (
-                    <>
-                        <TokenIcon src={tx.tokenIcon} symbol={tokenSymbol} size="md" type="token" />
-                        <div className={cn(
-                            "absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center border-2 border-zinc-950 shadow-sm",
-                            tx.isOutgoing ? "bg-violet-600" : "bg-zinc-950"
-                        )}>
-                            {tx.isOutgoing ? (
-                                <ArrowUpRight className="w-2.5 h-2.5 text-white stroke-[3]" />
-                            ) : (
-                                <ArrowDownToLine className="w-2.5 h-2.5 text-violet-400 stroke-[3]" />
-                            )}
-                        </div>
-                    </>
-                )}
+                ) : null}
             </div>
-
-            {/* Label + description */}
-            <div className="flex flex-col min-w-0 flex-1 gap-0">
-                <span className="text-[17px] font-bold text-white tracking-tight leading-snug whitespace-nowrap">{label}</span>
-                <span className="text-[14px] text-zinc-500 line-clamp-1 leading-snug">{shortDesc}</span>
-            </div>
-
-            {/* Amount */}
-            {hideBalances ? (
-                <div className="flex flex-col items-end gap-0.5">
-                    <span className="text-[17px] font-bold text-white/90 tracking-tight leading-none">••••••</span>
-                </div>
-            ) : (amountSol || (isSwap && secondaryAmount)) ? (
-                <div className="flex flex-col items-end gap-0.5 min-w-[100px]">
-                    {amountSol && (
-                        <span className={cn(
-                            "text-[17px] font-bold flex-shrink-0 tracking-tight leading-none",
-                            (isSwap || !tx.isOutgoing) ? "text-[#00ED89]" : "text-white/90"
-                        )}>
-                            {isSwap ? "+" : (tx.isOutgoing ? "-" : "+")}{amountSol} {tokenSymbol}
-                        </span>
-                    )}
-                    {isSwap && secondaryAmount && (
-                        <span className="text-[14px] font-medium text-zinc-500 tracking-tight leading-none">
-                            -{secondaryAmount} {secondaryTokenSymbol}
-                        </span>
-                    )}
-                </div>
-            ) : null}
         </button>
     );
 }

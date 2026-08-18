@@ -50,19 +50,21 @@ export function TokenListSkeleton({ rows = 4 }: { rows?: number }) {
             {Array.from({ length: rows }).map((_, i) => (
                 <div
                     key={i}
-                    className="w-full flex items-center justify-between p-3.5 rounded-3xl bg-panel2 border-baseborder/20 border"
+                    className="w-full flex items-center justify-between p-3.5 rounded-3xl border border-baseborder/20 bg-panel2"
                 >
                     <div className="flex items-center gap-3">
                         {/* TokenIcon size="lg" */}
-                        <div className="h-10 w-10 rounded-full shimmer-skeleton shrink-0" />
+                        <div className="size-10 shrink-0 rounded-full shimmer-skeleton" />
                         <div className="flex flex-col items-start">
-                            <TextBar width="w-14" />
-                            <TextBar width="w-10" />
+                            {/* 15px symbol over a 13px balance — the two line
+                                boxes TokenListItem renders. */}
+                            <TextBar width="w-14" bar="h-3.5" line="h-[22px]" />
+                            <TextBar width="w-12" bar="h-3" line="h-[19px]" />
                         </div>
                     </div>
                     <div className="flex flex-col items-end">
-                        <TextBar width="w-16" />
-                        <TextBar width="w-12" />
+                        <TextBar width="w-16" bar="h-3.5" line="h-[22px]" />
+                        <TextBar width="w-12" bar="h-3" line="h-[19px]" />
                     </div>
                 </div>
             ))}
@@ -76,12 +78,12 @@ export function NftGridSkeleton({ count = 4 }: { count?: number }) {
             {Array.from({ length: count }).map((_, i) => (
                 <div
                     key={i}
-                    className="aspect-square rounded-xl overflow-hidden bg-zinc-900/40 relative"
+                    className="relative aspect-square overflow-hidden rounded-3xl bg-white/[0.03]"
                 >
                     <div className="w-full h-full shimmer-skeleton" />
                     {/* The real overlay stays fully rendered — it's chrome, not
                         content, and it's what makes the tile read as a tile. */}
-                    <div className="absolute inset-x-2 bottom-2 p-2 bg-black/90 backdrop-blur-md rounded-md border border-white/5 flex items-center justify-between">
+                    <div className="absolute inset-x-2 bottom-2 flex items-center justify-between rounded-2xl bg-black/70 p-2 backdrop-blur-md">
                         <TextBar width="w-20" bar="h-3" line="h-4" />
                         <TextBar width="w-4" bar="h-3" line="h-4" />
                     </div>
@@ -108,31 +110,42 @@ export function TokenSelectorSkeleton({ rows = 8 }: { rows?: number }) {
     );
 }
 
+// Mirrors TransactionItem exactly: same p-3.5, same 24px radius, same panel2
+// fill and baseborder hairline, same 40px icon and same two-line stack. It was
+// the last thing in the drawer still wearing the pre-redesign card (zinc-900 +
+// zinc-500/5, 44px icon, p-3), so the activity tab visibly changed surface the
+// moment it finished loading — the loudest "old UI" tell in the whole drawer.
 function ActivityRowSkeleton() {
     return (
-        <div className="w-full flex items-center justify-between p-3 rounded-3xl bg-zinc-900 border-zinc-500/5 border gap-4">
-            <div className="h-11 w-11 rounded-full shimmer-skeleton shrink-0" />
-            <div className="flex flex-col flex-1 min-w-0">
-                <TextBar width="w-20" />
-                <TextBar width="w-28" bar="h-3" line="h-5" />
-            </div>
-            <div className="flex flex-col items-end min-w-[100px]">
-                <TextBar width="w-16" />
+        <div className="w-full rounded-3xl border border-baseborder/20 bg-panel2 p-3.5">
+            <div className="flex items-center gap-3">
+                <div className="size-10 shrink-0 rounded-full shimmer-skeleton" />
+                <div className="flex min-w-0 flex-1 flex-col">
+                    {/* 15px bold label / 13px description — the two line boxes
+                        TransactionItem renders, so the row is the same height
+                        loading as loaded. */}
+                    <TextBar width="w-24" bar="h-3.5" line="h-[22px]" />
+                    <TextBar width="w-32" bar="h-3" line="h-[19px]" />
+                </div>
+                <div className="flex shrink-0 flex-col items-end">
+                    <TextBar width="w-20" bar="h-3.5" line="h-[22px]" />
+                </div>
             </div>
         </div>
     );
 }
 
 // Grouped by day, like the real list — a flat run of rows reads as a different
-// component and then reflows into groups when it lands.
+// component and then reflows into groups when it lands. The date heading is a
+// 13px line, matching the real one.
 export function ActivityListSkeleton() {
     const groups = [2, 2, 2];
     return (
         <div className="space-y-1">
             {groups.map((rows, g) => (
                 <div key={g} className="space-y-1 pb-4">
-                    <div className="px-1">
-                        <TextBar width="w-24" />
+                    <div className="px-1.5">
+                        <TextBar width="w-24" bar="h-3" line="h-[19px]" />
                     </div>
                     {Array.from({ length: rows }).map((_, i) => (
                         <ActivityRowSkeleton key={i} />

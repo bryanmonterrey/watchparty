@@ -40,15 +40,17 @@ export function NetworkView({ onSelect, onClose, availableKinds }: NetworkViewPr
       transition={{ type: "spring", stiffness: 320, damping: 28 }}
       className="flex h-full flex-col"
     >
-      <div className="relative flex flex-shrink-0 items-center px-5 pb-4 pt-5">
+      {/* Same 56px header the rest of the drawer uses; the close control keeps
+          its own slot because this screen is dismissed, not backed out of. */}
+      <div className="relative flex h-14 flex-shrink-0 items-center px-3">
         <button
           onClick={onClose}
-          aria-label="close"
-          className="z-10 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white/[0.06] text-zinc-400 transition-colors hover:bg-white/[0.1] hover:text-white"
+          aria-label="Close"
+          className="z-10 grid size-9 cursor-pointer place-items-center rounded-full text-zinc-500 transition-colors hover:bg-white/[0.06] hover:text-white active:scale-95"
         >
-          <HugeiconsIcon icon={Cancel01Icon} className="size-[18px]" strokeWidth={2} />
+          <HugeiconsIcon icon={Cancel01Icon} className="size-5" strokeWidth={2.5} />
         </button>
-        <span className="pointer-events-none absolute left-0 right-0 text-center text-[18px] font-semibold text-white">
+        <span className="pointer-events-none absolute left-0 right-0 text-center text-16 font-bold tracking-tight text-white">
           Receive on
         </span>
       </div>
@@ -59,11 +61,11 @@ export function NetworkView({ onSelect, onClose, availableKinds }: NetworkViewPr
             <button
               key={chain.id}
               onClick={() => onSelect(chain.id)}
-              className="group flex w-full cursor-pointer items-center gap-3.5 rounded-2xl px-3 py-2.5 text-left transition-colors hover:bg-white/[0.04]"
+              className="group flex w-full cursor-pointer items-center gap-3.5 rounded-3xl px-3 py-2.5 text-left transition-colors hover:bg-white/[0.05]"
             >
               <ChainIcon chain={chain.id} size={40} />
-              <span className="flex-1 text-[17px] font-medium text-white">{chain.name}</span>
-              <span className="text-[13px] font-medium text-zinc-500">
+              <span className="flex-1 text-15 font-bold tracking-tight text-white">{chain.name}</span>
+              <span className="text-13 font-medium text-zinc-500">
                 {chain.nativeCurrency.symbol}
               </span>
             </button>

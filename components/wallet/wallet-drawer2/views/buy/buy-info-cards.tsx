@@ -1,30 +1,31 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { FlashIcon, SecurityCheckIcon } from "@hugeicons/core-free-icons";
 import * as React from "react";
-import { ShieldCheck, Zap } from "lucide-react";
 
 export function BuyInfoCards() {
     return (
-        <div className="space-y-3">
-            <div className="flex items-start space-x-3 p-4 bg-zinc-900/30 rounded-2xl border border-zinc-900">
-                <div className="mt-0.5 p-2 bg-bleu/10 rounded-xl">
-                    <ShieldCheck className="w-4 h-4 text-bleu" />
+        <div className="space-y-1">
+            <div className="flex items-start gap-3 rounded-3xl border border-baseborder/20 bg-panel2 p-4">
+                <div className="mt-0.5 grid size-8 place-items-center rounded-full bg-white/[0.06]">
+                    <HugeiconsIcon icon={SecurityCheckIcon} className="size-4 text-zinc-300" />
                 </div>
                 <div>
-                    <p className="text-[14px] font-semibold text-white">Secure Checkout</p>
-                    <p className="text-[12px] text-zinc-500 leading-relaxed">
+                    <p className="text-15 font-bold tracking-tight text-white">Secure checkout</p>
+                    <p className="text-13 font-medium leading-relaxed text-zinc-500">
                         Transactions are secured by MoonPay with encrypted processing.
                     </p>
                 </div>
             </div>
 
-            <div className="flex items-start space-x-3 p-4 bg-zinc-900/30 rounded-2xl border border-zinc-900">
-                <div className="mt-0.5 p-2 bg-amber-500/10 rounded-xl">
-                    <Zap className="w-4 h-4 text-amber-400" />
+            <div className="flex items-start gap-3 rounded-3xl border border-baseborder/20 bg-panel2 p-4">
+                <div className="mt-0.5 grid size-8 place-items-center rounded-full bg-white/[0.06]">
+                    <HugeiconsIcon icon={FlashIcon} className="size-4 text-zinc-300" />
                 </div>
                 <div>
-                    <p className="text-[14px] font-semibold text-white">Instant Delivery</p>
-                    <p className="text-[12px] text-zinc-500 leading-relaxed">
+                    <p className="text-15 font-bold tracking-tight text-white">Instant delivery</p>
+                    <p className="text-13 font-medium leading-relaxed text-zinc-500">
                         SOL will be sent directly to your wallet once confirmed.
                     </p>
                 </div>

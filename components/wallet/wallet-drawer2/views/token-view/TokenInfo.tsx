@@ -1,9 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { Check } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Tick02Icon } from "@hugeicons/core-free-icons";
 import { CopyIcon } from "@/components/icons";
+import { getChainOrDefault } from "@/lib/chains/registry";
 import { Token } from "../../types";
+import { DrawerCard, DrawerDataRow } from "../../components/drawer-chrome";
 
 interface TokenInfoProps {
     token: Token;
@@ -30,38 +33,38 @@ export function TokenInfo({ token }: TokenInfoProps) {
     };
 
     const rows = [
-        { label: "Name",       value: token.name },
-        { label: "Symbol",     value: token.symbol },
-        { label: "Network",    value: "Solana" },
-        { label: "Market Cap", value: token.marketCap ? formatLargeNumber(token.marketCap) : "—" },
-        { label: "FDV",        value: token.fdv ? formatLargeNumber(token.fdv) : "—" },
+        { label: "Name", value: token.name },
+        { label: "Symbol", value: token.symbol },
+        // The drawer holds coins on eight networks, so a hardcoded "Solana"
+        // here was wrong on every EVM and Bitcoin row it rendered.
+        { label: "Network", value: getChainOrDefault(token.chain ?? "solana").name },
+        { label: "Market cap", value: token.marketCap ? formatLargeNumber(token.marketCap) : "—" },
+        { label: "FDV", value: token.fdv ? formatLargeNumber(token.fdv) : "—" },
     ];
 
+    // One card, rows separated by padding rather than by a hairline under each
+    // — the banded `border-b border-white/5` look is what dated this screen.
     return (
-        <div className="bg-gray1 rounded-[22px] overflow-hidden">
+        <DrawerCard className="py-1.5">
             {rows.map((row) => (
-                <div
-                    key={row.label}
-                    className="flex items-center justify-between px-5 py-4 border-b border-white/5"
-                >
-                    <span className="text-lg font-bold text-zinc-500">{row.label}</span>
-                    <span className="text-lg font-bold text-zinc-200">{row.value}</span>
-                </div>
+                <DrawerDataRow key={row.label} label={row.label}>
+                    {row.value}
+                </DrawerDataRow>
             ))}
 
-            {/* Mint address — copyable */}
-            <div className="flex items-center justify-between px-5 py-4">
-                <span className="text-lg font-bold text-zinc-500">Mint</span>
-                <button onClick={copyMint} className="flex items-center gap-1.5 cursor-pointer group">
-                    <span className="text-lg font-bold text-zinc-200">
-                        {truncateMint(token.mint)}
-                    </span>
-                    {copied
-                        ? <Check className="w-3.5 h-3.5 text-[#00ED89]" />
-                        : <CopyIcon className="w-3.5 h-3.5 text-zinc-500 group-hover:text-zinc-300 transition-colors" />
-                    }
+            <DrawerDataRow label="Mint">
+                <button onClick={copyMint} className="group flex cursor-pointer items-center gap-1.5">
+                    <span className="font-semibold text-white">{truncateMint(token.mint)}</span>
+                    <HugeiconsIcon
+                        icon={Tick02Icon}
+                        className={`size-3.5 text-lantern ${copied ? "" : "hidden"}`}
+                        strokeWidth={2.5}
+                    />
+                    {!copied && (
+                        <CopyIcon className="size-3.5 text-zinc-600 transition-colors group-hover:text-white" />
+                    )}
                 </button>
-            </div>
-        </div>
+            </DrawerDataRow>
+        </DrawerCard>
     );
 }

@@ -102,7 +102,7 @@ export function TokenChart({ token, onHoverPrice, onPeriodStart }: TokenChartPro
 
         // Green series — renders on top, trimmed to the left portion while hovering.
         const activeSeries = chart.addSeries(AreaSeries, {
-            lineColor: "#00ED89",
+            lineColor: "#00ED89", // --color-lantern
             topColor: "rgba(0, 237, 137, 0.2)",
             bottomColor: "rgba(0, 237, 137, 0.0)",
             lineWidth: 3,
@@ -244,12 +244,12 @@ export function TokenChart({ token, onHoverPrice, onPeriodStart }: TokenChartPro
         <div className="w-full relative">
             <div
                 ref={tooltipRef}
-                className="absolute z-10 pointer-events-none text-[13px] font-bold text-white/50 px-2 py-1 transition-opacity duration-200 uppercase"
+                className="pointer-events-none absolute z-10 px-2 py-1 text-12 font-semibold text-zinc-500 transition-opacity duration-200"
                 style={{ opacity: 0 }}
             />
             {hasNoData && !isLoadingChart && (
-                <div className="absolute inset-0 flex items-center justify-center h-[200px] text-zinc-600 text-sm">
-                    No chart data available
+                <div className="absolute inset-0 flex h-[200px] items-center justify-center text-13 font-medium text-zinc-600">
+                    No chart data yet
                 </div>
             )}
             {/* Keep the chart container mounted at all times so the chart library
@@ -263,11 +263,13 @@ export function TokenChart({ token, onHoverPrice, onPeriodStart }: TokenChartPro
                     <button
                         key={tf}
                         onClick={() => setActiveTimeframe(tf)}
+                        // Pill, matching the tab strip on the main view — this
+                        // was the drawer's only rounded-lg control.
                         className={[
-                            "px-3 py-1.5 rounded-lg text-[13px] font-bold transition-all cursor-pointer",
+                            "cursor-pointer rounded-full px-3 py-1.5 text-13 font-bold transition-colors",
                             activeTimeframe === tf
-                                ? "bg-zinc-800 text-white"
-                                : "text-zinc-500 hover:text-zinc-300",
+                                ? "bg-white/[0.08] text-white"
+                                : "text-zinc-500 hover:text-white",
                         ].join(" ")}
                     >
                         {tf}

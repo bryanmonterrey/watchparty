@@ -2,8 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { Globe } from "lucide-react";
-import { XIcon, TelegramIcon, DiscordIcon, RedditIcon } from "@/components/icons";
+import { XIcon, TelegramIcon, DiscordIcon, RedditIcon, GlobeIcon } from "@/components/icons";
 import { Token, TokenLink } from "../../types";
 
 interface TokenAboutProps {
@@ -14,15 +13,15 @@ function LinkIcon({ type }: { type: string }) {
     switch (type) {
         case "twitter":
         case "x":
-            return <XIcon className="w-4 h-4" />;
+            return <XIcon className="size-4" />;
         case "telegram":
-            return <TelegramIcon className="w-4 h-4" />;
+            return <TelegramIcon className="size-4" />;
         case "discord":
-            return <DiscordIcon className="w-4 h-4" />;
+            return <DiscordIcon className="size-4" />;
         case "reddit":
-            return <RedditIcon className="w-4 h-4" />;
+            return <RedditIcon className="size-4" />;
         default:
-            return <Globe className="w-4 h-4" />;
+            return <GlobeIcon className="size-4" />;
     }
 }
 
@@ -52,16 +51,16 @@ export function TokenAbout({ token }: TokenAboutProps) {
             {hasDescription && (
                 <div className="relative">
                     <p className={cn(
-                        "text-md leading-relaxed text-zinc-400 font-medium transition-all",
+                        "text-14 font-medium leading-relaxed text-zinc-400",
                         !isExpanded && "line-clamp-3"
                     )}>
                         {token.description}
                     </p>
                     <button
                         onClick={() => setIsExpanded(!isExpanded)}
-                        className="mt-2 text-[14px] font-bold text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                        className="mt-2 cursor-pointer text-13 font-bold text-zinc-500 transition-colors hover:text-white"
                     >
-                        {isExpanded ? "Show Less" : "Show More"}
+                        {isExpanded ? "Show less" : "Show more"}
                     </button>
                 </div>
             )}
@@ -74,7 +73,7 @@ export function TokenAbout({ token }: TokenAboutProps) {
                             href={link.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center gap-2 px-4 py-2 bg-gray1 rounded-full text-[13px] font-bold text-zinc-300 hover:text-white hover:bg-zinc-800 transition-all cursor-pointer"
+                            className="flex cursor-pointer items-center gap-2 rounded-full bg-white/[0.06] px-4 py-2 text-13 font-bold text-zinc-300 transition-colors hover:bg-white/[0.12] hover:text-white"
                         >
                             <LinkIcon type={link.type} />
                             {linkLabel(link)}

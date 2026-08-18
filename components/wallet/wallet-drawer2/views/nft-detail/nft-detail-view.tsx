@@ -1,8 +1,8 @@
 "use client";
 
+import { DrawerHeader } from "../../components/drawer-chrome";
 import { useState } from "react";
 import { AnimatePresence } from "motion/react";
-import { ArrowLeft } from "lucide-react";
 import { NFT } from "../../types";
 import { TokenIcon } from "../../components/token-icon";
 import { NFTActions } from "./nft-actions";
@@ -25,23 +25,16 @@ export function NFTDetailView({ nft, onBack, onSend, onPin, onAvatar, onMore, on
     const [showMoreActions, setShowMoreActions] = useState(false);
 
     return (
-        <div className="flex flex-col h-full bg-[#0A0A0A] rounded-2xl overflow-y-auto hidden-scrollbar">
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 rounded-t-2xl sticky top-0 bg-[#0A0A0A]/80 backdrop-blur-md z-10">
-                <button
-                    onClick={onBack}
-                    className="p-2 rounded-full hover:bg-white/5 transition-colors cursor-pointer"
-                >
-                    <ArrowLeft className="w-5 h-5 text-white" />
-                </button>
-                <h2 className="text-[17px] font-bold text-white flex-1 text-center mr-8">
-                    {nft.name}
-                </h2>
-            </div>
+        <div className="flex h-full flex-col overflow-y-auto hidden-scrollbar bg-canvas">
+            <DrawerHeader
+                title={nft.name}
+                onBack={onBack}
+                className="sticky top-0 z-10 bg-canvas/80 backdrop-blur-md"
+            />
 
             <div className="px-4 pb-10 space-y-6">
                 {/* Image */}
-                <div className="relative aspect-square w-full rounded-none overflow-hidden shadow-2xl">
+                <div className="relative aspect-square w-full overflow-hidden rounded-3xl">
                     <TokenIcon
                         src={nft.image}
                         symbol={nft.name}
@@ -62,13 +55,17 @@ export function NFTDetailView({ nft, onBack, onSend, onPin, onAvatar, onMore, on
                     }}
                 />
 
-                {/* Description */}
-                <div className="bg-zinc-900 border-zinc-500/5 border hover:bg-zinc-800/70 rounded-2xl p-4 space-y-1">
-                    <p className="text-md font-bold text-zinc-500">Description</p>
-                    <p className="text-md font-semibold text-white/90">
-                        {nft.description || "2222 We Tardio World Order"}
-                    </p>
-                </div>
+                {/* Description. Rendered only when there IS one — the fallback
+                    was a hardcoded string from somebody's test collection, so
+                    every NFT without a description showed another NFT's copy. */}
+                {nft.description && (
+                    <div className="space-y-1 rounded-3xl border border-baseborder/20 bg-panel2 p-4">
+                        <p className="text-13 font-medium text-zinc-500">Description</p>
+                        <p className="text-14 font-medium leading-relaxed text-white">
+                            {nft.description}
+                        </p>
+                    </div>
+                )}
 
                 {/* Info Table */}
                 <NFTInfoTable nft={nft} />

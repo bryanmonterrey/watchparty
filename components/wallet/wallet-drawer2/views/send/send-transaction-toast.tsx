@@ -1,8 +1,9 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowUpRight01Icon, Cancel01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
-import { Check, X, ArrowUpRight } from "lucide-react";
 
 interface SendToastData {
     status: "sending" | "sent" | "error";
@@ -35,28 +36,28 @@ function SendToastContent({
             initial={{ opacity: 0, y: 12, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
-            className="w-[300px] bg-black1 border border-zinc-800/60 rounded-3xl p-4 flex flex-col gap-3 shadow-2xl"
+            className="w-[300px] bg-black1 border border-baseborder/20 rounded-3xl p-4 flex flex-col gap-3"
         >
             {/* Token + recipient */}
             <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-zinc-800 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-white/[0.08] flex items-center justify-center">
                     {tokenIcon ? (
                         <img src={tokenIcon} alt={tokenSymbol} className="w-full h-full object-cover" />
                     ) : (
-                        <span className="text-[13px] font-bold text-zinc-400">{tokenSymbol.slice(0, 2)}</span>
+                        <span className="text-13 font-bold text-zinc-400">{tokenSymbol.slice(0, 2)}</span>
                     )}
                 </div>
                 <div className="flex-1 min-w-0">
-                    <p className="text-[14px] font-semibold text-white truncate">
+                    <p className="text-14 font-semibold text-white truncate">
                         {amount} {tokenSymbol}
                     </p>
-                    <p className="text-[12px] text-zinc-500 truncate">to {recipientDisplay}</p>
+                    <p className="text-12 text-zinc-500 truncate">to {recipientDisplay}</p>
                 </div>
                 <button
                     onClick={() => toast.dismiss(toastId)}
                     className="p-1 rounded-full text-zinc-600 hover:text-zinc-400 transition-colors shrink-0 cursor-pointer"
                 >
-                    <X className="w-3.5 h-3.5" />
+                    <HugeiconsIcon icon={Cancel01Icon} className="w-3.5 h-3.5" />
                 </button>
             </div>
 
@@ -70,7 +71,7 @@ function SendToastContent({
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0, opacity: 0 }}
                             transition={{ type: "spring", stiffness: 500, damping: 28 }}
-                            className="w-2 h-2 rounded-full bg-[#A7A9FF] animate-pulse shrink-0"
+                            className="w-2 h-2 rounded-full bg-zinc-400 animate-pulse shrink-0"
                         />
                     )}
                     {isSent && (
@@ -80,9 +81,9 @@ function SendToastContent({
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0, opacity: 0 }}
                             transition={{ type: "spring", stiffness: 500, damping: 22 }}
-                            className="w-4 h-4 rounded-full bg-[#10B981] flex items-center justify-center shrink-0"
+                            className="w-4 h-4 rounded-full bg-lantern flex items-center justify-center shrink-0"
                         >
-                            <Check className="w-2.5 h-2.5 text-black" strokeWidth={3} />
+                            <HugeiconsIcon icon={Tick02Icon} className="w-2.5 h-2.5 text-black" strokeWidth={3} />
                         </motion.div>
                     )}
                     {isError && (
@@ -94,7 +95,7 @@ function SendToastContent({
                             transition={{ type: "spring", stiffness: 500, damping: 22 }}
                             className="w-4 h-4 rounded-full bg-red-500 flex items-center justify-center shrink-0"
                         >
-                            <X className="w-2.5 h-2.5 text-black" strokeWidth={3} />
+                            <HugeiconsIcon icon={Cancel01Icon} className="w-2.5 h-2.5 text-black" strokeWidth={3} />
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -106,8 +107,8 @@ function SendToastContent({
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 4 }}
                         transition={{ duration: 0.18, ease: "easeOut" }}
-                        className={`text-[13px] font-medium flex-1 ${
-                            isSent ? "text-[#10B981]" : isError ? "text-red-400" : "text-zinc-300"
+                        className={`text-13 font-medium flex-1 ${
+                            isSent ? "text-lantern" : isError ? "text-pastelred" : "text-zinc-300"
                         }`}
                     >
                         {isSending && "Sending..."}
@@ -126,10 +127,10 @@ function SendToastContent({
                             initial={{ opacity: 0, x: 8 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.1, duration: 0.2, ease: "easeOut" }}
-                            className="flex items-center gap-1 text-[12px] text-[#A7A9FF] hover:opacity-80 transition-opacity font-medium shrink-0"
+                            className="flex items-center gap-1 text-12 text-zinc-400 hover:opacity-80 transition-opacity font-medium shrink-0"
                         >
                             View tx
-                            <ArrowUpRight className="w-3 h-3" />
+                            <HugeiconsIcon icon={ArrowUpRight01Icon} className="w-3 h-3" />
                         </motion.a>
                     )}
                 </AnimatePresence>

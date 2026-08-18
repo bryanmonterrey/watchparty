@@ -1,8 +1,9 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowRight01Icon, CancelCircleIcon, CheckmarkCircle02Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { CheckCircle2, XCircle, ArrowRight } from "lucide-react";
 
 export type SwapStep = "building" | "signing" | "confirming" | "success" | "error";
 
@@ -45,35 +46,35 @@ export function SwapStatus({ step, inputSymbol, outputSymbol, inputAmount, outpu
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 12 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
-                className="rounded-[24px] border border-zinc-800/60 bg-[#1b1b1c] p-5 flex flex-col gap-4"
+                className="rounded-3xl border border-baseborder/20 bg-panel2 p-5 flex flex-col gap-4"
             >
                 {/* Token summary */}
-                <div className="flex items-center justify-center gap-3 text-white font-semibold text-[16px]">
+                <div className="flex items-center justify-center gap-3 text-white font-semibold text-16">
                     <span>{inputAmount} {inputSymbol}</span>
-                    <ArrowRight className="w-4 h-4 text-zinc-500 shrink-0" />
+                    <HugeiconsIcon icon={ArrowRight01Icon} className="w-4 h-4 text-zinc-500 shrink-0" />
                     <span>{outputAmount} {outputSymbol}</span>
                 </div>
 
                 {/* Status row */}
                 <div className="flex items-center gap-3">
                     {isPending && (
-                        <div className="w-2 h-2 rounded-full bg-[#00ED89] animate-pulse shrink-0" />
+                        <div className="w-2 h-2 rounded-full bg-lantern animate-pulse shrink-0" />
                     )}
                     {isSuccess && (
-                        <CheckCircle2 className="w-5 h-5 text-[#00ED89] shrink-0" />
+                        <HugeiconsIcon icon={CheckmarkCircle02Icon} className="w-5 h-5 text-lantern shrink-0" />
                     )}
                     {isError && (
-                        <XCircle className="w-5 h-5 text-red-400 shrink-0" />
+                        <HugeiconsIcon icon={CancelCircleIcon} className="w-5 h-5 text-pastelred shrink-0" />
                     )}
                     <div className="flex flex-col">
-                        <span className={`text-[14px] font-semibold ${isError ? "text-red-400" : isSuccess ? "text-[#00ED89]" : "text-white"}`}>
+                        <span className={`text-14 font-semibold ${isError ? "text-pastelred" : isSuccess ? "text-lantern" : "text-white"}`}>
                             {config.label}
                         </span>
                         {config.sublabel && (
-                            <span className="text-[12px] text-zinc-500">{config.sublabel}</span>
+                            <span className="text-12 text-zinc-500">{config.sublabel}</span>
                         )}
                         {isError && error && (
-                            <span className="text-[12px] text-red-400/80 mt-0.5 max-w-[240px] line-clamp-2">{error}</span>
+                            <span className="text-12 text-pastelred/80 mt-0.5 max-w-[240px] line-clamp-2">{error}</span>
                         )}
                     </div>
                 </div>
@@ -86,10 +87,10 @@ export function SwapStatus({ step, inputSymbol, outputSymbol, inputAmount, outpu
                                 key={s}
                                 className={`h-1 rounded-full transition-all duration-300 ${
                                     step === s
-                                        ? "w-6 bg-[#00ED89]"
+                                        ? "w-6 bg-lantern"
                                         : s === "building" || (s === "signing" && (step === "confirming"))
                                         ? "w-2 bg-zinc-600"
-                                        : "w-2 bg-zinc-800"
+                                        : "w-2 bg-white/[0.12]"
                                 }`}
                             />
                         ))}
@@ -99,7 +100,7 @@ export function SwapStatus({ step, inputSymbol, outputSymbol, inputAmount, outpu
                 {(isError) && (
                     <button
                         onClick={onDone}
-                        className="text-[13px] font-semibold text-zinc-400 hover:text-white transition-colors text-center"
+                        className="text-13 font-semibold text-zinc-400 hover:text-white transition-colors text-center"
                     >
                         Dismiss
                     </button>

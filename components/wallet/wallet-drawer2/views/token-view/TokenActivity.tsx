@@ -1,12 +1,11 @@
 "use client";
 
-"use client";
-
 import * as React from "react";
 import { Token, Transaction } from "../../types";
 import { trpc } from "@/lib/trpc/client";
 import { TransactionItem } from "../../components/transaction-item";
 import { ActivityListSkeleton } from "../../components/wallet-skeletons";
+import { DrawerEmptyState } from "../../components/drawer-chrome";
 
 interface TokenActivityProps {
     token: Token;
@@ -45,14 +44,15 @@ export function TokenActivity({ token, tokens = [], hideBalances }: TokenActivit
 
     if (tokenTransactions.length === 0) {
         return (
-            <div className="bg-gray1 p-4 rounded-2xl text-center text-zinc-500 text-sm">
-                No activity for {token.symbol}
-            </div>
+            <DrawerEmptyState
+                title={`No ${token.symbol} activity yet`}
+                description="Sends, receives and swaps of this coin show up here."
+            />
         );
     }
 
     return (
-        <div className="space-y-2">
+        <div className="space-y-1">
             {tokenTransactions.map((tx: Transaction) => (
                 <TransactionItem key={tx.signature} tx={tx} tokens={tokens} hideBalances={hideBalances} />
             ))}

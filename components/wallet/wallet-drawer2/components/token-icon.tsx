@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Coins, Image as ImageIcon } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Coins01Icon, Image01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { ChainIcon } from "@/components/wallet/chain-icon";
 import type { ChainId } from "@/lib/chains/types";
@@ -115,23 +116,24 @@ export function TokenIcon({
                     />
                 </>
             ) : (
+                // Flat fill, no gradient and no ring: house rule is no
+                // gradients anywhere, and the ring made every logo-less coin
+                // read as a bordered chip next to the real logos beside it.
                 <div className={cn(
-                    "w-full h-full bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center border border-zinc-700/50",
+                    "flex h-full w-full items-center justify-center bg-white/[0.07] text-zinc-500",
                     type === "token" ? "rounded-full" : "rounded-none",
                     innerClassName
                 )}>
-                    {type === "token" ? (
-                        <span className="text-[10px] font-bold text-zinc-300">
-                            <Coins className="w-4 h-4" />
-                        </span>
-                    ) : (
-                        <ImageIcon className="w-5 h-5 text-zinc-600" />
-                    )}
+                    <HugeiconsIcon
+                        icon={type === "token" ? Coins01Icon : Image01Icon}
+                        className="size-1/2"
+                        strokeWidth={2}
+                    />
                 </div>
             )}
 
             {(chain || showChainBadge) && !isNative && (
-                <div className="absolute -bottom-0.5 -right-0.5 rounded-full bg-[#131313] p-[1.5px]">
+                <div className="absolute -bottom-0.5 -right-0.5 rounded-full bg-canvas p-[1.5px]">
                     <ChainIcon chain={chain ?? "solana"} size={badgeSize} />
                 </div>
             )}

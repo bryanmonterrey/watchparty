@@ -1,9 +1,8 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { Coins, Image, Activity } from "lucide-react";
+import { motion } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, Coins01Icon, Image01Icon, Activity01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import type { ChainId } from "@/lib/chains/types";
 import { Token, NFT, Transaction, TabId, TabType, NFTCollection } from "../types";
@@ -18,12 +17,12 @@ import {
     ViewOffIcon, 
     RefreshIcon 
 } from "@/components/icons";
-import { GooDropdown } from "@/components/ui/goo-dropdown";
+import { GooDropdown, gooMenuItem } from "@/components/ui/goo-dropdown";
 
 const TABS: TabType[] = [
-    { id: "tokens", name: "Coins", icon: Coins },
-    { id: "nfts", name: "Collections", icon: Image },
-    { id: "activity", name: "Activity", icon: Activity },
+    { id: "tokens", name: "Coins" },
+    { id: "nfts", name: "Collections" },
+    { id: "activity", name: "Activity" },
 ];
 
 // How many rows the coins tab shows before "All Coins".
@@ -118,17 +117,17 @@ export function WalletTabs({
                             key={tab.id}
                             onClick={() => onTabChange(tab.id)}
                             className={cn(
-                                "py-1.5 px-3 text-lg font-semibold cursor-pointer rounded-full transition-all relative z-10 flex items-center gap-1.5",
+                                "relative z-10 flex cursor-pointer items-center gap-1.5 rounded-full px-3.5 py-1.5 text-15 font-bold tracking-tight transition-colors",
                                 activeTab === tab.id
-                                    ? "text-white/80"
-                                    : "text-zinc-500 hover:text-white hover:bg-zinc-900/65"
+                                    ? "text-white"
+                                    : "text-zinc-500 hover:text-white"
                             )}
                         >
                             {tab.name}
                             {activeTab === tab.id && (
                                 <motion.div
                                     layoutId="walletTabHighlight"
-                                    className="absolute inset-0 bg-gray1 text-white rounded-full -z-10"
+                                    className="absolute inset-0 -z-10 rounded-full bg-white/[0.08]"
                                     initial={false}
                                     transition={{ type: "spring", stiffness: 250, damping: 30 }}
                                 />
@@ -146,48 +145,29 @@ export function WalletTabs({
                     items={[
                         ...(activeTab !== "activity"
                             ? [
-                                  {
+                                  gooMenuItem({
                                       key: "manage",
+                                      icon: <ToggleIcon />,
+                                      label: activeTab === "tokens" ? "Manage coins" : "Manage collectibles",
                                       onClick: () => {
                                           if (activeTab === "tokens") onManageTokens?.();
                                           else if (activeTab === "nfts") onManageCollectibles?.();
                                       },
-                                      className: "gap-3 px-4 cursor-pointer hover:bg-white/5 group",
-                                      label: (
-                                          <>
-                                              <ToggleIcon className="size-6 text-zinc-500 group-hover:text-white transition-colors shrink-0" />
-                                              <span className="text-lg font-medium text-white/90">
-                                                  {activeTab === "tokens" ? "Manage Coins" : "Manage Collectibles"}
-                                              </span>
-                                          </>
-                                      ),
-                                  },
+                                  }),
                               ]
                             : []),
-                        {
+                        gooMenuItem({
                             key: "hide-balances",
+                            icon: <ViewOffIcon />,
+                            label: hideBalances ? "Show balances" : "Hide balances",
                             onClick: onHideBalances,
-                            className: "gap-3 px-4 cursor-pointer hover:bg-white/5 group",
-                            label: (
-                                <>
-                                    <ViewOffIcon className="size-6 text-zinc-500 group-hover:text-white transition-colors shrink-0" />
-                                    <span className="text-lg font-medium text-white/90">
-                                        {hideBalances ? "Show Balances" : "Hide Balances"}
-                                    </span>
-                                </>
-                            ),
-                        },
-                        {
+                        }),
+                        gooMenuItem({
                             key: "refresh",
+                            icon: <RefreshIcon />,
+                            label: "Refresh",
                             onClick: onRefresh,
-                            className: "gap-3 px-4 cursor-pointer hover:bg-white/5 group",
-                            label: (
-                                <>
-                                    <RefreshIcon className="size-6 text-zinc-500 group-hover:text-white transition-colors shrink-0" />
-                                    <span className="text-lg font-medium text-white/90">Refresh</span>
-                                </>
-                            ),
-                        },
+                        }),
                     ]}
                 />
             </div>
@@ -227,15 +207,15 @@ export function WalletTabs({
                             // lie the balance chip used to tell with 0.000.
                             assetsUnavailable ? (
                                 <EmptyState
-                                    icon={Coins}
+                                    icon={<HugeiconsIcon icon={Coins01Icon} className="size-5" strokeWidth={2} />}
                                     title="Balances unavailable"
-                                    description="We couldn't reach the network just now. Your coins are safe — pull to refresh in a moment."
+                                    description="We couldn't reach the network just now. Your coins are safe — refresh in a moment."
                                 />
                             ) : (
                                 <EmptyState
-                                    icon={Coins}
-                                    title="No Coins Found"
-                                    description="Your coin balances will appear here once you have assets."
+                                    icon={<HugeiconsIcon icon={Coins01Icon} className="size-5" strokeWidth={2} />}
+                                    title="No coins yet"
+                                    description="Your coin balances show up here once you hold something."
                                 />
                             )
                         ) : (
@@ -248,9 +228,9 @@ export function WalletTabs({
                             <div className="flex justify-end pt-1">
                                 <button
                                     onClick={onAllTokens}
-                                    className="flex items-center gap-1 px-2 py-1.5 text-md font-semibold text-zinc-500 hover:text-white transition-colors cursor-pointer"
+                                    className="flex cursor-pointer items-center gap-1 px-2 py-1.5 text-13 font-semibold text-zinc-500 transition-colors hover:text-white"
                                 >
-                                    All Coins
+                                    All coins
                                     <HugeiconsIcon icon={ArrowRight01Icon} className="size-4" strokeWidth={2.5} />
                                 </button>
                             </div>
@@ -274,9 +254,9 @@ export function WalletTabs({
                             </div>
                         ) : (
                             <EmptyState
-                                icon={Image}
-                                title="No Collections Found"
-                                description="Collectibles in your wallet will be grouped here."
+                                icon={<HugeiconsIcon icon={Image01Icon} className="size-5" strokeWidth={2} />}
+                                title="No collections yet"
+                                description="Collectibles in your wallet get grouped here."
                             />
                         )}
                     </div>
@@ -302,7 +282,7 @@ export function WalletTabs({
                             }
                             return groups.map(group => (
                                 <div key={group.label} className="space-y-1 pb-4">
-                                    <p className="text-md font-semibold text-zinc-400 px-1">{group.label}</p>
+                                    <p className="px-1.5 text-13 font-semibold text-zinc-500">{group.label}</p>
                                     {group.txs.map((tx) => (
                                         <TransactionItem
                                             key={tx.signature}
@@ -315,9 +295,9 @@ export function WalletTabs({
                             ));
                         })() : (
                             <EmptyState
-                                icon={Activity}
-                                title="No Recent Activity"
-                                description="Your transaction history will appear here once you start using your wallet."
+                                icon={<HugeiconsIcon icon={Activity01Icon} className="size-5" strokeWidth={2} />}
+                                title="No activity yet"
+                                description="Transactions show up here once you start using this wallet."
                             />
                         )}
                     </div>

@@ -1,8 +1,10 @@
 "use client";
 
+import { DrawerHeader } from "../../components/drawer-chrome";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowLeft } from "lucide-react";
 import { Token } from "../../types";
 import { TokenSearch } from "./token-search";
 import { TokenToggleItem } from "./token-toggle-item";
@@ -52,20 +54,13 @@ export function ManageTokensView({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
-            className="flex flex-col h-full bg-[#0A0A0A] rounded-2xl overflow-hidden"
+            className="flex flex-col h-full bg-canvas rounded-2xl overflow-hidden"
         >
-            {/* Header */}
-            <div className="flex items-center justify-between rounded-t-2xl p-4 sticky top-0 bg-[#0A0A0A]/80 backdrop-blur-md z-10">
-                <button
-                    onClick={onBack}
-                    className="p-2 rounded-full hover:bg-white/5 transition-colors cursor-pointer"
-                >
-                    <ArrowLeft className="w-5 h-5 text-white" />
-                </button>
-                <h2 className="text-[17px] font-bold text-white flex-1 text-center mr-8">
-                    Manage Coins
-                </h2>
-            </div>
+            <DrawerHeader
+                title="Manage coins"
+                onBack={onBack}
+                className="sticky top-0 z-10 bg-canvas/80 backdrop-blur-md"
+            />
 
             <TokenSearch value={searchQuery} onChange={setSearchQuery} />
 

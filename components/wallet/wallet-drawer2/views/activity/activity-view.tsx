@@ -1,12 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { ArrowLeft } from "lucide-react";
 import { Transaction, Token } from "../../types";
 import { trpc } from "@/lib/trpc/client";
 import { format, isToday, isYesterday } from "date-fns";
 import { ActivitySkeleton } from "./activity-skeleton";
 import { ActivityGroup } from "./activity-group";
+import { DrawerHeader, DrawerEmptyState } from "../../components/drawer-chrome";
 
 interface ActivityViewProps {
     tokens: Token[];
@@ -50,21 +50,12 @@ export function ActivityView({ tokens, onBack, onTransactionClick, hideBalances 
     }, [transactions]);
 
     return (
-        <div className="flex flex-col h-full bg-black rounded-2xl overflow-hidden">
-            {/* Header */}
-            <div className="sticky top-0 z-10 backdrop-blur-xs bg-black/80 rounded-t-2xl relative flex items-center justify-center px-5 pt-4 pb-2 min-h-[60px]">
-                <button
-                    onClick={onBack}
-                    className="absolute left-3 p-2 rounded-full hover:bg-zinc-800/50 transition-colors cursor-pointer text-zinc-400 hover:text-white"
-                >
-                    <ArrowLeft className="w-5 h-5" />
-                </button>
-                <span className="text-2xl font-bold text-white/90">Activity</span>
-            </div>
+        <div className="flex h-full flex-col overflow-hidden bg-canvas">
+            <DrawerHeader title="Activity" onBack={onBack} className="sticky top-0 z-10 bg-canvas/80 backdrop-blur-md" />
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto hidden-scrollbar px-1 pb-10">
-                <div className="px-4 py-2 space-y-6">
+            <div className="flex-1 overflow-y-auto hidden-scrollbar pb-10">
+                <div className="space-y-5 px-5 pt-1">
                     {isLoading ? (
                         <ActivitySkeleton />
                     ) : groupedTransactions.length > 0 ? (
@@ -79,9 +70,10 @@ export function ActivityView({ tokens, onBack, onTransactionClick, hideBalances 
                             />
                         ))
                     ) : (
-                        <div className="flex flex-col items-center justify-center py-20 text-zinc-500">
-                            <p className="text-sm">No recent transactions</p>
-                        </div>
+                        <DrawerEmptyState
+                            title="No activity yet"
+                            description="Transactions show up here once you start using this wallet."
+                        />
                     )}
                 </div>
             </div>

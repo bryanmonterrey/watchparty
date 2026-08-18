@@ -1,13 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { ArrowLeft } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { trpc } from "@/lib/trpc/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { BuyAmountInput } from "./buy-amount-input";
 import { BuyInfoCards } from "./buy-info-cards";
+import { DrawerHeader } from "../../components/drawer-chrome";
 
 interface BuyViewProps {
     walletAddress: string;
@@ -34,7 +34,7 @@ export function BuyView({ walletAddress, onBack }: BuyViewProps) {
             const result = await buyUrlQuery.refetch();
             if (result.data?.url) {
                 window.open(result.data.url, "_blank", "noopener,noreferrer");
-                toast.success("Opening MoonPay...", {
+                toast.success("Opening MoonPay…", {
                     description: "Please complete your purchase in the new tab."
                 });
             } else {
@@ -56,18 +56,7 @@ export function BuyView({ walletAddress, onBack }: BuyViewProps) {
             transition={{ type: "spring", stiffness: 320, damping: 28 }}
             className="flex flex-col h-full"
         >
-            {/* Header */}
-            <div className="px-5 pt-5 pb-4 flex items-center relative flex-shrink-0">
-                <button
-                    onClick={onBack}
-                    className="cursor-pointer p-1.5 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-800/60 transition-colors -ml-1 z-10"
-                >
-                    <ArrowLeft className="w-5 h-5" />
-                </button>
-                <span className="text-[18px] font-semibold text-white absolute left-0 right-0 text-center pointer-events-none">
-                    Buy SOL
-                </span>
-            </div>
+            <DrawerHeader title="Buy SOL" onBack={onBack} />
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto px-5 pt-6 flex flex-col space-y-8">
@@ -83,11 +72,12 @@ export function BuyView({ walletAddress, onBack }: BuyViewProps) {
                     <Button
                         onClick={handleBuy}
                         disabled={isGeneratingUrl}
-                        className="w-full cursor-pointer h-14 rounded-full bg-white hover:bg-zinc-200 text-black text-[16px] font-bold shadow-xl shadow-white/5 disabled:opacity-50"
+                        size="wide"
+                        className="w-full cursor-pointer rounded-full bg-white text-15 font-bold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
                     >
-                        {isGeneratingUrl ? "Opening MoonPay..." : "Continue to MoonPay"}
+                        {isGeneratingUrl ? "Opening MoonPay…" : "Continue to MoonPay"}
                     </Button>
-                    <p className="text-center text-[11px] text-zinc-600 mt-4 px-4 leading-relaxed">
+                    <p className="text-center text-11 text-zinc-600 mt-4 px-4 leading-relaxed">
                         By proceeding, you agree to MoonPay's Terms of Use. MoonPay is a third-party service.
                     </p>
                 </div>

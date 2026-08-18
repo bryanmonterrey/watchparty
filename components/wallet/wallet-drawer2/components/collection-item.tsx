@@ -1,6 +1,6 @@
 import { TokenIcon } from "./token-icon";
 import { NFTCollection } from "../types";
-import { Pin } from "lucide-react";
+import { Pin2Icon } from "@/components/icons";
 
 interface CollectionItemProps {
     collection: NFTCollection;
@@ -11,27 +11,30 @@ export function CollectionItem({ collection, onClick }: CollectionItemProps) {
     const hasPinned = collection.items.some(nft => nft.isPinned);
 
     return (
+        // 24px radius, the drawer's one card radius — the tile was rounded-xl,
+        // the only 12px corner on the surface.
         <div
-            className="group relative aspect-square overflow-hidden rounded-xl transition-all cursor-pointer bg-zinc-900/40"
+            className="group relative aspect-square cursor-pointer overflow-hidden rounded-3xl bg-white/[0.03] transition-colors hover:bg-white/[0.06]"
             onClick={() => onClick(collection)}
         >
             <TokenIcon
                 src={collection.image}
                 symbol={collection.name}
-                className="w-full h-full object-cover"
-                innerClassName="rounded-lg"
+                className="h-full w-full object-cover"
+                innerClassName="rounded-none"
                 type="nft"
             />
-            
-            {/* Overlay Info */}
-            <div className="absolute inset-x-2 bottom-2 p-2 bg-black/90 backdrop-blur-md rounded-md border border-white/5 flex items-center justify-between">
-                <div className="flex items-center gap-1.5 min-w-0">
-                    {hasPinned && <Pin className="w-2.5 h-2.5 text-white/60 shrink-0" />}
-                    <p className="text-[13px] font-bold text-white line-clamp-1 tracking-tight">
+
+            {/* Caption plate. No hairline — it sits on artwork, where a white/5
+                border reads as a seam rather than as depth. */}
+            <div className="absolute inset-x-2 bottom-2 flex items-center justify-between rounded-2xl bg-black/70 p-2 backdrop-blur-md">
+                <div className="flex min-w-0 items-center gap-1.5">
+                    {hasPinned && <Pin2Icon className="size-3 shrink-0 text-white/60" />}
+                    <p className="line-clamp-1 text-13 font-bold tracking-tight text-white">
                         {collection.name}
                     </p>
                 </div>
-                <span className="text-[13px] font-bold text-white/50 shrink-0 ml-1">
+                <span className="ml-1 shrink-0 text-13 font-bold text-white/50">
                     {collection.count}
                 </span>
             </div>

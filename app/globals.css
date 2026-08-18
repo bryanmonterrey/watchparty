@@ -217,8 +217,17 @@
      force. (Spelling the arbitrary form here trips that guard on its own
      example, so it is described rather than quoted.) */
   --text-11: 11px;
+  --text-12: 12px;
   --text-13: 13px;
+  --text-14: 14px;
   --text-15: 15px;
+  --text-16: 16px;
+  /* 12 / 14 / 16 complete the run. They duplicate text-xs / text-sm /
+     text-base in SIZE but not in behaviour: the named Tailwind steps also set
+     a line-height, and the surfaces adopting these (the wallet drawer) set
+     their own leading on the same element. Swapping an arbitrary literal for
+     a step that silently changes line-height is a layout change disguised as
+     a rename, which is not what the guard is asking for. */
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);

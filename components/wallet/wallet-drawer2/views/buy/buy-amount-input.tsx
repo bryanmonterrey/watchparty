@@ -13,12 +13,12 @@ export function BuyAmountInput({ amount, onAmountChange }: BuyAmountInputProps) 
     const inputRef = React.useRef<HTMLInputElement>(null);
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-3">
             <div 
                 onClick={() => inputRef.current?.focus()}
-                className="bg-[#1b1b1c] cursor-pointer border border-zinc-800/60 rounded-[28px] p-6 text-center group transition-all hover:border-zinc-700/80"
+                className="group cursor-pointer rounded-3xl border border-baseborder/20 bg-panel2 p-6 text-center transition-colors hover:bg-white/[0.05]"
             >
-                <p className="text-[13px] font-medium text-zinc-500 mb-2 uppercase tracking-wider">You Pay</p>
+                <p className="mb-2 text-13 font-medium text-zinc-500">You pay</p>
                 
                 <div className="flex items-center justify-center">
                     <span className="text-4xl font-bold text-white/40 mr-2 select-none">$</span>
@@ -38,20 +38,23 @@ export function BuyAmountInput({ amount, onAmountChange }: BuyAmountInputProps) 
                     </div>
                 </div>
                 
-                <p className="text-[14px] font-medium text-zinc-400 mt-2">USD</p>
+                <p className="mt-2 text-13 font-medium text-zinc-500">USD</p>
             </div>
 
             {/* Quick Select */}
-            <div className="flex justify-between gap-2">
+            <div className="flex justify-between gap-1">
                 {quickAmounts.map((amt) => (
                     <button
                         key={amt}
                         onClick={() => onAmountChange(amt)}
                         className={cn(
-                            "flex-1 cursor-pointer py-3 px-1 rounded-2xl text-[14px] font-semibold transition-all border",
+                            // Pills, and neutral — the selected state was a
+                            // white border on a white fill, i.e. two elevation
+                            // languages in one control.
+                            "h-11 flex-1 cursor-pointer rounded-full px-1 text-14 font-bold transition-colors",
                             amount === amt
-                                ? "bg-white text-black border-white"
-                                : "bg-zinc-900/40 text-zinc-400 border-zinc-800/50 hover:border-zinc-700 hover:text-white"
+                                ? "bg-white text-black"
+                                : "bg-white/[0.06] text-zinc-400 hover:bg-white/[0.12] hover:text-white"
                         )}
                     >
                         ${amt}

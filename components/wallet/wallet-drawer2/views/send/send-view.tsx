@@ -1,5 +1,8 @@
 "use client";
 
+import { DrawerHeader } from "../../components/drawer-chrome";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon, ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import {
@@ -8,16 +11,14 @@ import {
     Transaction,
     ComputeBudgetProgram,
 } from "@solana/web3.js";
-import { ArrowLeft } from "lucide-react";
 import { showSendToast } from "./send-transaction-toast";
 import { HoldToConfirm } from "@/components/ui/hold-to-confirm";
 import { trpc } from "@/lib/trpc/client";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { SendAmountInput } from "./send-amount-input";
 import { RecentRecipient } from "./send-recipient";
 import { SendToken } from "./send-token-selector";
 import { SendRecipientSelector } from "./send-recipient-selector";
-import { ChevronDown } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useWalletSigning } from "@/hooks/use-wallet-signing";
 import { getRecommendedMicrolamports } from "@/lib/solana/priority-fees";
@@ -426,17 +427,7 @@ export function SendView({
             className="flex flex-col h-full"
         >
             {/* Header */}
-            <div className="px-5 pt-5 pb-4 flex items-center relative flex-shrink-0">
-                <button
-                    onClick={onBack}
-                    className="cursor-pointer p-1.5 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-800/60 transition-colors -ml-1 z-10"
-                >
-                    <ArrowLeft className="w-5 h-5" />
-                </button>
-                <span className="text-[18px] font-semibold text-white absolute left-0 right-0 text-center pointer-events-none">
-                    Send
-                </span>
-            </div>
+            <DrawerHeader title="Send" onBack={onBack} />
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto h-full overflow-x-hidden px-4 space-y-2.5 pb-4">
@@ -456,31 +447,31 @@ export function SendView({
                 {/* Recipient trigger card */}
                 <button
                     onClick={() => setRecipientSelectorOpen(true)}
-                    className="cursor-pointer w-full bg-[#1b1b1c] border border-zinc-800/60 rounded-[24px] px-5 py-4 flex items-center gap-3 hover:border-zinc-700/60 transition-colors text-left"
+                    className="flex w-full cursor-pointer items-center gap-3 rounded-3xl border border-baseborder/20 bg-panel2 px-5 py-4 text-left transition-colors hover:bg-white/[0.05]"
                 >
                     {recipient ? (
                         recipientMeta?.avatar_url ? (
                             <Avatar className="w-9 h-9 flex-shrink-0">
                                 <AvatarImage src={recipientMeta.avatar_url} />
-                                <AvatarFallback className="bg-zinc-700 text-[11px]">
+                                <AvatarFallback className="bg-white/[0.08] text-11">
                                    
                                 </AvatarFallback>
                             </Avatar>
                         ) : (
-                            <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center flex-shrink-0">
-                                <span className="text-[11px] font-bold text-zinc-400">◎</span>
+                            <div className="w-9 h-9 rounded-full bg-white/[0.08] flex items-center justify-center flex-shrink-0">
+                                <span className="text-11 font-bold text-zinc-400">◎</span>
                             </div>
                         )
                     ) : null}
                     <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-medium text-zinc-500 mb-0.5">To</p>
+                        <p className="text-13 font-medium text-zinc-500 mb-0.5">To</p>
                         {recipient ? (
-                            <p className="text-[14px] font-semibold text-white truncate">{recipientDisplay}</p>
+                            <p className="text-14 font-semibold text-white truncate">{recipientDisplay}</p>
                         ) : (
-                            <p className="text-[14px] font-medium text-zinc-600">@username or wallet address</p>
+                            <p className="text-14 font-medium text-zinc-600">@username or wallet address</p>
                         )}
                     </div>
-                    <ChevronDown className="w-4 h-4 text-zinc-500 flex-shrink-0" />
+                    <HugeiconsIcon icon={ArrowDown01Icon} className="w-4 h-4 text-zinc-500 flex-shrink-0" />
                 </button>
 
                 <SendRecipientSelector
@@ -497,7 +488,7 @@ export function SendView({
                     address. Either way the sender covers it and the recipient
                     receives the full amount. Gas is quoted where we can. */}
                 {hasAmount && (
-                    <p className="text-center text-[12px] text-zinc-500">
+                    <p className="text-center text-12 text-zinc-500">
                         0.5% platform fee ·{" "}
                         {((parsedTokenAmount * PLATFORM_FEE_BPS) / 10000).toFixed(Math.min(6, sendDecimals))}{" "}
                         {selectedToken?.symbol ?? "SOL"}
@@ -536,7 +527,7 @@ export function SendView({
                 {!canSend ? (
                     <button
                         disabled
-                        className="w-full py-4 rounded-full font-semibold text-lg transition-all flex items-center justify-center gap-2 bg-zinc-800/60 text-zinc-500 cursor-not-allowed"
+                        className="w-full py-4 rounded-full font-semibold text-lg transition-all flex items-center justify-center gap-2 bg-white/[0.06] text-zinc-500 cursor-not-allowed"
                     >
                         {buttonLabel}
                     </button>

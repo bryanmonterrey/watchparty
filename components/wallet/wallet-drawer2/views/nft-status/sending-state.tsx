@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 
 export function SendingState() {
     return (
@@ -23,7 +23,7 @@ export function SendingState() {
                         cy="50"
                     />
                     <motion.circle
-                        className="text-[#A7A9FF]"
+                        className="text-zinc-400"
                         strokeWidth="8"
                         strokeDasharray="251.2"
                         animate={{
@@ -47,7 +47,7 @@ export function SendingState() {
 
             <div className="space-y-2">
                 <h2 className="text-[32px] font-bold text-white tracking-tight">Sending...</h2>
-                <button className="text-[#A7A9FF] text-[15px] font-medium flex items-center gap-1.5 mx-auto hover:opacity-80 transition-opacity">
+                <button className="text-zinc-400 text-15 font-medium flex items-center gap-1.5 mx-auto hover:opacity-80 transition-opacity">
                     View transaction
                 </button>
             </div>

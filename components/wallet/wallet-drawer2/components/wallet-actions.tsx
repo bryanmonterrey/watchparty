@@ -30,7 +30,11 @@ export function WalletActions({ onNavigate }: WalletActionsProps) {
                             key={action.id}
                             size="wide"
                             onClick={() => onNavigate(action.id)}
-                            className="bg-panel2 hover:bg-white/10 rounded-3xl flex flex-col items-start px-3 h-24 text-base font-semibold text-zinc-500 hover:text-white"
+                            // Same card as every other surface in the drawer —
+                            // panel2 + one baseborder hairline. It was the only
+                            // card here with no edge, which is why the block
+                            // read as floating chips above hairlined rows.
+                            className="flex h-24 flex-col items-start rounded-3xl border border-baseborder/20 bg-panel2 px-3 text-13 font-semibold text-zinc-400 hover:bg-white/[0.05] hover:text-white"
                         >
                             <Icon className={action.iconClass} />
                             {action.label}

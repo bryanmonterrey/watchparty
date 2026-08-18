@@ -1,43 +1,59 @@
 'use client';
 
-import { ArrowLeft, ShieldCheck, ShieldAlert, ShieldOff, Loader2 } from 'lucide-react';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { SecurityCheckIcon, SecurityWarningIcon, ShieldBanIcon, Loading03Icon } from '@hugeicons/core-free-icons';
 import { useDeviceRecovery } from '@/hooks/use-device-recovery';
-import { Button } from '@/components/ui/button';
+import { DrawerScreen } from '../../components/drawer-chrome';
 
 interface DeviceKeyViewProps {
     onBack: () => void;
 }
 
+// Status is the whole screen, so it gets the ceremonial treatment: one large
+// glyph in a tinted disc, a 17px bold line, a 13px explanation. Colour is
+// semantic only — lantern for secured, sunset for "needs your attention",
+// neutral zinc for the two informational states. (Was emerald-400/yellow-400,
+// raw Tailwind ramps that appear nowhere else in the app.)
 const STATUS_CONFIG = {
     loading: {
-        icon: <Loader2 className="w-8 h-8 text-zinc-500 animate-spin" />,
+        icon: Loading03Icon,
+        spin: true,
+        tone: 'text-zinc-400',
+        disc: 'bg-white/[0.06]',
         title: 'Checking…',
         description: '',
-        color: 'text-zinc-400',
     },
     secured: {
-        icon: <ShieldCheck className="w-8 h-8 text-emerald-400" />,
+        icon: SecurityCheckIcon,
+        spin: false,
+        tone: 'text-lantern',
+        disc: 'bg-lantern/15',
         title: 'This device is secured',
         description: 'Your wallet key is stored locally on this device. Transactions are signed in your browser — the server never sees your private key.',
-        color: 'text-emerald-400',
     },
     needs_restore: {
-        icon: <ShieldAlert className="w-8 h-8 text-yellow-400" />,
+        icon: SecurityWarningIcon,
+        spin: false,
+        tone: 'text-sunset',
+        disc: 'bg-sunset/15',
         title: 'Wallet key not on this device',
         description: 'You have a backup secured by your passkey. Restore it now so transactions can be signed locally on this device.',
-        color: 'text-yellow-400',
     },
     no_backup: {
-        icon: <ShieldOff className="w-8 h-8 text-zinc-500" />,
+        icon: ShieldBanIcon,
+        spin: false,
+        tone: 'text-zinc-400',
+        disc: 'bg-white/[0.06]',
         title: 'No local key available',
         description: 'This wallet was created before client-side signing was supported. Transactions are signed securely on the server.',
-        color: 'text-zinc-400',
     },
     unsupported: {
-        icon: <ShieldOff className="w-8 h-8 text-zinc-500" />,
+        icon: ShieldBanIcon,
+        spin: false,
+        tone: 'text-zinc-400',
+        disc: 'bg-white/[0.06]',
         title: 'Not supported',
         description: 'Your browser or authenticator does not support the WebAuthn PRF extension required for local key storage.',
-        color: 'text-zinc-400',
     },
 };
 
@@ -46,44 +62,44 @@ export function DeviceKeyView({ onBack }: DeviceKeyViewProps) {
     const cfg = STATUS_CONFIG[status];
 
     return (
-        <div className="flex flex-col h-full bg-black text-white rounded-2xl">
-            <div className="flex items-center justify-center px-4 pt-4 pb-2 relative min-h-[56px]">
-                <button
-                    onClick={onBack}
-                    className="absolute left-3 p-2 rounded-full hover:bg-white/5 transition-colors cursor-pointer"
-                >
-                    <ArrowLeft className="w-5 h-5 text-white" />
-                </button>
-                <h2 className="text-[17px] font-bold text-white">Device Key</h2>
-            </div>
-
-            <div className="flex-1 flex flex-col items-center justify-center gap-6 px-6 pb-8">
-                <div className="flex flex-col items-center gap-3 text-center">
-                    {cfg.icon}
-                    <p className={`text-[17px] font-semibold ${cfg.color}`}>{cfg.title}</p>
-                    {cfg.description && (
-                        <p className="text-[13px] text-zinc-500 leading-relaxed max-w-[280px]">
-                            {cfg.description}
-                        </p>
-                    )}
+        <DrawerScreen
+            title="Device key"
+            onBack={onBack}
+            scroll={false}
+            bodyClassName="flex flex-col items-center justify-center gap-8 px-6 pb-10"
+        >
+            <div className="flex flex-col items-center gap-4 text-center">
+                <div className={`grid size-16 place-items-center rounded-full ${cfg.disc}`}>
+                    <HugeiconsIcon
+                        icon={cfg.icon}
+                        className={`size-8 ${cfg.tone} ${cfg.spin ? 'animate-spin' : ''}`}
+                        strokeWidth={2}
+                    />
                 </div>
-
-                {status === 'needs_restore' && (
-                    <Button
-                        onClick={recover}
-                        disabled={isRecovering}
-                        className="w-full bg-zinc-900 hover:bg-zinc-800 text-white rounded-full py-5 font-semibold"
-                    >
-                        {isRecovering ? (
-                            <span className="flex items-center gap-2">
-                                <Loader2 className="w-4 h-4 animate-spin" /> Verifying…
-                            </span>
-                        ) : (
-                            'Restore with Passkey'
-                        )}
-                    </Button>
+                <p className="text-[17px] font-bold tracking-tight text-white">{cfg.title}</p>
+                {cfg.description && (
+                    <p className="max-w-[280px] text-13 font-medium leading-relaxed text-zinc-500">
+                        {cfg.description}
+                    </p>
                 )}
             </div>
-        </div>
+
+            {status === 'needs_restore' && (
+                <button
+                    onClick={recover}
+                    disabled={isRecovering}
+                    className="flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-white text-15 font-bold text-black transition-opacity hover:opacity-90 active:scale-[0.99] disabled:opacity-50"
+                >
+                    {isRecovering ? (
+                        <>
+                            <HugeiconsIcon icon={Loading03Icon} className="size-4 animate-spin" strokeWidth={2.5} />
+                            Verifying…
+                        </>
+                    ) : (
+                        'Restore with passkey'
+                    )}
+                </button>
+            )}
+        </DrawerScreen>
     );
 }

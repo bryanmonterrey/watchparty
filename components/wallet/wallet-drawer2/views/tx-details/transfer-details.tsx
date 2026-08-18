@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowUpRight01Icon, ArrowDownLeft01Icon } from "@hugeicons/core-free-icons";
 import { Transaction, Token } from "../../types";
 import { TokenIcon } from "../../components/token-icon";
 import { shortenWalletAddress } from "@/lib/utils";
@@ -55,37 +57,40 @@ export function TransferDetails({ transaction, tokens }: TransferDetailsProps) {
     return (
         <div className="w-full flex flex-col items-center">
             {/* Main Visual */}
+            {/* Direction badge is neutral: it was #A294F9 with a black ring and
+                a drop shadow — a lilac that exists nowhere else in the app, and
+                a gray shadow, which the house rules forbid outright. */}
             <div className="relative mb-6">
-                <div className="w-24 h-24 rounded-full bg-zinc-900 border border-white/5 flex items-center justify-center relative overflow-hidden">
+                <div className="relative flex size-24 items-center justify-center overflow-hidden rounded-full bg-white/[0.04]">
                     <TokenIcon
                         src={tokenIcon}
                         symbol={resolvedToken?.symbol ?? transaction.tokenSymbol}
                         size="xl"
-                        className="w-16 h-16"
+                        className="size-16"
                     />
                 </div>
-                <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-[#A294F9] flex items-center justify-center border-2 border-black shadow-lg">
-                    {isSent ? (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-black"><path d="M7 17l10-10M7 7h10v10" /></svg>
-                    ) : (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-black"><path d="M7 7l10 10M17 7v10H7" /></svg>
-                    )}
+                <div className="absolute -bottom-1 -right-1 grid size-8 place-items-center rounded-full border-4 border-canvas bg-white text-black">
+                    <HugeiconsIcon
+                        icon={isSent ? ArrowUpRight01Icon : ArrowDownLeft01Icon}
+                        className="size-4"
+                        strokeWidth={3}
+                    />
                 </div>
             </div>
 
             {/* Amount */}
-            <h1 className={`text-[40px] font-bold tracking-tight mb-8 ${!isSent ? 'text-[#00ED89]' : 'text-white'}`}>
+            <h1 className={`mb-8 text-[40px] font-bold tabular-nums tracking-tight ${!isSent ? 'text-lantern' : 'text-white'}`}>
                 {isSent ? '-' : '+'}{amountStr} {transaction.tokenSymbol}
             </h1>
 
             {/* Info Card */}
-            <div className="w-full bg-zinc-900/50 border border-white/5 rounded-3xl overflow-hidden">
+            <div className="w-full overflow-hidden rounded-3xl border border-baseborder/20 bg-panel2">
                 <div className="flex flex-col">
                     <DetailRow label="Date" value={dateStr} />
                     <DetailRow
                         label="Status"
                         value={statusLabel}
-                        valueClassName={transaction.status === "success" ? "text-[#00ED89]" : "text-red-400"}
+                        valueClassName={transaction.status === "success" ? "text-lantern" : "text-pastelred"}
                     />
                     {transaction.counterpartyAddress && (
                         <DetailRow
@@ -94,11 +99,11 @@ export function TransferDetails({ transaction, tokens }: TransferDetailsProps) {
                         />
                     )}
                     <DetailRow label="Network" value="Solana" />
-                    {feeStr && <DetailRow label="Network Fee" value={feeStr} />}
+                    {feeStr && <DetailRow label="Network fee" value={feeStr} />}
 
                     <button
                         onClick={() => window.open(`https://orbmarkets.io/tx/${transaction.signature}`, '_blank')}
-                        className="w-full cursor-pointer py-4 text-white font-medium text-[15px] hover:bg-white/5 transition-colors border-t border-white/5"
+                        className="mt-1 w-full cursor-pointer py-3.5 text-14 font-semibold text-zinc-400 transition-colors hover:bg-white/[0.04] hover:text-white"
                     >
                         View on Orb
                     </button>
@@ -108,11 +113,11 @@ export function TransferDetails({ transaction, tokens }: TransferDetailsProps) {
     );
 }
 
-function DetailRow({ label, value, valueClassName = "text-white/90" }: { label: string, value: string, valueClassName?: string }) {
+function DetailRow({ label, value, valueClassName = "text-white" }: { label: string, value: string, valueClassName?: string }) {
     return (
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/5 last:border-0">
-            <span className="text-[15px] text-zinc-500 font-medium">{label}</span>
-            <span className={`text-[15px] font-medium ${valueClassName}`}>{value}</span>
+        <div className="flex items-center justify-between gap-4 px-5 py-3">
+            <span className="shrink-0 text-13 font-medium text-zinc-500">{label}</span>
+            <span className={`min-w-0 truncate text-14 font-semibold ${valueClassName}`}>{value}</span>
         </div>
     );
 }

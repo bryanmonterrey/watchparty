@@ -1,10 +1,12 @@
 "use client";
 
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
+import { DrawerHeader } from "../../components/drawer-chrome";
 import * as React from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { VersionedTransaction } from "@solana/web3.js";
 import { toPublicKey } from "@/lib/solana/pubkey";
-import { ArrowDown, ArrowLeft } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { useWalletSigning } from "@/hooks/use-wallet-signing";
 import { Button } from "@/components/ui/button";
@@ -245,18 +247,11 @@ export function SwapView({
 
     return (
         <div className="flex flex-col h-full">
-            {/* Header */}
-            <div className="flex items-center justify-center p-4 mb-2 relative">
-                {showBack && (
-                    <Button onClick={onBack} className="absolute left-4 flex items-center gap-2 text-zinc-300 hover:text-white transition-colors bg-transparent border-none shadow-none hover:bg-transparent p-0">
-                        <ArrowLeft className="w-5 h-5" />
-                    </Button>
-                )}
-                <span className="text-lg font-semibold capitalize text-zinc-300">Swap</span>
-                <div className="absolute right-4">
-                    <SwapSettingsPanel settings={swapSettings} onChange={setSwapSettings} />
-                </div>
-            </div>
+            <DrawerHeader
+                title="Swap"
+                onBack={showBack ? onBack : undefined}
+                right={<SwapSettingsPanel settings={swapSettings} onChange={setSwapSettings} />}
+            />
 
             <div className="px-4 pb-6 space-y-1">
                 {/* Inputs Wrapper */}
@@ -278,9 +273,9 @@ export function SwapView({
                     <div className="absolute left-1/2 top-[50%] -translate-x-1/2 -translate-y-[52%] z-20">
                         <button
                             onClick={handleFlipTokens}
-                            className="p-1.5 bg-[#1b1b1c] rounded-xl hover:bg-zinc-800 transition-colors border-4 border-[#131313] text-zinc-300 hover:text-white shadow-sm flex items-center justify-center"
+                            className="flex cursor-pointer items-center justify-center rounded-full border-4 border-canvas bg-white/[0.08] p-1.5 text-zinc-300 transition-colors hover:bg-white/[0.16] hover:text-white"
                         >
-                            <ArrowDown className="w-5 h-5" />
+                            <HugeiconsIcon icon={ArrowDown01Icon} className="w-5 h-5" />
                         </button>
                     </div>
 
@@ -301,16 +296,16 @@ export function SwapView({
 
                 {quote && outputAmount && (
                     <div className="px-2 pt-2 pb-1 space-y-1.5">
-                        <div className="flex justify-between items-center text-[13px]">
+                        <div className="flex justify-between items-center text-13">
                             <span className="text-zinc-500 font-medium">Rate</span>
                             <span className="text-zinc-300 font-medium tracking-wide">
                                 1 {inputToken?.symbol} ≈ {(parseFloat(outputAmount) / parseFloat(inputAmount)).toFixed(6)} {outputToken?.symbol}
                             </span>
                         </div>
                         {quote.priceImpactPct && (
-                            <div className="flex justify-between items-center text-[13px]">
-                                <span className="text-zinc-500 font-medium">Price Impact</span>
-                                <span className={`font-semibold ${parseFloat(String(quote.priceImpactPct)) > 1 ? "text-[#f4ba40]" : "text-[#40f47e]"}`}>
+                            <div className="flex justify-between items-center text-13">
+                                <span className="font-medium text-zinc-500">Price impact</span>
+                                <span className={`font-semibold ${parseFloat(String(quote.priceImpactPct)) > 1 ? "text-sunset" : "text-lantern"}`}>
                                     {parseFloat(String(quote.priceImpactPct)).toFixed(2)}%
                                 </span>
                             </div>
@@ -322,14 +317,14 @@ export function SwapView({
                     {(!inputToken || !outputToken) ? (
                         <Button
                             disabled
-                            className="w-full h-[60px] bg-white/10 text-white/50 text-xl font-semibold rounded-full transition-all cursor-not-allowed border-none shadow-sm"
+                            className="h-12 w-full cursor-not-allowed rounded-full border-none bg-white/10 text-15 font-bold text-white/50"
                         >
                             Select a token
                         </Button>
                     ) : !inputAmount ? (
                         <Button
                             disabled
-                            className="w-full h-[60px] bg-white/10 text-white/50 text-xl font-semibold rounded-full transition-all cursor-not-allowed border-none shadow-sm"
+                            className="h-12 w-full cursor-not-allowed rounded-full border-none bg-white/10 text-15 font-bold text-white/50"
                         >
                             Enter an amount
                         </Button>
@@ -337,9 +332,9 @@ export function SwapView({
                         <Button
                             onClick={handleSwap}
                             disabled={!quote || isLoadingQuote || parseFloat(inputAmount) <= 0}
-                            className="w-full h-[60px] bg-white hover:bg-zinc-200 text-black text-xl font-semibold rounded-full transition-all disabled:opacity-50 disabled:bg-white/50 disabled:cursor-not-allowed border-none shadow-sm"
+                            className="h-12 w-full rounded-full border-none bg-white text-15 font-bold text-black transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                            {isLoadingQuote ? "Getting Quote..." : "Swap"}
+                            {isLoadingQuote ? "Getting quote…" : "Swap"}
                         </Button>
                     )}
                 </div>

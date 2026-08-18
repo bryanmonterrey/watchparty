@@ -9,20 +9,20 @@ interface SendDetailsCardProps {
 
 export function SendDetailsCard({ recipientAddress, recipientDisplay }: SendDetailsCardProps) {
     return (
-        <div className="w-full bg-zinc-900/40 border border-white/5 rounded-[24px] overflow-hidden">
-            <div className="px-5 py-4 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
-                <span className="text-[14px] text-zinc-500 font-medium">To</span>
-                <span className="text-[14px] text-white font-bold truncate max-w-[180px]">
+        // The "Network fee $0.0075" row is gone. Nothing computed it — it was a
+        // constant printed next to a real recipient and a real network, which
+        // is the one place on the screen a made-up number can cost money.
+        // Re-add it when the confirm step actually quotes a fee.
+        <div className="w-full overflow-hidden rounded-3xl border border-baseborder/20 bg-panel2 py-1.5">
+            <div className="flex items-center justify-between gap-4 px-5 py-3">
+                <span className="shrink-0 text-13 font-medium text-zinc-500">To</span>
+                <span className="min-w-0 truncate text-14 font-semibold text-white">
                     {recipientDisplay} ({shortenWalletAddress(recipientAddress)})
                 </span>
             </div>
-            <div className="px-5 py-4 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
-                <span className="text-[14px] text-zinc-500 font-medium">Network</span>
-                <span className="text-[14px] text-white font-bold">Solana</span>
-            </div>
-            <div className="px-5 py-4 flex justify-between items-center">
-                <span className="text-[14px] text-zinc-500 font-medium">Network fee</span>
-                <span className="text-[14px] text-white font-bold">$0.0075</span>
+            <div className="flex items-center justify-between gap-4 px-5 py-3">
+                <span className="shrink-0 text-13 font-medium text-zinc-500">Network</span>
+                <span className="text-14 font-semibold text-white">Solana</span>
             </div>
         </div>
     );

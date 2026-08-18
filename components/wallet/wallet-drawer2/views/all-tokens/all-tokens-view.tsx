@@ -2,11 +2,12 @@
 
 import * as React from "react";
 import { motion } from "motion/react";
-import { ArrowLeft } from "lucide-react";
-import { Coins } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Coins01Icon } from "@hugeicons/core-free-icons";
 import { Token } from "../../types";
 import { TokenListItem } from "../../components/token-list-item";
 import { EmptyState } from "../../components/empty-state";
+import { DrawerHeader } from "../../components/drawer-chrome";
 
 // Every holding across every chain, in the same value-sorted order the merged
 // list already uses. The main tab shows only the four headline coins; this is
@@ -34,19 +35,11 @@ export function AllTokensView({ tokens, hideBalances, onBack, onTokenClick }: Al
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
-            className="flex flex-col h-full bg-[#0A0A0A] rounded-2xl overflow-hidden"
+            // bg-canvas, not #0A0A0A — a one-off near-black that read as a
+            // lighter sheet stacked on the drawer it slides over.
+            className="flex h-full flex-col overflow-hidden bg-canvas"
         >
-            <div className="flex items-center justify-between rounded-t-2xl p-4 sticky top-0 bg-[#0A0A0A]/80 backdrop-blur-md z-10">
-                <button
-                    onClick={onBack}
-                    className="p-2 rounded-full hover:bg-white/5 transition-colors cursor-pointer"
-                >
-                    <ArrowLeft className="w-5 h-5 text-white" />
-                </button>
-                <h2 className="text-[17px] font-bold text-white flex-1 text-center mr-8">
-                    All Coins
-                </h2>
-            </div>
+            <DrawerHeader title="All coins" onBack={onBack} className="sticky top-0 z-10 bg-canvas/80 backdrop-blur-md" />
 
             <div className="flex-1 overflow-y-auto hidden-scrollbar">
                 <div className="space-y-1 p-5 pt-2">
@@ -71,9 +64,9 @@ export function AllTokensView({ tokens, hideBalances, onBack, onTokenClick }: Al
                         ))
                     ) : (
                         <EmptyState
-                            icon={Coins}
-                            title="No Coins Found"
-                            description="Your coin balances will appear here once you have assets."
+                            icon={<HugeiconsIcon icon={Coins01Icon} className="size-5" strokeWidth={2} />}
+                            title="No coins yet"
+                            description="Your coin balances show up here once you hold something."
                         />
                     )}
                 </div>

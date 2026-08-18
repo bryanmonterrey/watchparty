@@ -1,6 +1,7 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Search01Icon } from "@hugeicons/core-free-icons";
 
 interface TokenSearchProps {
     value: string;
@@ -11,13 +12,13 @@ export function TokenSearch({ value, onChange }: TokenSearchProps) {
     return (
         <div className="p-4 pt-2">
             <div className="relative group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500 group-focus-within:text-white transition-colors" />
+                <HugeiconsIcon icon={Search01Icon} className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-zinc-500 transition-colors group-focus-within:text-white" />
                 <input
                     type="text"
-                    placeholder="Search..."
+                    placeholder="Search"
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
-                    className="h-[52px] w-full bg-[#1C1C1E] border-none rounded-2xl pl-12 pr-4 text-[17px] text-white placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-white/10 transition-all font-medium"
+                    className="h-[52px] w-full rounded-full border-none bg-white/[0.06] pl-12 pr-4 text-16 font-medium text-white transition-colors placeholder:text-zinc-400 focus:bg-white/[0.09] focus:outline-none"
                 />
             </div>
         </div>

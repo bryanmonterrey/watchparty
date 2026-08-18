@@ -3,7 +3,7 @@
 import { motion } from "motion/react";
 import { NFTCollection } from "../../types";
 import { TokenIcon } from "../../components/token-icon";
-import { cn } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
 
 interface CollectionToggleItemProps {
     collection: NFTCollection;
@@ -18,40 +18,31 @@ export function CollectionToggleItem({ collection, shown, onToggle }: Collection
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-[#1C1C1E] rounded-[22px] p-4 flex items-center justify-between border border-white/5 group hover:bg-zinc-800/50 transition-colors"
+            className="group flex items-center justify-between rounded-3xl border border-baseborder/20 bg-panel2 p-4 transition-colors hover:bg-white/[0.05]"
         >
             <div className="flex items-center gap-4">
                 <TokenIcon
                     src={collection.image}
                     symbol={collection.name}
-                    className="w-[60px] h-[60px] rounded-[14px] shadow-lg"
-                    innerClassName="rounded-[14px]"
+                    className="size-14 rounded-2xl"
+                    innerClassName="rounded-2xl"
                     type="nft"
                 />
                 <div className="flex flex-col gap-0.5">
-                    <h3 className="text-lg font-bold text-white tracking-tight leading-tight">
+                    <h3 className="text-15 font-bold leading-tight tracking-tight text-white">
                         {collection.name}
                     </h3>
-                    <p className="text-[15px] font-medium text-zinc-500">
-                        {collection.count} Items
+                    <p className="text-13 font-medium text-zinc-500">
+                        {collection.count} {collection.count === 1 ? "item" : "items"}
                     </p>
                 </div>
             </div>
 
-            <button
-                onClick={() => onToggle(collection.id)}
-                className={cn(
-                    "relative w-[52px] h-[32px] rounded-full transition-colors duration-200 outline-none flex items-center px-1",
-                    shown ? "bg-lantern" : "bg-zinc-700"
-                )}
-            >
-                <motion.div
-                    layout
-                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                    className="w-6 h-6 bg-white rounded-full shadow-md"
-                    animate={{ x: shown ? 20 : 0 }}
-                />
-            </button>
+            {/* The app's Switch, not a hand-rolled one. This was a 52x32 pill
+                that turned LANTERN when on — the app's positive-value green
+                used as an interactive state, which is exactly the colour rule
+                the design system reserves. */}
+            <Switch checked={shown} onCheckedChange={() => onToggle(collection.id)} />
         </motion.div>
     );
 }

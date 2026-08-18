@@ -1,6 +1,7 @@
 "use client";
 
-import { X } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Transaction, Token } from "../../types";
 import { SwapDetails } from "./swap-details";
 import { TransferDetails } from "./transfer-details";
@@ -25,18 +26,19 @@ export function TransactionDetailsView({
     const isSwap = transaction.type === "SWAP";
 
     return (
-        <div className="flex flex-col h-full bg-black rounded-2xl text-white overflow-y-auto hidden-scrollbar">
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 sticky top-0 bg-black/80 backdrop-blur-md z-20">
-                <div className="w-10" />
-                <h2 className="text-[17px] font-bold tracking-tight text-white/90">
-                    {isSwap ? "Coin Swap" : (transaction.isOutgoing ? "Sent" : "Received")}
+        <div className="flex h-full flex-col overflow-y-auto hidden-scrollbar bg-canvas text-white">
+            {/* Header — 56px and 16px bold, the drawer's one header size. */}
+            <div className="sticky top-0 z-20 flex h-14 items-center justify-between gap-2 bg-canvas/80 px-3 backdrop-blur-md">
+                <div className="w-9 shrink-0" />
+                <h2 className="min-w-0 flex-1 truncate text-center text-16 font-bold tracking-tight text-white">
+                    {isSwap ? "Coin swap" : (transaction.isOutgoing ? "Sent" : "Received")}
                 </h2>
                 <button
                     onClick={onBack}
-                    className="w-10 h-10 cursor-pointer flex items-center justify-center rounded-full bg-zinc-900/50 hover:bg-zinc-800 transition-colors"
+                    aria-label="Close"
+                    className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-full text-zinc-500 transition-colors hover:bg-white/[0.06] hover:text-white active:scale-95"
                 >
-                    <X className="w-5 h-5 text-zinc-400" />
+                    <HugeiconsIcon icon={Cancel01Icon} className="size-5" strokeWidth={2.5} />
                 </button>
             </div>
 
@@ -52,16 +54,17 @@ export function TransactionDetailsView({
                 )}
 
                 <div className="w-full mt-8 flex flex-col gap-2">
+                    {/* h-12 — the wide-CTA height from the design system. */}
                     <button
                         onClick={onBack}
-                        className="w-full py-4 cursor-pointer rounded-full bg-white hover:bg-zinc-200 text-black font-bold text-lg transition-all"
+                        className="h-12 w-full cursor-pointer rounded-full bg-white text-15 font-bold text-black transition-opacity hover:opacity-90 active:scale-[0.99]"
                     >
                         Close
                     </button>
                     {onReportSpam && !transaction.isSpam && (
                         <button
                             onClick={() => onReportSpam(transaction.signature)}
-                            className="w-full py-3 cursor-pointer rounded-full text-red-400/80 hover:text-red-400 hover:bg-red-500/10 text-sm font-medium transition-all"
+                            className="h-11 w-full cursor-pointer rounded-full text-13 font-semibold text-pastelred/80 transition-colors hover:bg-pastelred/10 hover:text-pastelred"
                         >
                             Report as spam
                         </button>
