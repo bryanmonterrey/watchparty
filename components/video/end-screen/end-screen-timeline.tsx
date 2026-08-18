@@ -177,14 +177,14 @@ export function EndScreenTimeline({
           </div>
           <div className="flex items-center gap-1">
             <button
-              className="flex items-center bg-white/15 disabled:bg-white/15 gap-2 px-4 py-2 text-md font-bold text-zinc-400 hover:text-white hover:bg-white/8 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex items-center bg-white/15 disabled:bg-white/15 gap-2 px-4 py-2 text-md font-bold text-zinc-400 hover:text-white hover:bg-white/25 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               disabled={!canUndo}
               onClick={onUndo}
             >
               <UndoIcon className="size-5" /> Undo
             </button>
             <button
-              className="flex items-center bg-white/15 disabled:bg-white/15 gap-3 px-4 py-2 text-md font-bold text-zinc-400 hover:text-white hover:bg-white/8 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex items-center bg-white/15 disabled:bg-white/15 gap-3 px-4 py-2 text-md font-bold text-zinc-400 hover:text-white hover:bg-white/25 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               disabled={!canRedo}
               onClick={onRedo}
             >

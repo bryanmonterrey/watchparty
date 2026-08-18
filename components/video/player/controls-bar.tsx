@@ -285,7 +285,7 @@ export function ControlsBar({
                     }}
                 >
                     <button
-                        className="text-white hover:text-white/80 cursor-pointer"
+                        className="cursor-pointer text-white/80 hover:text-white"
                         onClick={() => { setIsFineScrubbing(false); void videoRef.current?.play(); }}
                         title="Play from this position"
                     >
@@ -295,7 +295,7 @@ export function ControlsBar({
                         {formatTime(currentTime)}
                     </span>
                     <button
-                        className="text-white hover:text-white/80 cursor-pointer"
+                        className="cursor-pointer text-white/80 hover:text-white"
                         onClick={() => setIsFineScrubbing(false)}
                         title="Exit precise seeking"
                     >

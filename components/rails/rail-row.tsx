@@ -78,7 +78,7 @@ export function RailRow({
             <span className="flex min-w-0 flex-1 flex-col gap-0.2">
                 <span
                     className={cn(
-                        "line-clamp-2 text-sm font-bold leading-snug",
+                        "line-clamp-2 text-sm font-medium leading-snug",
                         isActive ? "text-white" : "text-flexwhite/75",
                     )}
                 >
@@ -86,7 +86,7 @@ export function RailRow({
                 </span>
                 {username && (
                     <span className="flex min-w-0 items-center gap-1">
-                        <span className="truncate text-sm font-bold text-flexwhite/95">{username}</span>
+                        <span className="truncate text-sm font-medium text-flexwhite/95">{username}</span>
                         {verifiedTier === "verified" && <VerifiedBadgeIcon className="size-3.5 shrink-0" />}
                         {verifiedTier === "business" && <BusinessBadgeIcon className="size-3.5 shrink-0" />}
                         {verifiedTier === "government" && <GovBadgeIcon className="size-3.5 shrink-0" />}

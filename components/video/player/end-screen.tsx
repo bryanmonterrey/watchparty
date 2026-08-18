@@ -74,7 +74,7 @@ export function EndScreen({ isEnded, postId }: EndScreenProps) {
 
                                     {/* Info */}
                                     <div className="mt-2 px-0.5">
-                                        <p className="text-white text-base font-semibold leading-snug line-clamp-2 group-hover:text-white/90">
+                                        <p className="text-white/90 text-base font-semibold leading-snug line-clamp-2 group-hover:text-white">
                                             {v.title ?? "Untitled"}
                                         </p>
                                         <p className="text-white/50 text-sm mt-0.5 truncate">

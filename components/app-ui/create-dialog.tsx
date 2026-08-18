@@ -1092,7 +1092,7 @@ export function CreateDialog({ children, open: openProp, onOpenChange, initialTa
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel onClick={() => setShowCloseAlert(false)} className="bg-transparent border-zinc-700 hover:bg-zinc-800 text-white hover:text-white">Cancel</AlertDialogCancel>
+                        <AlertDialogCancel onClick={() => setShowCloseAlert(false)} className="bg-transparent border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white">Cancel</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={() => {
                                 // Discard logic

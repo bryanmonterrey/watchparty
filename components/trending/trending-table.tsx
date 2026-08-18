@@ -218,7 +218,7 @@ function StarCell({ row }: { row: TrendingRow }) {
             className={cn(
                 "t-like relative z-10 flex cursor-pointer items-center transition-colors [--like-color:var(--color-bleu)]",
                 bursting && "is-bursting",
-                starred ? "text-bleu" : "text-white hover:text-white/60",
+                starred ? "text-bleu" : "text-white/60 hover:text-white",
             )}
         >
             {/* The pop scale rides this wrapper, never the <svg> — transforming

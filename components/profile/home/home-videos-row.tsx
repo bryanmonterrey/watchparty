@@ -149,7 +149,7 @@ export function HomeVideosRow({ user, onViewAll }: {
                                 </Avatar>
                                 <div className="min-w-0 flex-1">
                                     <Link href={href}>
-                                        <p className="line-clamp-1 text-base font-bold leading-snug tracking-tight text-white transition-colors group-hover:text-zinc-300">
+                                        <p className="line-clamp-1 text-base font-bold leading-snug tracking-tight text-white/85 transition-colors group-hover:text-white">
                                             {v.title}
                                         </p>
                                     </Link>

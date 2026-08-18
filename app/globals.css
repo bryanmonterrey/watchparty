@@ -389,6 +389,7 @@
   --color-applefitnessgreen: rgb(170, 255, 0);
   --color-apple-gray: rgb(153, 153, 153);
   --color-xborder: rgb(47, 51, 54);
+  --color-xborderhighlight: rgb(83, 100, 113);
   --color-soft-pink: oklch(0.95 0.0253 11.58);
   --color-soft-blue: oklch(0.95 0.0253 240);
   --color-pastel-yellow: oklch(0.9713 0.0373 95.44);

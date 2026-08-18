@@ -147,7 +147,7 @@ export function PostDetailView({ postId }: PostDetailViewProps) {
         <div className="flex flex-row items-center justify-start gap-5 backdrop-blur-sm w-full bg-black/40 sticky top-0 z-100">
             <button
                 onClick={() => router.back()}
-                className="px-4 cursor-pointer h-13 flex items-center justify-center text-zinc-100 hover:text-zinc-300 hover:bg-zinc-500/20 transition-colors"
+                className="px-4 cursor-pointer h-13 flex items-center justify-center text-zinc-300 hover:text-white hover:bg-zinc-500/20 transition-colors"
             >
                 <ChevronLeft className="w-7 h-7" />
             </button>

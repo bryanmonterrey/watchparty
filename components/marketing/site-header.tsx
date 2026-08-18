@@ -57,7 +57,7 @@ export function SiteHeader() {
                 <Link
                   href={link.href}
                   onClick={() => setOpen(false)}
-                  className="block px-4 py-1 text-4xl font-semibold tracking-tight text-white transition-colors duration-150 hover:text-white/60 sm:text-6xl"
+                  className="block px-4 py-1 text-4xl font-semibold tracking-tight text-white/70 transition-colors duration-150 hover:text-white sm:text-6xl"
                 >
                   {link.label}
                 </Link>
@@ -92,7 +92,7 @@ export function SiteHeader() {
             <Link
               href="/login"
               className={`rounded-full px-5 py-3.5 text-lg font-semibold tracking-tight active:scale-[0.97] [transition:background-color_.3s_ease-out,color_.3s_ease-out,transform_.16s_ease-out] sm:h-[55px] sm:px-12 ${
-                open ? "bg-white text-black hover:bg-white/80" : "bg-black text-white hover:bg-black/90"
+                open ? "bg-white/90 text-black hover:bg-white" : "bg-black text-white hover:bg-black/90"
               }`}
             >
               Log in
@@ -105,7 +105,7 @@ export function SiteHeader() {
               aria-expanded={open}
               aria-controls="site-menu"
               className={`grid place-items-center h-[55px] w-[55px] rounded-full active:scale-[0.94] [transition:background-color_.3s_ease-out,color_.3s_ease-out,transform_.16s_ease-out] sm:h-[55px] sm:w-[55px] ${
-                open ? "bg-white text-black hover:bg-white/80" : "bg-black text-white hover:bg-black/90"
+                open ? "bg-white/90 text-black hover:bg-white" : "bg-black text-white hover:bg-black/90"
               }`}
             >
               <MorphMenuIcon open={open} className="size-6" />

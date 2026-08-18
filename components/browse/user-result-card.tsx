@@ -81,7 +81,7 @@ export function UserResultCard({ user, initialIsFollowing = false, className }: 
                                 "px-4 h-11 rounded-full text-base font-extrabold transition-all shrink-0 cursor-pointer",
                                 isFollowing 
                                     ? "bg-transparent border border-zinc-700 text-zinc-100 hover:border-red-500/50 hover:text-red-500 hover:bg-red-500/5"
-                                    : "bg-zinc-100 text-black hover:bg-zinc-200"
+                                    : "bg-zinc-100 text-black hover:bg-white"
                             )}
                         >
                             {isFollowing ? (isHoveringFollowing ? "Unfollow" : "Following") : "Follow"}

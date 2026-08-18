@@ -91,7 +91,7 @@ export function RailTabs({
                             // No fill — colour alone carries the active state,
                             // same as the category tabs.
                             className={cn(
-                                "flex shrink-0 cursor-pointer items-center whitespace-nowrap px-1.5 py-1.5 text-base font-medium transition-colors",
+                                "flex shrink-0 cursor-pointer items-center whitespace-nowrap px-1.5 py-1.5 text-base font-medium transition-colors ease-out duration-50",
                                 active === tab ? "text-white" : "text-zinc-500 hover:text-white",
                             )}
                         >
