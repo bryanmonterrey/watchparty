@@ -65,6 +65,44 @@ export function PostCardHeaderRow({
                                 </span>
                             )}
                             <span className="text-postgray truncate text-[15px]">@{user.username || "user"}</span>
+
+                            {/* SERVER TAG — the community this user represents,
+                                immediately right of the handle.
+                                
+                                Its own slot rather than reusing the affiliate
+                                badge to its left: an affiliate is a creator this
+                                person is tied to, a server tag is a community
+                                they speak for. Same shape, different claim, and
+                                a row that conflates them tells the reader the
+                                wrong thing about both.
+
+                                Renders only with data — no placeholder. */}
+                            {user.serverTag && (
+                                <span
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (user.serverTagId) router.push(`/communities/${user.serverTagId}`);
+                                    }}
+                                    title={user.serverTag}
+                                    className="flex shrink-0 cursor-pointer items-center gap-1 rounded-[4px] bg-white/[0.06] px-1.5 py-0.5 ring-1 ring-border/60 transition-colors hover:bg-white/[0.1]"
+                                >
+                                    {user.serverTagIconUrl && (
+                                        /* eslint-disable-next-line @next/next/no-img-element */
+                                        <img
+                                            src={user.serverTagIconUrl}
+                                            alt=""
+                                            className="size-3 shrink-0 rounded-[2px] object-cover"
+                                        />
+                                    )}
+                                    {/* Truncated hard: a server tag is an
+                                        abbreviation, and one long enough to
+                                        squeeze the handle has stopped being a
+                                        tag. */}
+                                    <span className="max-w-[72px] truncate text-11 font-bold text-white2">
+                                        {user.serverTag}
+                                    </span>
+                                </span>
+                            )}
                         </div>
                     </UserHoverCard>
                 </div>

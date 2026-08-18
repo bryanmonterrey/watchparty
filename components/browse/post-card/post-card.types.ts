@@ -5,6 +5,18 @@ export interface PostCardUser {
     verifiedTier?: string | null;
     affiliateUsername?: string | null;
     affiliateIconUrl?: string | null;
+    /**
+     * The community server this user represents — Discord's "server tag".
+     *
+     * `communityServers.tag` already exists in the schema ("Short server tag");
+     * what does not yet exist is the per-user CHOICE of which server to show,
+     * so these are optional and the slot renders nothing until a query supplies
+     * them. Nothing is stubbed: an empty slot costs a user nothing, a fake tag
+     * would cost them trust in every other badge on the row.
+     */
+    serverTag?: string | null;
+    serverTagIconUrl?: string | null;
+    serverTagId?: string | null;
     wallet_address?: string | null;
 }
 
