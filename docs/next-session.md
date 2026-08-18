@@ -1,271 +1,144 @@
 # Next session — start here
 
-Written 2026-08-13 after a long session. Everything below is committed and
-deployed unless marked otherwise. Ordered by what to do first.
+Written 2026-08-18. Everything below is committed, pushed and deployed green
+unless marked otherwise. Ordered by what actually matters, not by what was most
+recent.
 
 ---
 
-## 1. Board liquidity is blank on every row  (task #24) — BUILT 2026-08-13
+## 0. READ THIS FIRST: nothing in the buy/swap flow has ever moved real money
 
-**Measured:** 0 of 308 fresh `trending_coins` rows carry a `liquidity_usd`.
+A whole multichain buy/swap stack shipped this session. **Every QUOTE path is
+verified against live APIs. No EXECUTION path has ever been signed.** Not the
+same-chain EVM swap, not the bridge, not the Solana signer, not the swap card.
 
-**There were TWO causes, and the second one is why the number stayed at zero
-rather than creeping up.** The write path below was already working — a coin
-page view called `securityWithLiquidityBackfill` and wrote a real figure — but
-`trending-mobula.ts`'s upsert set `liquidityUsd: excluded.liquidity_usd` on
-conflict, and `excluded` is ALWAYS null on that path (the mapping writes null on
-purpose, because the pairs field is not dollars). So every hourly board pass
-erased every measurement taken in the previous hour. Fixed with a `coalesce`,
-the same idiom its neighbours (`image_url`, the holder stats) already use for
-the same reason.
+It type-checks, guards pass, tests pass, CI is green, and none of that touches a
+signature. Do not treat "the buy flow works" as established, and do not build on
+top of it as though it were.
 
-With that in place, the screening pass below can actually accumulate:
-`screenBoardLiquidity()` in `server/lib/backfill-liquidity.ts`, called from the
-trending-sync cron on the same `dueThisPass` hourly gate. 20 coins/pass, highest
-24h volume first, 1 credit each = **480/month**, taking the free tier from 7,200
-to 7,680 of 10,000. Knob: `TRENDING_LIQUIDITY_SCREEN_PER_PASS` (0 = off);
-`?screen=N` on the cron URL overrides it for a manual seed, bounded at 200, the
-same way `?all=1` overrides the chain slice.
+The first real transaction is still the test. Start with the smallest amount
+that will route. The riskiest single line is `Keypair.fromSeed` vs
+`fromSecretKey` in `lib/chains/swap/solana-lifi.ts` — SLIP-0010 yields the
+32-byte seed, and the wrong constructor **signs as a different account** rather
+than failing. There is a pubkey-vs-address assertion guarding it.
 
-**Verify after deploy** — the cron response now carries a `liquidityScreen`
-block, and it is written to be read:
-
-```
-curl -sH "Authorization: Bearer $CRON_SECRET" \
-  "https://watchparty.xyz/api/cron/trending-sync?screen=5" | jq .liquidityScreen
-# {"picked":5,"measured":5,"unmeasured":0,"failed":0,"deadlineHit":false}
-```
-
-`measured` 0 with `unmeasured` N on repeated passes is the one failure mode to
-watch: it means the head of the volume ordering is a coin the provider has no
-liquidity figure for, so it stays NULL, stays at the head, and is re-paid for
-every hour. The fix if that shows up is a `liquidity_screened_at` column to key
-retries off — deliberately NOT built ahead of evidence.
-
-### RESOLVED 2026-08-13 — the source was wrong, not the budget
-
-Everything in the section below is kept because the reasoning was sound and the
-conclusion was wrong, which is worth being able to see.
-
-The screen now reads **Dexscreener** (`lib/coins/dexscreener`, free, per-IP
-limits in the hundreds/min), which was already vendored in this repo and already
-fronting every coin page for untracked coins. Five live passes of 60:
-
-    measured 54 / 48 / 47 / 45 / 43     failed 0 0 0 0 0     deadlineHit false
-
-against Mobula's 1-measured-2-failed per 3. Default per-pass raised 20 -> 60.
-
-**What it found, which is the actual point.** 105 of 243 measured rows — 43% of
-the board — sat under the $1,000 floor and are now hidden. The top of the board
-included:
-
-    TikTok    $168,842,702 of 24h volume  ->  $0.02 liquidity   HIDDEN
-    SNDK       $80,068,102                ->  $27.69            HIDDEN
-    UNITREE    $60,386,088                ->   $3.67            HIDDEN
-
-and, separately, a SECOND SNDK on a different mint with $256k of real liquidity
-that stays. Name matching could never have told those two apart; liquidity does
-it instantly. SOL, ETH and CBBTC all retained — which is why NULL must keep
-meaning "unmeasured" rather than "none".
-
-The Mobula $50 plan is no longer justified by this workstream. Its remaining
-case is the alert tape's `/2/token/trades`, which Dexscreener does not replace.
-
-### The original finding — kept, because the constraint it assumed was not real
-
-Deploy `1c4929b9`, three probes. The mechanism works: `liquidity_usd` went from
-**0 of 308 to 3 of 243 fresh rows**, values sane (max $13.5M), and they PERSIST
-— so the deferred `after()` write does flush on the worker.
-
-What the probes also showed, immediately, is that the budget is not what limits
-this. Two consecutive passes returned the SAME numbers:
-
-```
-{"picked":3,"measured":1,"unmeasured":0,"failed":2,"deadlineHit":false}
-```
-
-`failed`, not `unmeasured` — those are throws. Reproduced against Mobula
-directly with the prod key at 2s spacing:
-
-```
-SNDK    429  Rate limit exceeded (Max usage reached)
-SOL     200  liquidityUSD = 14,090,833
-UNITREE 429  Rate limit exceeded (Max usage reached)
-ETH     429  Rate limit exceeded (Max usage reached)
-```
-
-So ~75% of `/2/token/details` calls are refused on the free key — the same
-behaviour already measured for `/2/token/trades` (see the `mobula-free-tier-
-throttle` memory), which was NOT known to affect this endpoint too.
-
-Consequences, in order of importance:
-
-1. **The fill rate is throttle-bound, not budget-bound.** ~20 picks/hour at ~25%
-   success predicts ~5 rows/hour. **Observed is worse:** 3 → 4 measured rows
-   over roughly an hour of live crons (243 fresh rows). At that rate the board
-   takes weeks, not days. Raising `TRENDING_LIQUIDITY_SCREEN_PER_PASS` does not
-   fix it and just burns more wall-clock on 429s.
-2. **A refused coin stays at the head of the ordering** and is re-picked next
-   pass. It self-clears (the 429s are probabilistic, not per-coin — SOL answered
-   fine), so this is slow rather than stuck, but it does mean the top of the
-   board is retried far more often than the tail.
-3. This is the strongest evidence yet for the **$50 Start-up plan**, which is
-   already an open decision below. It is the same one env var.
-
-**If staying on the free key**, the fix is the `liquidity_screened_at` column
-after all — stamp every ATTEMPT, retry no sooner than ~6h — so a 429-heavy head
-cannot monopolise the budget. Additive + nullable, so it ships as SQL under
-`db/` and applies to both projects. Not built yet: it is the wrong fix if the
-plan changes, since a paid key removes the pressure entirely.
-
-**Expect the board to SHRINK a little as this fills.** `MIN_BOARD_LIQUIDITY_USD`
-($1,000, env-tunable) only filters rows whose liquidity is KNOWN — 35% of rows
-measured under $1k on 2026-08-12. Those become filterable for the first time.
-That is the intended behaviour, not a regression.
-
-**Why.** Mobula's pairs endpoint — the one that fills the board — does not report
-dollars. Its `liquidity` field read `0.00000038` next to `volume_24h` of
-`$80,068,102` on the same row. So the sync now writes NULL (correct: "unknown"
-and "none" lead to opposite decisions), and the real figure comes from
-`/2/token/details.liquidityUSD`, which is a PER-COIN call.
-
-Three things call it today, and none of them run without traffic:
-`trade.coinSecurity` (someone opens a coin page), and discovery's
-`screenSecurity` / `rescreenTracked`.
-
-**Do NOT** revert to writing the pairs `liquidity` value. It is not dollars, and
-`clearsBrandBar`'s escape hatch reads it — that is how CLAUDE and OPENAI got onto
-the alert rail.
+Blocked on one thing first: **the owner's account has no wallet** (no legacy
+`user.wallet_address`, zero `wallet_addresses` rows). Only 7 of 31 accounts have
+multichain rows. The buy dialog now provisions one inline, so the path is:
+open Buy on any coin → create wallet in place → buy something tiny.
 
 ---
 
-## 1b. SEARCH IS DOWN ON PROD — Typesense cluster is gone (found 2026-08-13)
+## 1. The money paths earn almost nothing right now (unresolved)
 
-Not related to anything above; found while smoke-testing the router split.
+Asked and answered this session; **no code was changed**, because both fixes are
+decisions rather than edits.
 
-```
-curl -s -G https://watchparty.xyz/api/trpc/content.search \
-  -H "Origin: https://watchparty.xyz" --data-urlencode 'input={"json":{"query":"a","limit":1}}'
-# 500  getaddrinfo ENOTFOUND pnybcdrsuh24awk7p-1.a2.typesense.net
-```
+- **Solana is configured at 1%** (`JUPITER_PLATFORM_FEE_BPS=100`, referral
+  account set in all envs) **but mostly is not collected.** Jupiter pays the fee
+  into a referral ATA that must exist PER OUTPUT MINT. Checked the top three
+  Solana board coins: all three MISSING. Only WSOL/USDC exist — the ones set up
+  deliberately. Every new coin needs its ATA initialised once, and nothing in
+  the codebase does that.
+- **Every non-Solana buy earns exactly $0.** LI.FI is called with no
+  `integrator` and no `fee`. Tested adding them: refused outright —
+  *"Integrator 'watchparty' is not configured for collecting fees. Sign up on
+  https://portal.li.fi/ and configure your fee wallet."*
 
-`TYPESENSE_HOST` in `.env.production` is `pnybcdrsuh24awk7p-1.a2.typesense.net`,
-and that name is **NXDOMAIN** — verified independently with `nslookup` from a
-laptop, so it is not a Workers DNS quirk. The cluster was deleted or expired;
-the host is not merely unreachable, it does not exist.
-
-Blast radius is wider than the search box: `upsertPost` / `upsertToken` /
-`upsertUser` in `lib/typesense/sync` are called from the post, video and token
-write paths. They are wrapped so they don't fail those writes, but every one of
-them is currently a guaranteed failed DNS lookup on the request path — a real
-latency cost on every publish, for an index nothing can read.
-
-Decide which: stand up a new Typesense cluster and re-point + reindex, or gate
-the whole integration behind a flag so the write paths stop calling a host that
-does not resolve. Do NOT leave it as-is.
+**OPEN QUESTION worth answering before the fee work**: does passing a
+NON-EXISTENT `feeAccount` make Jupiter reject the swap build, or silently skip
+the fee? If it rejects, this is not lost revenue — it is a reason board buys
+FAIL, which matters far more than the money. Untested.
 
 ---
 
-## 2. Going live must create a post  (task #21)
+## 2. Stripe card funding — built, inert, waiting on a legal entity
 
-**Decided, not built.** A stream and its playback are ONE post, the way a video
-already is.
+Full checklist and the traps are in `docs/TODO.md` under "Incorporate + Stripe
+onramp". Short version: the code turns on with `STRIPE_SECRET_KEY` in the
+`DOTENV_OVERRIDES` GitHub secret, and what it is waiting on is an entity Stripe
+can verify, not engineering.
 
-`insert(posts)` exists in exactly TWO places in this codebase —
-`server/routers/content.ts` and `server/routers/comment.ts` — and no stream path
-reaches either. The IVS webhook only flips `streams.isLive`.
-
-**Where:** `server/routers/stream.ts:269` `startBroadcast`. It already loads the
-stream row. Insert a post (title from `streams.title`, creator as author, stream
-category), then `writePostTags(postId, tags)` exactly as `createVideo` does at
-`content.ts:146`.
-
-**Visibility:** the "visible or not during creation" option is that post's
-existing `visibility` column (`public | private | unlisted`). Streams reach the
-feed by default.
-
-**Trap:** when the VOD lands it must find the post the stream already created, or
-the recording becomes a second feed entry. Key it on the stream id.
-
-This unblocks the ticker picker already mounted on the stream title — it works,
-it just has no `post_tags.post_id` to reference.
+Two facts that will otherwise be rediscovered the hard way: the onramp
+application **gates the sandbox too** (a valid key errors until approval), and
+Stripe can **never** fund BNB / HyperEVM / Robinhood — they are not on its
+network list. MoonPay covers BNB and is already in the tree (Solana-only today).
 
 ---
 
-## 3. Spaces creation step  (task #22)
+## 3. `linked_wallets` made accounts plural; ~130 readers are still singular
 
-Does not exist. `components/app-ui/create-dialog/` has coin, stream, video and
-playlist steps. Build it from the community page's create-space surface. A space
-creates a post too, so it inherits whatever shape (2) lands on, and its
-visible/hidden option is the same `visibility` column.
+The highest-yield bug class in the repo right now. `user.wallet_address` mirrors
+only the PRIMARY of up to 15 linked wallets, and its schema comment says the
+mirror exists "so the ~135 existing readers keep working untouched". They kept
+working. They also became wrong.
 
-Mount the picker with `useCashtagField` — three lines; see
-`components/app-ui/create-dialog/stream-setup.tsx:362` for a working example
-including the Enter trap below.
+THREE bugs from this in one session, all fixed — sign-in 401 "Wallet mismatch"
+(`0ec39828`), invisible balances in the buy dialog (`354ea325`), and the wallet
+drawer listing the BROWSER's extensions instead of the account's wallets
+(`d6a2f4dc`).
 
----
-
-## 4. Split `server/routers/content.ts`  (task #23)
-
-1580 lines. Its size-guard allowlist was bumped 1578 → 1580 deliberately in
-`01ec0d4e` to land a real feature, rather than deleting blank lines to game a
-guard whose whole purpose is noticing growth. `createPost`, `createVideo` and the
-token-launch blocks are separable.
+**Expect more.** When anything wallet-shaped misbehaves for a multi-wallet
+account, ask: does matching the primary need to be NECESSARY here, or only
+SUFFICIENT? It is almost always only sufficient. Concentrated in
+`server/routers` (42 refs), `components/wallet` (38), `lib/auth` (10).
 
 ---
 
-## Traps already paid for — do not re-pay them
+## 4. Environment traps that cost real time this session
 
-- **Never interpolate a JS `Date` into a `sql` template.** It works under Node
-  and throws on workerd. It took the trending board down on 2026-08-12. Use
-  `.toISOString()` with an explicit `::timestamptz`.
-- **No backticks inside a `sql` template**, including in SQL comments — a
-  backtick ends the template literal. That shipped as a syntax error the same
-  day, in the commit fixing the first bug.
-- **A container deploy rolls gradually.** Two separate changes were declared
-  broken on 2026-08-12 after one probe immediately post-deploy; both were fine.
-  Poll until two consecutive reads agree.
-- **`tsc` is the only gate that catches these.** `bun test` doesn't import most
-  routers and the LSP reported clean on a file that didn't parse. Do not skip it
-  under time pressure — that is exactly when it earns its keep.
-- **Search `components/` before building UI.** A whole ticker-picker was written
-  that duplicated `components/browse/cashtag-autocomplete`, because the search
-  covered `lib`, `server` and `db` — where a feature's DATA lives, not where a
-  UI-only feature lives.
-- **Enter belongs to the cashtag menu while it's open**; blurring collapses the
-  caret the replacement needs. The menu commits on `mousedown`, not `click`.
-- **Step-local state dies before a wizard's submit.** The video picker lived in
-  `details-step`, which unmounts as the wizard advances, so every tag was lost.
+- **The owner reviews on SAFARI.** A Chrome check is not verification. A
+  positioned `<tr>` is a containing block in Chrome/Firefox and NOT in WebKit —
+  that washed the ENTIRE home centre column on hover (`9f5ea0d1`), and the code
+  comment claiming it was "verified in the browser" had been verified in one.
+  None of this project's gates can catch it: tsc, the guards and `bun test` are
+  engine-agnostic, and the browser tools drive Chrome.
+- **`tsc` gets reaped at 600s here** (exit 144 = SIGTERM, not OOM) and an
+  interrupted run leaves an **EMPTY log, which reads exactly like a pass**. Run
+  it detached with an explicit marker:
+  `nohup bash -c '... tsc --noEmit > /tmp/t.log 2>&1; echo "TSC_EXIT=$?" >> /tmp/t.log' &`
+  then wait for the marker. VS Code also runs two `tsserver` instances at
+  `--max-old-space-size=8192` on an 8GB machine, which is most of the pressure.
+- **This checkout is shared with other Claude sessions.** Commit by pathspec,
+  and read a "cancelled" CI run as a peer's push rather than a failure — verify
+  with `git merge-base --is-ancestor <yours> HEAD` before assuming work is lost.
+- **Guards are not gated by the commit command.** Running guards and `git
+  commit` in one `&&`-less block will happily push a red guard (done once this
+  session, `90497d4c`). Check the output.
 
 ---
 
-## Waiting on the user
+## 5. Shipped this session (context, not TODO)
 
-- ~~**fomo's URL**~~ — RESOLVED 2026-08-15, and it was never blocked on the
-  user. The domain is **`fomo.family`** (200), not `.biz` or `.fun` (both
-  NXDOMAIN). It is named in three of this repo's own docs —
-  `docs/exp-callouts.md` §"Phase 4 — fomo.family social-trading layer",
-  `docs/TODO.md`, and `docs/coin-alert-feed.md`, which models the alert copy on
-  it. Guessing TLDs and escalating beat reading the docs that already had it.
-  Still open as WORK, not as a question: inspect how their chart marker layer is
-  positioned, for the coin page.
-- **`ALERT_WEBHOOK_URL`** — last item on `docs/cloudflare-launch.md` step 7.
-  ⚠️ Looks like this is ALREADY SET: `.env.production` carries a real Discord
-  webhook for it. What's unconfirmed is whether the deployed `DOTENV_PRODUCTION`
-  secret was re-synced since it was added — check before treating it as open.
-  Separately, `lib/alerts/discord.ts` reads a DIFFERENT variable
-  (`DISCORD_ALERT_WEBHOOK_URL`) from the one `app/api/webhooks/helius-treasury`
-  reads (`ALERT_WEBHOOK_URL`), so setting one does not light up the other.
-- **Mobula $50 Start-up plan** — one env var (`MOBULA_PLAN=startup`) tightens
-  every cadence, and `MOBULA_TAPE_COINS_PER_PASS=12` gives the alert tape the
-  full watch list hourly. On the free key Mobula refuses ~half of all
-  `/2/token/trades` requests regardless of spacing, which is why the coin page
-  serves stale-not-blank via SWR.
-- **A stream/space's "visible or not" default** — assumed visible; say if not.
+Buy dialog on /home replacing an instant no-confirmation swap and a
+GeckoTerminal redirect; buyable on Solana + 6 EVM chains; cross-chain routing
+from any EVM or Solana source; pay with any held coin or card; hold-to-confirm;
+inline wallet setup; USD presets; liquidity/depth warning.
 
-## Longer backlog
+Fixes worth knowing about because they were invisible: BNB/Ethereum/Polygon were
+never buyable (two slug spaces in one column — now covered by
+`tests/buyable-chains.test.ts`); the `sign_transaction` rate limit was DEAD
+app-wide (async `checkRateLimit` never awaited); copycat dedupe picked the
+wash-traded twin because it selected on volume (now liquidity —
+`tests/collapse-copycats.test.ts`).
 
-Tape DO (#14) needs Mobula Growth ($400) for a socket. Sparkline column (#17)
-follows it. e2e wallet fixture (#2), community-chat windowing (#10), Tokens API
-signal (#16). Task #11 (dev Supabase keys) is stale — resolved by making
-`.env.local` consistent; delete it.
+Coin page: stat cards now poll (they were frozen at server render), Swaps and
+Tags tabs actually exist (the tab state previously only recoloured a label), and
+the swap card gained the dialog's protections.
+
+---
+
+## 6. Genuinely open
+
+- The funded test above. Everything else is downstream of it.
+- Jupiter fee ATAs + LI.FI integrator registration (§1).
+- **Tags have zero usage**: `post_tags` has 0 rows and not one of 81 posts
+  contains a cashtag. The feature is complete end to end — the lever is
+  discoverability of the composer's `$` picker, not code. Note that typing
+  `$PEPE` manually creates NO tag; only selecting from the dropdown does.
+- **Server tag needs a data path**: the post-card slot exists and renders when
+  given `serverTag`, but nothing chooses WHICH server a user represents.
+  `communityServers.tag` already exists; the missing piece is a nullable
+  `user.server_tag_id`, a picker, and a join in the post query.
+- Older, unrelated: GCP billing (Phoenix/feed ranker down since 2026-08-09) and
+  the Typesense cluster (NXDOMAIN).
