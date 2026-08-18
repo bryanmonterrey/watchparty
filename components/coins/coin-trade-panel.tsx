@@ -29,6 +29,9 @@ import { OPEN_WALLET_DRAWER_EVENT } from "@/components/wallet/sol-balance-chip";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { Squircle } from "@/components/ui/squircle";
+import { compactUsd } from "@/components/trending/trending-format";
+import { HoldButton } from "@/components/ui/hold-button";
 import { chainLabel } from "@/lib/coin-feed/networks";
 import { getChain } from "@/lib/chains/registry";
 import { NATIVE_TOKEN } from "@/lib/chains/swap/types";
@@ -53,8 +56,17 @@ const NETWORK_TO_CHAIN: Record<string, string> = {
     robinhood: "robinhood",
 };
 
-const BUY_PRESETS_SOL = [0.05, 0.1, 0.5, 1];
-const BUY_PRESETS_EVM = [0.01, 0.05, 0.1, 0.5];
+// BUY presets are DOLLARS, matching the buy dialog. Native amounts asked the
+// user to price the token in their head first, and the right numbers differed
+// per chain — 0.05 is ~$95 of ETH and about two cents of POL. The token amount
+// is derived from the coin's own listed price, so no extra request.
+//
+// SELL stays percent-of-balance: selling is denominated in what you hold, and
+// "$25" of a position you may not have that much of is the wrong question.
+const BUY_PRESETS_USD = [10, 25, 50, 100];
+/** Used only when the native coin cannot be priced (an empty wallet), so the
+ *  presets stay usable instead of vanishing. */
+const BUY_PRESETS_NATIVE = [0.05, 0.1, 0.5, 1];
 const SELL_PRESETS_PCT = [25, 50, 75, 100];
 const SLIPPAGE_PRESETS = [
     { label: "1%", bps: 100 },
@@ -160,6 +172,20 @@ export function CoinTradePanel({
         ? solAssets.data?.tokens?.find((t) => t.mint === coin.tokenAddress)?.balance ?? 0
         : evmAssets.data?.assets?.find((a) => a.contract?.toLowerCase() === coin.tokenAddress.toLowerCase())
               ?.balance ?? 0;
+
+    // What one unit of the native coin is worth, derived from the holding
+    // itself (`usdValue / balance`) exactly as the buy dialog does it: no extra
+    // price request, and it cannot disagree with the balance shown beside it.
+    // Null when there is no balance to divide — a wallet with no SOL cannot be
+    // asked for a dollar-denominated amount, and inventing a rate would be
+    // worse than falling back to native presets.
+    const nativeAsset = isSolana
+        ? solAssets.data?.tokens?.find((t) => t.mint === SOL_DISPLAY_MINT)
+        : evmAssets.data?.assets?.find((a) => !a.contract);
+    const nativeUsd =
+        nativeAsset && nativeAsset.balance > 0 && nativeAsset.usdValue
+            ? nativeAsset.usdValue / nativeAsset.balance
+            : null;
 
     const mintDecimals = useMintDecimals(coin.tokenAddress, isSolana);
     const nativeSymbol = chain?.nativeCurrency.symbol ?? "SOL";
@@ -327,7 +353,18 @@ export function CoinTradePanel({
         );
     }
 
-    const presets = side === "buy" ? (isSolana ? BUY_PRESETS_SOL : BUY_PRESETS_EVM) : SELL_PRESETS_PCT;
+    /** Dollars only when we can convert them; otherwise the old native amounts. */
+    const buyInUsd = side === "buy" && nativeUsd != null;
+
+    /** The trade's dollar size, and how much of the pool that is. Buying spends
+     *  the native coin; selling spends the coin itself, so each side is priced
+     *  with its own rate rather than one of them being assumed. */
+    const tradeUsd =
+        side === "buy"
+            ? nativeUsd != null && amountNum > 0 ? amountNum * nativeUsd : null
+            : coin.priceUsd && amountNum > 0 ? amountNum * coin.priceUsd : null;
+    const depthRatio = tradeUsd && coin.liquidityUsd ? tradeUsd / coin.liquidityUsd : 0;
+    const presets = side === "buy" ? BUY_PRESETS_USD : SELL_PRESETS_PCT;
     const balance = side === "buy" ? nativeBalance : coinBalance;
     const balanceSymbol = side === "buy" ? nativeSymbol : coinSymbol;
     // The missing-wallet precondition never renders inline — pressing the
@@ -393,19 +430,34 @@ export function CoinTradePanel({
                 <span className="shrink-0 text-sm font-bold text-zinc-400">{balanceSymbol}</span>
             </div>
 
+            {/* What that amount is worth. An amount in SOL means nothing to
+                someone thinking in dollars, which is the same gap the buy
+                dialog closed. */}
+            {side === "buy" && nativeUsd != null && amountNum > 0 && (
+                <p className="mt-1.5 text-[13px] font-medium text-zinc-500 tabular-nums">
+                    ≈ ${(amountNum * nativeUsd).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                </p>
+            )}
+
             {/* presets: native amounts buying, % of balance selling */}
             <div className="mt-2 flex items-center gap-1.5">
-                {presets.map((p) => (
-                    <button
-                        key={p}
-                        type="button"
-                        onClick={() =>
-                            setAmount(side === "buy" ? String(p) : toInputAmount((coinBalance * p) / 100))
-                        }
-                        className={cn(CHIP, "flex-1 bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white")}
-                    >
-                        {side === "buy" ? p : `${p}%`}
-                    </button>
+                {(buyInUsd || side === "sell" ? presets : BUY_PRESETS_NATIVE).map((p) => (
+                    <Squircle asChild autoEffects={false} radius={12} key={p}>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                if (side === "sell") return setAmount(toInputAmount((coinBalance * p) / 100));
+                                // Dollars -> native, via the rate the balance
+                                // implies. Rounded to 6dp: more precision than
+                                // that is noise in an input box.
+                                if (buyInUsd && nativeUsd) return setAmount(toInputAmount(p / nativeUsd));
+                                return setAmount(String(p));
+                            }}
+                            className={cn(CHIP, "flex-1 bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white")}
+                        >
+                            {side === "sell" ? `${p}%` : buyInUsd ? `$${p}` : p}
+                        </button>
+                    </Squircle>
                 ))}
             </div>
 
@@ -445,20 +497,42 @@ export function CoinTradePanel({
                 </div>
             </div>
 
+            {/* DEPTH. The share of the pool this trade represents, which is
+                what says whether it can be exited — the number behind every
+                junk row the board filters. Shown only when it is worth saying:
+                under 2% of a pool is noise, and a permanent line would train
+                people to ignore it. */}
+            {tradeUsd != null && depthRatio > 0.02 && (
+                <p className={cn(
+                    "mt-3 text-[13px] font-medium leading-snug",
+                    depthRatio > 0.05 ? "text-pastelred" : "text-sunset",
+                )}>
+                    This is {(depthRatio * 100).toFixed(0)}% of the pool
+                    {coin.liquidityUsd ? ` (${compactUsd(coin.liquidityUsd)} liquidity)` : ""} — expect the
+                    price to move against you.
+                </p>
+            )}
+
             {quoteError && (
                 <p className="mt-3 text-[13px] leading-snug text-pastelred">{quoteError}</p>
             )}
 
-            <Button
-                onClick={submit}
+            {/* HOLD, not click — the same rule as the buy dialog. This spends
+                real money and cannot be undone, and it sits under a free-text
+                amount field where a mis-click follows a typo closely. */}
+            <HoldButton
+                onConfirm={() => void submit()}
                 disabled={!canSubmit}
+                fillClassName={side === "buy" ? "bg-lantern text-black" : "bg-pastelred text-black"}
                 className={cn(
-                    "mt-4 h-13 w-full rounded-full font-bold text-black transition-colors disabled:opacity-40",
+                    "mt-4 h-13 w-full cursor-pointer rounded-full font-bold text-black transition-colors disabled:opacity-40",
                     side === "buy" ? "bg-flexwhite/85 hover:bg-flexwhite/95" : "bg-pastelred/85 hover:bg-pastelred",
                 )}
             >
-                {submitting ? "Swapping…" : `${side === "buy" ? "Buy" : "Sell"} ${coinSymbol}`}
-            </Button>
+                {submitting
+                    ? "Swapping…"
+                    : `Hold to ${side === "buy" ? "buy" : "sell"} ${coinSymbol}`}
+            </HoldButton>
 
             {/* Bottom "open market ↗" link removed (2026-08-12) — the in-app swap
                 is the intended action here; the market link stays only in the
