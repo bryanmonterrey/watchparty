@@ -40,10 +40,21 @@ import { cn } from "@/lib/utils";
 /** Card fill + hairline. One string, so no surface can drift from it. */
 export const DRAWER_CARD = "rounded-3xl bg-panel2 border border-baseborder/20";
 
-/** Interactive version of the same card. */
+/**
+ * Interactive version of the same card.
+ *
+ * The hover MUST land lighter than the resting fill, and on a dark surface the
+ * class name hides whether it does: `bg-*` and `hover:bg-*` replace each other
+ * rather than stacking, so both composite over the canvas (rgb 5,5,5) and it is
+ * those two numbers that have to be compared.
+ *
+ *     bg-panel2       rgba(26,26,26,.6)     -> 17.6
+ *     bg-white/[.05]  rgba(255,255,255,.05) -> 17.5   <- DARKER. shipped once.
+ *     bg-white/[.09]                        -> 27.5   <- what this uses
+ */
 export const DRAWER_CARD_INTERACTIVE = cn(
     DRAWER_CARD,
-    "transition-colors hover:bg-white/[0.05] cursor-pointer",
+    "transition-colors hover:bg-white/[0.09] cursor-pointer",
 );
 
 export function DrawerBackButton({

@@ -36,7 +36,7 @@ export function ReceiveActions({ walletAddress, missingAddress }: ReceiveActions
                 whileTap={{ scale: 0.98 }}
                 onClick={handleCopy}
                 disabled={!walletAddress}
-                className="group relative flex w-full cursor-pointer flex-col items-center overflow-hidden rounded-3xl border border-baseborder/20 bg-panel2 px-5 py-4 transition-colors hover:bg-white/[0.05] disabled:cursor-default"
+                className="group relative flex w-full cursor-pointer flex-col items-center overflow-hidden rounded-3xl border border-baseborder/20 bg-panel2 px-5 py-4 transition-colors hover:bg-white/[0.09] disabled:cursor-default"
             >
                 <p className="text-12 font-medium text-zinc-500 mb-1 group-hover:text-zinc-400 transition-colors">Your wallet address</p>
                 {walletAddress ? (

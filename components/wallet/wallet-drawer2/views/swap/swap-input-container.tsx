@@ -75,7 +75,7 @@ export function SwapInputContainer({
 
     return (
         <div
-            className="group relative flex cursor-pointer flex-col gap-1.5 overflow-hidden rounded-3xl border border-baseborder/20 bg-panel2 p-4 transition-colors hover:bg-white/[0.05]"
+            className="group relative flex cursor-pointer flex-col gap-1.5 overflow-hidden rounded-3xl border border-baseborder/20 bg-panel2 p-4 transition-colors hover:bg-white/[0.09]"
             onClick={() => inputRef.current?.focus()}
             onMouseEnter={() => {
                 if (label === "Sell") setIsSellHovered(true);

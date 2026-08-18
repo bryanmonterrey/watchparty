@@ -447,7 +447,7 @@ export function SendView({
                 {/* Recipient trigger card */}
                 <button
                     onClick={() => setRecipientSelectorOpen(true)}
-                    className="flex w-full cursor-pointer items-center gap-3 rounded-3xl border border-baseborder/20 bg-panel2 px-5 py-4 text-left transition-colors hover:bg-white/[0.05]"
+                    className="flex w-full cursor-pointer items-center gap-3 rounded-3xl border border-baseborder/20 bg-panel2 px-5 py-4 text-left transition-colors hover:bg-white/[0.09]"
                 >
                     {recipient ? (
                         recipientMeta?.avatar_url ? (

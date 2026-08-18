@@ -41,7 +41,7 @@ export function MoreActionsOverlay({ nft, onClose, onHideCollections, onReportSp
                             onClose();
                             onHideCollections?.();
                         }}
-                        className="flex cursor-pointer items-center gap-3 rounded-3xl border border-baseborder/20 bg-panel2 px-4 py-3.5 text-white transition-colors hover:bg-white/[0.05]"
+                        className="flex cursor-pointer items-center gap-3 rounded-3xl border border-baseborder/20 bg-panel2 px-4 py-3.5 text-white transition-colors hover:bg-white/[0.09]"
                     >
                         <ViewOffIcon className="size-5" />
                         <span className="text-14 font-bold tracking-tight">Hide collection</span>
@@ -61,7 +61,7 @@ export function MoreActionsOverlay({ nft, onClose, onHideCollections, onReportSp
                             window.open(`https://orbmarkets.io/token/${nft.mint}`, "_blank", "noopener,noreferrer");
                             onClose();
                         }}
-                        className="flex cursor-pointer items-center gap-3 rounded-3xl border border-baseborder/20 bg-panel2 px-4 py-3.5 text-white transition-colors hover:bg-white/[0.05]"
+                        className="flex cursor-pointer items-center gap-3 rounded-3xl border border-baseborder/20 bg-panel2 px-4 py-3.5 text-white transition-colors hover:bg-white/[0.09]"
                     >
                         <LinkIcon className="size-5" />
                         <span className="text-14 font-bold tracking-tight">View on Orb</span>

@@ -18,7 +18,7 @@ export function TokenToggleItem({ token, shown, onToggle }: TokenToggleItemProps
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="group flex items-center justify-between rounded-3xl border border-baseborder/20 bg-panel2 p-4 transition-colors hover:bg-white/[0.05]"
+            className="group flex items-center justify-between rounded-3xl border border-baseborder/20 bg-panel2 p-4 transition-colors hover:bg-white/[0.09]"
         >
             <div className="flex items-center gap-4">
                 <TokenIcon

@@ -47,7 +47,7 @@ export function TransactionItem({ tx, tokens = [], hideBalances, onClick }: Tran
     return (
         <button
             onClick={onClick}
-            className="group w-full cursor-pointer rounded-3xl border border-baseborder/20 bg-panel2 p-3.5 text-left transition-colors hover:bg-white/[0.05]"
+            className="group w-full cursor-pointer rounded-3xl border border-baseborder/20 bg-panel2 p-3.5 text-left transition-colors hover:bg-white/[0.09]"
         >
             <div className="flex items-center gap-3">
                 <div className="relative shrink-0">

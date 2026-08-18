@@ -61,7 +61,7 @@ export function NetworkView({ onSelect, onClose, availableKinds }: NetworkViewPr
             <button
               key={chain.id}
               onClick={() => onSelect(chain.id)}
-              className="group flex w-full cursor-pointer items-center gap-3.5 rounded-3xl px-3 py-2.5 text-left transition-colors hover:bg-white/[0.05]"
+              className="group flex w-full cursor-pointer items-center gap-3.5 rounded-3xl px-3 py-2.5 text-left transition-colors hover:bg-white/[0.09]"
             >
               <ChainIcon chain={chain.id} size={40} />
               <span className="flex-1 text-14 font-bold tracking-tight text-white">{chain.name}</span>

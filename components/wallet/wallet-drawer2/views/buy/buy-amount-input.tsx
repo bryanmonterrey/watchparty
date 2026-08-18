@@ -16,7 +16,7 @@ export function BuyAmountInput({ amount, onAmountChange }: BuyAmountInputProps) 
         <div className="space-y-3">
             <div 
                 onClick={() => inputRef.current?.focus()}
-                className="group cursor-pointer rounded-3xl border border-baseborder/20 bg-panel2 p-6 text-center transition-colors hover:bg-white/[0.05]"
+                className="group cursor-pointer rounded-3xl border border-baseborder/20 bg-panel2 p-6 text-center transition-colors hover:bg-white/[0.09]"
             >
                 <p className="mb-2 text-12 font-medium text-zinc-500">You pay</p>
                 

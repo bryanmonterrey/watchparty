@@ -34,7 +34,7 @@ export function WalletActions({ onNavigate }: WalletActionsProps) {
                             // panel2 + one baseborder hairline. It was the only
                             // card here with no edge, which is why the block
                             // read as floating chips above hairlined rows.
-                            className="flex h-24 flex-col items-start rounded-3xl border border-baseborder/20 bg-panel2 px-3 text-12 font-semibold text-zinc-400 hover:bg-white/[0.05] hover:text-white"
+                            className="flex h-24 flex-col items-start rounded-3xl border border-baseborder/20 bg-panel2 px-3 text-12 font-semibold text-zinc-400 hover:bg-white/[0.09] hover:text-white"
                         >
                             <Icon className={action.iconClass} />
                             {action.label}

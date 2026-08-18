@@ -16,7 +16,7 @@ export function NFTRecipientTrigger({ recipient, recipientDisplay, recipientMeta
     return (
         <button
             onClick={onClick}
-            className="cursor-pointer w-full rounded-3xl border border-baseborder/20 bg-panel2 px-4 py-3.5 flex items-center gap-3 transition-colors hover:bg-white/[0.05] text-left"
+            className="cursor-pointer w-full rounded-3xl border border-baseborder/20 bg-panel2 px-4 py-3.5 flex items-center gap-3 transition-colors hover:bg-white/[0.09] text-left"
         >
             {recipient ? (
                 recipientMeta?.avatar_url ? (

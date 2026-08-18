@@ -49,7 +49,7 @@ export function TokenListItem({
             onClick={onClick}
             // hover:bg-panel2 was a no-op — the row's own fill, so hovering did
             // nothing. Same wash the rest of the drawer uses now.
-            className="group w-full cursor-pointer flex items-center justify-between rounded-3xl border border-baseborder/20 bg-panel2 p-3.5 transition-colors hover:bg-white/[0.05]"
+            className="group w-full cursor-pointer flex items-center justify-between rounded-3xl border border-baseborder/20 bg-panel2 p-3.5 transition-colors hover:bg-white/[0.09]"
         >
             <div className="flex items-center gap-3">
                 <TokenIcon
