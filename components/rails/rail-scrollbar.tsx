@@ -3,75 +3,44 @@
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
-// A scroll indicator for the rails, modelled on rs-4/curved-scrollbar-expo.
+// An overlay scrollbar for the rails, rebuilt on Base UI's ScrollArea model
+// (https://base-ui.com/react/components/scroll-area) — its geometry, its
+// visibility rules and its look, reimplemented as an OVERLAY over a scroller
+// this component doesn't own.
 //
-// THE IDEA WORTH TAKING from that library isn't the curve — it's that the
-// indicator has a CONSTANT LENGTH. A normal scrollbar's thumb is proportional
-// to content, so an infinite list (which both rails are) shrinks it toward a
-// dot and it reads as broken. That library draws a fixed 70px segment and only
-// ever MOVES it, so the indicator looks the same at ten rows or ten thousand.
-// It gets that by holding stroke-dasharray at `${visibleLength} ${totalLength}`
-// and animating only the offset. On a straight track the same property falls
-// out of a fixed-height thumb and a translate, with no SVG at all — hence no
-// curve here, which was fine to drop.
+// Why not `<ScrollArea.Root>` itself: Base UI's parts only work when the
+// viewport is its own element, and none of the three consumers can give it
+// one. BidirectionalList (alerts rail) creates and owns its scroll element
+// internally; rail-card and chat-panel pin content INSIDE the scroller. So the
+// component takes a `getScroller` callback and hangs an absolutely-positioned
+// track next to whatever it finds.
 //
-// The library is React Native (Reanimated + react-native-svg + NativeWind) and
-// its "web" support means react-native-web, which this app doesn't use. So this
-// is the behaviour reimplemented on DOM, not the package.
+// WHAT CHANGED, and why (the previous version lagged behind the wheel):
+// it held a spring (stiffness 500 / damping 30) integrated on rAF, so the
+// thumb *chased* the scroll position instead of reporting it. Any spring has
+// settle time by definition, which is exactly the "out of sync with my
+// scrolling" symptom — the faster you scroll, the further behind it sits.
+// Base UI has no spring: it writes `transform` synchronously inside the scroll
+// handler, which runs before paint, so the thumb lands in the SAME frame as the
+// content it describes. That's the whole fix, and it also deletes the rAF loop.
+//
+// Everything else here is motion the rebuild deliberately dropped: the thumb no
+// longer animates its height on hover (it was proportional-on-hover and a flat
+// 48px otherwise, so it resized under the cursor and re-derived its own travel
+// mid-gesture), and nothing transitions but opacity.
 //
 // NOTE this reintroduces a visible scroll affordance into an app whose
 // globals.css hides scrollbars everywhere (`* { scrollbar-width: none }`).
-// Deliberate, and scoped to the two rails that opt in.
+// Deliberate, and scoped to the surfaces that opt in.
 
-/** Floor for the thumb, not its size.
- *
- *  This used to be a CONSTANT 90px height that never scaled — taken from the
- *  library this was modelled on, to stop an infinite list shrinking the thumb
- *  toward a dot. That problem is real; a fixed height is the wrong fix for it.
- *
- *  A proportional thumb carries information a fixed one throws away: how much
- *  content there is. Every native scrollbar (macOS, iOS, Windows) is
- *  proportional for exactly that reason, and a fixed thumb is why this felt
- *  un-native — it reads as a position dot, not a scrollbar.
- *
- *  A MINIMUM keeps both: proportional wherever there's room, clamped before it
- *  can become a tick. 40px is roughly where a thumb stops reading as a handle,
- *  and matches what browsers themselves clamp to. */
-const MIN_THUMB_PX = 40;
-/** Resting height, used whenever the pointer ISN'T over the rail.
- *
- *  This is the resolution to the fixed-vs-proportional argument rather than a
- *  compromise between them, because the two states want different things:
- *
- *    - While you're just scrolling past, the only question is "where am I".
- *      A constant 48px answers that and — crucially — never degenerates, so an
- *      infinite list can't shrink it to a tick no matter how much loads in.
- *    - On hover you're about to interact, and now "how much is there" matters
- *      and the thumb has to be worth grabbing. So it expands to its true
- *      proportional height.
- *
- *  Same trick as macOS, which swaps a thin overlay bar for a fatter draggable
- *  one when the pointer approaches. */
-const RESTING_THUMB_PX = 48;
+/** Floor for the thumb — Base UI's `MIN_THUMB_SIZE` is 16, raised here because
+ *  these rails are infinite lists: proportional wherever there's room, clamped
+ *  before it degenerates into a tick you can't grab. */
+const MIN_THUMB_PX = 32;
 /** Inset from the scroller's top and bottom edges. */
 const TRACK_INSET_PX = 6;
-/** How long the bar stays up after the last scroll before fading out.
- *
- *  Auto-hide is the modern default — macOS/iOS/Android all show the indicator
- *  while scrolling and fade it when idle, so it answers "where am I" without
- *  permanently spending a strip of the design on chrome. 1200ms is long enough
- *  to still be there when you glance down after a flick. */
-const IDLE_HIDE_MS = 1200;
-
-// Spring, ported from the library's { damping: 30, stiffness: 500 } and
-// integrated per frame. Snappy and barely overshooting: with mass 1, critical
-// damping here is 2*sqrt(500) ≈ 44.7, so 30 is under-damped but only slightly.
-// Tone the whole thing down by raising DAMPING (toward 45 = no bounce at all)
-// or lowering STIFFNESS.
-const STIFFNESS = 500;
-const DAMPING = 30;
-/** Below this, snap and stop the loop — prevents a permanent rAF. */
-const REST_PX = 0.1;
+/** Idle delay before the bar fades, matching Base UI's `SCROLL_TIMEOUT`. */
+const SCROLL_TIMEOUT_MS = 500;
 
 export function RailScrollbar({
     getScroller,
@@ -89,6 +58,13 @@ export function RailScrollbar({
 }) {
     const thumbRef = useRef<HTMLDivElement>(null);
     const trackRef = useRef<HTMLDivElement>(null);
+    // Held in a ref, and the effect below runs ONCE. Every consumer passes an
+    // inline arrow, so depending on `getScroller` directly would tear down and
+    // re-attach every listener plus the ResizeObserver on every render — and
+    // the alerts rail re-renders on every incoming alert.
+    const getScrollerRef = useRef(getScroller);
+    getScrollerRef.current = getScroller;
+    const rebindRef = useRef<(() => void) | null>(null);
 
     useEffect(() => {
         const thumb = thumbRef.current;
@@ -96,121 +72,84 @@ export function RailScrollbar({
         if (!thumb || !track) return;
 
         let scroller: HTMLElement | null = null;
-        let raf = 0;
         let attachRaf = 0;
-        let current = 0;
-        let target = 0;
-        let velocity = 0;
-        let last = 0;
-        let running = false;
-        // Measured each pass now that the thumb is proportional, and read by
-        // both the travel maths and the drag handler.
-        let thumbH = MIN_THUMB_PX;
         let scrollable = false;
-        let hovering = false;
+        // Hover is tracked as two flags because the track is a SIBLING of the
+        // scroller, not a descendant: moving the cursor onto the thumb fires
+        // `pointerleave` on the scroller. One flag would collapse the bar at
+        // the exact moment you reach for it.
+        let overScroller = false;
+        let overThumb = false;
         let dragging = false;
+        let pointerId: number | null = null;
         let dragStartY = 0;
         let dragStartScroll = 0;
+        let thumbH = MIN_THUMB_PX;
         let idleTimer: ReturnType<typeof setTimeout> | undefined;
 
-        const reduceMotion =
-            typeof window !== "undefined" &&
-            window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-
-        const paint = (y: number) => {
-            thumb.style.transform = `translate3d(0, ${y}px, 0)`;
+        // Visible while scrolling or while the pointer is on the rail, faded
+        // otherwise — the fade-in is quick and the fade-out is slow and
+        // delayed, which is Base UI's rule and reads as the bar receding rather
+        // than blinking off. The classes live on the element; this only flips
+        // the flag they key off.
+        const setVisible = (visible: boolean) => {
+            track.dataset.visible = visible && scrollable ? "true" : "false";
         };
 
-        // Visible while scrolling, faded when idle — unless the pointer is over
-        // the rail, in which case it stays up because the user is plainly
-        // looking at this column.
         const show = () => {
             if (!scrollable) return;
-            track.style.opacity = "1";
+            setVisible(true);
             clearTimeout(idleTimer);
             idleTimer = setTimeout(() => {
-                if (!hovering) track.style.opacity = "0";
-            }, IDLE_HIDE_MS);
+                if (!overScroller && !overThumb && !dragging) setVisible(false);
+            }, SCROLL_TIMEOUT_MS);
         };
 
-        const measure = () => {
+        // Base UI's `computeThumbPosition`, single-axis. Sizing and positioning
+        // are ONE pass on purpose: the thumb's height decides its own travel
+        // (track - thumb), so computing them apart lets the two disagree for a
+        // frame — most visibly at the end of a list, where the thumb overhangs.
+        const sync = () => {
             if (!scroller) return;
-            const distance = scroller.scrollHeight - scroller.clientHeight;
+
+            const content = scroller.scrollHeight;
+            const viewport = scroller.clientHeight;
+            const maxScroll = Math.max(0, content - viewport);
+
             // Nothing to scroll: hide entirely rather than parking a thumb that
-            // can't move. A rail that simply has few rows shouldn't advertise a
-            // scrollbar at all.
-            if (distance <= 1) {
+            // can't move. A rail with few rows shouldn't advertise a scrollbar.
+            if (maxScroll <= 1 || content === 0) {
                 scrollable = false;
-                track.style.opacity = "0";
+                setVisible(false);
                 return;
             }
             scrollable = true;
 
-            // Proportional: the thumb covers the same fraction of the track
-            // that the viewport covers of the content. Clamped so a very long
-            // list still leaves something grabbable.
             const trackH = track.clientHeight;
-            // True proportional height — what the thumb shows on hover.
-            const trueH = Math.max(
-                MIN_THUMB_PX,
-                Math.round(trackH * (scroller.clientHeight / scroller.scrollHeight)),
-            );
-            // Resting is a flat 48 unless the content is SHORT enough that the
-            // honest thumb is already smaller; expanding on hover should never
-            // shrink it, which would read as the bar recoiling from the cursor.
-            thumbH = hovering || dragging ? trueH : Math.min(RESTING_THUMB_PX, trueH);
+            thumbH = Math.max(MIN_THUMB_PX, trackH * (viewport / content));
             thumb.style.height = `${thumbH}px`;
 
-            const progress = Math.max(0, Math.min(1, scroller.scrollTop / distance));
-            // Travel is the track minus the thumb, so a full scroll lands the
-            // thumb exactly at the bottom instead of running past it.
-            target = progress * Math.max(0, trackH - thumbH);
-        };
-
-        const tick = (now: number) => {
-            const dt = Math.min((now - last) / 1000, 1 / 30); // clamp: a backgrounded tab
-            last = now;                                       // must not fling the spring
-            const displacement = current - target;
-            velocity += (-STIFFNESS * displacement - DAMPING * velocity) * dt;
-            current += velocity * dt;
-
-            if (Math.abs(current - target) < REST_PX && Math.abs(velocity) < REST_PX) {
-                current = target;
-                velocity = 0;
-                paint(current);
-                running = false;
-                return;
-            }
-            paint(current);
-            raf = requestAnimationFrame(tick);
-        };
-
-        const start = () => {
-            if (reduceMotion) {
-                current = target;
-                paint(current);
-                return;
-            }
-            if (running) return;
-            running = true;
-            last = performance.now();
-            raf = requestAnimationFrame(tick);
+            // Clamped, so Safari's rubber-band overscroll (a negative scrollTop,
+            // or one past the end) pins the thumb to the edge instead of
+            // running it off the track.
+            const clamped = Math.min(Math.max(scroller.scrollTop, 0), maxScroll);
+            const maxThumbOffset = Math.max(0, trackH - thumbH);
+            const offset = (clamped / maxScroll) * maxThumbOffset;
+            thumb.style.transform = `translate3d(0,${offset}px,0)`;
         };
 
         const onScroll = () => {
-            measure();
+            sync();
             show();
-            start();
         };
 
-        // Dragging the thumb. A pure indicator was the old behaviour and it is
-        // the main thing that made this feel unlike a scrollbar — every native
-        // one can be grabbed. Only the THUMB takes pointer events (the track
-        // stays transparent to clicks), so this cannot swallow presses meant for
-        // the rail underneath it.
+        // Dragging the thumb. Only the THUMB takes pointer events — the track
+        // stays transparent to them — so this can never swallow a press meant
+        // for the rail underneath it.
         const onPointerDown = (e: PointerEvent) => {
-            if (!scroller || !scrollable) return;
+            if (e.button !== 0 || !scroller || !scrollable) return;
             e.preventDefault();
+            pointerId = e.pointerId;
             thumb.setPointerCapture(e.pointerId);
             dragging = true;
             dragStartY = e.clientY;
@@ -219,124 +158,154 @@ export function RailScrollbar({
         };
 
         const onPointerMove = (e: PointerEvent) => {
-            if (!dragging || !scroller) return;
-            const travel = Math.max(1, track.clientHeight - thumbH);
-            const distance = scroller.scrollHeight - scroller.clientHeight;
-            // Map thumb pixels to content pixels, so the content keeps pace with
-            // the cursor rather than lagging or racing it.
-            scroller.scrollTop = dragStartScroll + ((e.clientY - dragStartY) / travel) * distance;
+            if (!dragging || !scroller || e.pointerId !== pointerId) return;
+            // A release can go missing (the browser can drop capture), which
+            // would leave a buttonless hover scrolling the rail. Base UI reads
+            // the primary-button bit to detect that.
+            if (e.buttons % 2 === 0) {
+                onPointerUp(e);
+                return;
+            }
+            const maxThumbOffset = track.clientHeight - thumbH;
+            if (maxThumbOffset <= 0) return;
+            const ratio = (e.clientY - dragStartY) / maxThumbOffset;
+            const maxScroll = scroller.scrollHeight - scroller.clientHeight;
+            scroller.scrollTop = dragStartScroll + ratio * maxScroll;
+            e.preventDefault();
         };
 
         const onPointerUp = (e: PointerEvent) => {
-            if (!dragging) return;
+            if (!dragging || e.pointerId !== pointerId) return;
             dragging = false;
-            thumb.releasePointerCapture?.(e.pointerId);
+            pointerId = null;
+            if (thumb.hasPointerCapture(e.pointerId)) thumb.releasePointerCapture(e.pointerId);
             show();
         };
 
-        // Both re-measure: changing the thumb's height changes the travel
-        // (trackH - thumbH), so the position has to be recomputed or the thumb
-        // would sit at the wrong offset for its new size — most visibly at the
-        // bottom of a list, where it would overhang the track.
-        const onEnter = () => {
-            hovering = true;
-            measure();
+        const onScrollerEnter = () => {
+            overScroller = true;
+            sync();
             show();
-            start();
         };
-        const onLeave = () => {
-            hovering = false;
-            measure();
+        const onScrollerLeave = () => {
+            overScroller = false;
             show();
-            start();
+        };
+        const onThumbEnter = () => {
+            overThumb = true;
+            show();
+        };
+        const onThumbLeave = () => {
+            overThumb = false;
+            show();
         };
 
         // The list can grow under us (pagination) without a scroll event, which
-        // changes scrollHeight and therefore where the thumb belongs.
-        const observer = new ResizeObserver(() => {
-            measure();
-            start();
-        });
+        // changes scrollHeight and therefore both the thumb's size and where it
+        // belongs.
+        const observer = new ResizeObserver(() => sync());
+
+        // Thumb listeners outlive any one scroller — the thumb is ours and
+        // never changes — so they're bound once, outside attach().
+        thumb.addEventListener("pointerenter", onThumbEnter);
+        thumb.addEventListener("pointerleave", onThumbLeave);
+        thumb.addEventListener("pointerdown", onPointerDown);
+        thumb.addEventListener("pointermove", onPointerMove);
+        thumb.addEventListener("pointerup", onPointerUp);
+        thumb.addEventListener("pointercancel", onPointerUp);
+
+        const detachScroller = () => {
+            if (!scroller) return;
+            scroller.removeEventListener("scroll", onScroll);
+            scroller.removeEventListener("pointerenter", onScrollerEnter);
+            scroller.removeEventListener("pointerleave", onScrollerLeave);
+            observer.disconnect();
+            scroller = null;
+        };
 
         const attach = (tries: number) => {
-            scroller = getScroller();
-            if (!scroller) {
+            const next = getScrollerRef.current();
+            if (!next) {
                 if (tries > 0) attachRaf = requestAnimationFrame(() => attach(tries - 1));
                 return;
             }
+            if (next === scroller) return;
+            detachScroller();
+            scroller = next;
             scroller.addEventListener("scroll", onScroll, { passive: true });
-            scroller.addEventListener("pointerenter", onEnter);
-            scroller.addEventListener("pointerleave", onLeave);
-            // The track is an absolutely-positioned SIBLING of the scroller,
-            // not a descendant, so the scroller's pointerenter never fires for
-            // the bar itself. Without these, moving the cursor toward the thumb
-            // to grab it would read as leaving the rail and collapse it back to
-            // 48px under the pointer — the exact opposite of an affordance.
-            track.addEventListener("pointerenter", onEnter);
-            track.addEventListener("pointerleave", onLeave);
-            thumb.addEventListener("pointerdown", onPointerDown);
-            thumb.addEventListener("pointermove", onPointerMove);
-            thumb.addEventListener("pointerup", onPointerUp);
-            thumb.addEventListener("pointercancel", onPointerUp);
+            scroller.addEventListener("pointerenter", onScrollerEnter);
+            scroller.addEventListener("pointerleave", onScrollerLeave);
             observer.observe(scroller);
             if (scroller.firstElementChild) observer.observe(scroller.firstElementChild);
-            measure();
-            current = target;
-            paint(current);
+            sync();
         };
         attach(10);
 
+        // The scroll element can be REPLACED under us without this component
+        // remounting: the alerts rail keys its BidirectionalList, so changing a
+        // filter throws away the old scroller while the bar stays put. The
+        // per-render effect below calls this; without it the bar would sit
+        // frozen, listening to a detached node.
+        rebindRef.current = () => attach(10);
+
         return () => {
-            cancelAnimationFrame(raf);
+            rebindRef.current = null;
             cancelAnimationFrame(attachRaf);
             clearTimeout(idleTimer);
-            observer.disconnect();
-            scroller?.removeEventListener("scroll", onScroll);
-            scroller?.removeEventListener("pointerenter", onEnter);
-            scroller?.removeEventListener("pointerleave", onLeave);
-            track.removeEventListener("pointerenter", onEnter);
-            track.removeEventListener("pointerleave", onLeave);
+            detachScroller();
+            thumb.removeEventListener("pointerenter", onThumbEnter);
+            thumb.removeEventListener("pointerleave", onThumbLeave);
             thumb.removeEventListener("pointerdown", onPointerDown);
             thumb.removeEventListener("pointermove", onPointerMove);
             thumb.removeEventListener("pointerup", onPointerUp);
             thumb.removeEventListener("pointercancel", onPointerUp);
         };
-    }, [getScroller]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Deliberately no dependency array: one cheap identity check per render,
+    // which is what keeps the effect above from re-running (and re-observing)
+    // on every render while still surviving a swapped-out scroller.
+    useEffect(() => {
+        rebindRef.current?.();
+    });
 
     return (
         <div
             ref={trackRef}
             aria-hidden
+            data-visible="false"
             style={{ top: topPx, bottom: TRACK_INSET_PX }}
             className={cn(
-                // The TRACK stays pointer-events-none so it can never swallow a
-                // press meant for the rail beneath it; the thumb below opts
-                // back in, which is what makes dragging possible without
-                // putting an 8px dead strip down the side of the column.
+                // The TRACK is pointer-events-none so it can never swallow a
+                // press meant for the rail beneath it; the thumb opts back in,
+                // which is what makes dragging possible without putting a dead
+                // strip down the side of the column.
                 //
-                // w-[8px]: the thumb is w-full, so the track's width IS the
-                // indicator's. 8px is roughly a native scrollbar thumb — what
-                // `scrollbar-width: thin` renders.
-                //
-                // Starts at opacity-0 and is raised by show() on scroll or
-                // hover: auto-hide is what macOS/iOS/Android all do, so the
-                // indicator answers "where am I" without permanently spending a
-                // strip of the layout on chrome.
-                "pointer-events-none absolute right-0.5 z-10 w-[8px] opacity-0 transition-opacity duration-300",
+                // Opacity is the only thing that animates, and asymmetrically:
+                // 75ms in with no delay so it's there the instant you touch the
+                // wheel, 150ms out after a 300ms hold so it doesn't flicker
+                // between two flicks. Straight from Base UI's demo styles.
+                "pointer-events-none absolute right-0.5 z-10 w-[10px]",
+                "opacity-0 transition-opacity delay-300 duration-150 ease-out",
+                "data-[visible=true]:opacity-100 data-[visible=true]:delay-0 data-[visible=true]:duration-75",
                 className,
             )}
         >
-            {/* Height is set in measure(), not here — it's proportional now.
-                touch-action-none so a drag on the thumb doesn't also scroll the
-                page on touch devices. Widens slightly on hover, the one bit of
-                affordance that says "this is grabbable". */}
+            {/* Height and transform are written by sync(); neither transitions
+                — the thumb reports the scroll position, it doesn't animate
+                toward it. The transparent side borders with bg-clip-padding
+                give a 6px bar with a 10px grab target, so the thumb stays thin
+                without being fiddly to catch.
+
+                Plain white rather than `flexwhite`: every surface this bar sits
+                over is `bg-canvas`, a literal rgb(5,5,5) that never lightens,
+                while `--flexwhite` flips to near-black in the light theme —
+                which would paint the thumb black on black. */}
             <div
                 ref={thumbRef}
-                style={{ height: RESTING_THUMB_PX }}
-                // height transitions with the colour: the resting→true growth
-                // should read as the bar offering itself, not as a jump. Kept
-                // to 200ms so it lands before a deliberate move to grab it.
-                className="pointer-events-auto w-full cursor-grab touch-none rounded-full bg-flexwhite/25 transition-[height,background-color] duration-200 ease-out hover:bg-flexwhite/40 active:cursor-grabbing active:bg-flexwhite/50"
+                style={{ height: MIN_THUMB_PX }}
+                className="pointer-events-auto w-full cursor-default touch-none rounded-full border-x-2 border-transparent bg-white/25 bg-clip-padding transition-colors duration-100 hover:bg-white/40 active:bg-white/55"
             />
         </div>
     );
