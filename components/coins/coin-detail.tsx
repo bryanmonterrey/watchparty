@@ -133,7 +133,40 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: str
  * The strip scrolls horizontally rather than wrapping — wrapped, it pushes the
  * chart down the page, and these read as one row.
  */
-function CoinHeader({ coin }: { coin: CoinViewData }) {
+function CoinHeader({ coin: initial }: { coin: CoinViewData }) {
+    // LIVE STATS. The page is a server component that resolves the coin once,
+    // so this header used to be frozen at render while the table and chart
+    // beneath it refreshed every 15s — the numbers people actually watch were
+    // the only ones on the page that never moved.
+    //
+    // Seeded with the server's own data via `initialData`, so there is no
+    // loading flash and no second render on arrival; the poll only ever
+    // replaces numbers with newer numbers. Same 15s cadence as the table and
+    // chart, and it reads our database rather than an upstream, so a viewer
+    // sitting on the page costs a query, not a metered API call.
+    const { data: live } = trpc.coin.stats.useQuery(
+        { network: initial.network, tokenAddress: initial.tokenAddress },
+        {
+            enabled: !initial.isDraft,
+            initialData: {
+                priceUsd: initial.priceUsd,
+                marketCapUsd: initial.marketCapUsd,
+                liquidityUsd: initial.liquidityUsd,
+                volume24hUsd: initial.volume24hUsd,
+                priceChange24h: initial.priceChange24h,
+                buys24h: initial.buys24h,
+                sells24h: initial.sells24h,
+                txns24h: initial.txns24h,
+            },
+            refetchInterval: 15_000,
+            staleTime: 10_000,
+            retry: retryTransient(1),
+        },
+    );
+
+    // Identity from the server render (it cannot change under a mounted page),
+    // the moving numbers from the poll.
+    const coin: CoinViewData = { ...initial, ...(live ?? {}) };
     // A draft has no mint, so there is nothing to link to and nothing to copy.
     // Passing the row id to either would point at an explorer page that does
     // not exist and hand out a string that looks exactly like an address.

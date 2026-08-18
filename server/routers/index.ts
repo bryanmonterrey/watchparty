@@ -41,6 +41,7 @@ import { profileRouter } from "./profile";
 import { panelsRouter } from "./panels";
 import { discoverRouter } from "./discover";
 import { coinFeedRouter } from "./coinFeed";
+import { coinRouter } from "./coin";
 import { trendingRouter } from "./trending";
 import { tagsRouter } from "./tags";
 import { apiKeysRouter } from "./apiKeys";
@@ -100,6 +101,7 @@ export const appRouter = router({
     panels: panelsRouter,
     discover: discoverRouter,
     coinFeed: coinFeedRouter,
+    coin: coinRouter,
     trending: trendingRouter,
     tags: tagsRouter,
     apiKeys: apiKeysRouter,
