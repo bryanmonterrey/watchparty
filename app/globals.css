@@ -384,6 +384,7 @@
   --blur-2xl: 40px;
   --blur-3xl: 64px;
   --color-jewel: oklch(0.795 0.224 158.3);
+  --color-ansemborder: rgb(35, 40, 52);
   --color-xborder: rgb(47, 51, 54);
   --color-soft-pink: oklch(0.95 0.0253 11.58);
   --color-soft-blue: oklch(0.95 0.0253 240);

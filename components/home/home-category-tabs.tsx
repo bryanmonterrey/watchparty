@@ -64,7 +64,7 @@ export function HomeCategoryTabs({
                         // paints it, and is what spaces the labels apart.
                         className={cn(
                             "flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap px-3.5 py-1.5 tracking-tight text-lg font-semibold transition-colors",
-                            active === tab ? "text-twitter2" : "text-zinc-500 hover:text-white"
+                            active === tab ? "text-flexwhite" : "text-zinc-500 hover:text-flexwhite/95"
                         )}
                     >
                         {tab}

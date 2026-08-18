@@ -32,7 +32,7 @@ import { cn } from "@/lib/utils";
 // in the border box — it gets cut away at exactly the corners the squircle
 // exists for. As an effect it's stroked into the wrapper Lisse injects, which
 // is never clipped, and traces the same curve.
-export const RAIL_BORDER = { width: 1, color: "#eff3f4", opacity: .12 };
+export const RAIL_BORDER = { width: 1, color: "#232834", opacity: 1 };
 
 export function RailShell({
     children,
