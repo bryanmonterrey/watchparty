@@ -402,12 +402,10 @@ export function BuyDialog({
         return Number(raw.toFixed(dp));
     }, [pricedInUsd, unitPrice, usdAmount, tokenAmount, payAsset?.decimals]);
 
-    /** What the spend is worth, for the secondary line. */
-    const spendUsd = pricedInUsd
-        ? fmtUsd(usdAmount)
-        : payAsset
-          ? fmtUsd((unitUsd(payAsset) ?? 0) * amount)
-          : null;
+    /** What the spend is worth, numerically — the headline when we can price it. */
+    const spendUsdValue = pricedInUsd ? usdAmount : (unitUsd(payAsset ?? { balance: 0 }) ?? 0) * amount;
+    const spendUsd = fmtUsd(spendUsdValue);
+
 
     // Live estimate for EVM, keyed by amount AND by what's being spent, so the
     // number on screen is the one that executes. Solana has no equivalent:
@@ -465,6 +463,27 @@ export function BuyDialog({
     // gate from disagreeing about which route is live.
     const activeQuote = bridging ? crossQuote : quote;
     const receive = activeQuote.data ? scaleUnits(activeQuote.data.toAmount, activeQuote.data.toDecimals) : null;
+
+    /**
+     * HOW MUCH OF THE COIN this buys — the thing actually being bought.
+     *
+     * The secondary line used to restate the spend in the payment token, which
+     * the big number above it already said. What someone wants under "you're
+     * paying $25" is "…for 1.2M PEPE".
+     *
+     * A real quote wins when there is one: it accounts for slippage, fees and
+     * the actual route. Where there isn't — Solana same-chain, because Jupiter
+     * returns base units with no decimals to scale them by — it falls back to
+     * the coin's own listed price, which is the same derivation used for the
+     * spend value and needs no extra request. Marked "≈" either way, because
+     * both are estimates.
+     */
+    const receiveEstimate =
+        receive !== null
+            ? receive
+            : coin && coin.priceUsd && spendUsdValue > 0
+              ? spendUsdValue / coin.priceUsd
+              : null;
     const needsQuote = (isEvm || bridging) && !payingByCard;
     // You cannot spend what you do not have, and a quote for it just wastes a
     // round trip — so this gates the CTA rather than only warning.
@@ -704,11 +723,13 @@ export function BuyDialog({
                                     )}
                                 </div>
                                 <span className="text-13 font-medium text-zinc-500">
-                                    {pricedInUsd
-                                        ? `≈ ${formatTokens(amount)} ${spendSymbol}`
-                                        : spendUsd
-                                          ? `≈ ${spendUsd}`
-                                          : null}
+                                    {receiveEstimate !== null
+                                        ? `≈ ${formatTokens(receiveEstimate)} ${coin.symbol}`
+                                        : pricedInUsd
+                                          ? `≈ ${formatTokens(amount)} ${spendSymbol}`
+                                          : spendUsd
+                                            ? `≈ ${spendUsd}`
+                                            : null}
                                 </span>
                             </div>
 
@@ -808,13 +829,6 @@ export function BuyDialog({
                         <div className="flex flex-col gap-2 bg-white/[0.03] p-4">
                             {needsQuote ? (
                                 <>
-                                    <Row label="You receive">
-                                        {activeQuote.isLoading
-                                            ? "…"
-                                            : receive !== null
-                                              ? `${formatTokens(receive)} ${activeQuote.data?.toSymbol ?? ""}`
-                                              : "—"}
-                                    </Row>
                                     {activeQuote.data?.tool ? <Row label="Route">{activeQuote.data.tool}</Row> : null}
                                     {/* Named, because a bridge is not a swap:
                                         the source receipt does not mean the
