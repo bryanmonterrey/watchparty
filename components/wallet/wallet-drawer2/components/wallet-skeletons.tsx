@@ -56,7 +56,7 @@ export function TokenListSkeleton({ rows = 4 }: { rows?: number }) {
                         {/* TokenIcon size="lg" */}
                         <div className="size-10 shrink-0 rounded-full shimmer-skeleton" />
                         <div className="flex flex-col items-start">
-                            {/* 15px symbol over a 13px balance — the two line
+                            {/* 14px symbol over a 12px balance — the two line
                                 boxes TokenListItem renders. */}
                             <TextBar width="w-14" bar="h-3.5" line="h-[22px]" />
                             <TextBar width="w-12" bar="h-3" line="h-[19px]" />
@@ -121,7 +121,7 @@ function ActivityRowSkeleton() {
             <div className="flex items-center gap-3">
                 <div className="size-10 shrink-0 rounded-full shimmer-skeleton" />
                 <div className="flex min-w-0 flex-1 flex-col">
-                    {/* 15px bold label / 13px description — the two line boxes
+                    {/* 14px bold label / 12px description — the two line boxes
                         TransactionItem renders, so the row is the same height
                         loading as loaded. */}
                     <TextBar width="w-24" bar="h-3.5" line="h-[22px]" />
@@ -137,7 +137,7 @@ function ActivityRowSkeleton() {
 
 // Grouped by day, like the real list — a flat run of rows reads as a different
 // component and then reflows into groups when it lands. The date heading is a
-// 13px line, matching the real one.
+// 12px line, matching the real one.
 export function ActivityListSkeleton() {
     const groups = [2, 2, 2];
     return (

@@ -244,11 +244,11 @@ export function TokenChart({ token, onHoverPrice, onPeriodStart }: TokenChartPro
         <div className="w-full relative">
             <div
                 ref={tooltipRef}
-                className="pointer-events-none absolute z-10 px-2 py-1 text-12 font-semibold text-zinc-500 transition-opacity duration-200"
+                className="pointer-events-none absolute z-10 px-2 py-1 text-11 font-semibold text-zinc-500 transition-opacity duration-200"
                 style={{ opacity: 0 }}
             />
             {hasNoData && !isLoadingChart && (
-                <div className="absolute inset-0 flex h-[200px] items-center justify-center text-13 font-medium text-zinc-600">
+                <div className="absolute inset-0 flex h-[200px] items-center justify-center text-12 font-medium text-zinc-600">
                     No chart data yet
                 </div>
             )}
@@ -266,7 +266,7 @@ export function TokenChart({ token, onHoverPrice, onPeriodStart }: TokenChartPro
                         // Pill, matching the tab strip on the main view — this
                         // was the drawer's only rounded-lg control.
                         className={[
-                            "cursor-pointer rounded-full px-3 py-1.5 text-13 font-bold transition-colors",
+                            "cursor-pointer rounded-full px-3 py-1.5 text-12 font-bold transition-colors",
                             activeTimeframe === tf
                                 ? "bg-white/[0.08] text-white"
                                 : "text-zinc-500 hover:text-white",

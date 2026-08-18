@@ -12,8 +12,8 @@ export function BuyInfoCards() {
                     <HugeiconsIcon icon={SecurityCheckIcon} className="size-4 text-zinc-300" />
                 </div>
                 <div>
-                    <p className="text-15 font-bold tracking-tight text-white">Secure checkout</p>
-                    <p className="text-13 font-medium leading-relaxed text-zinc-500">
+                    <p className="text-14 font-bold tracking-tight text-white">Secure checkout</p>
+                    <p className="text-12 font-medium leading-relaxed text-zinc-500">
                         Transactions are secured by MoonPay with encrypted processing.
                     </p>
                 </div>
@@ -24,8 +24,8 @@ export function BuyInfoCards() {
                     <HugeiconsIcon icon={FlashIcon} className="size-4 text-zinc-300" />
                 </div>
                 <div>
-                    <p className="text-15 font-bold tracking-tight text-white">Instant delivery</p>
-                    <p className="text-13 font-medium leading-relaxed text-zinc-500">
+                    <p className="text-14 font-bold tracking-tight text-white">Instant delivery</p>
+                    <p className="text-12 font-medium leading-relaxed text-zinc-500">
                         SOL will be sent directly to your wallet once confirmed.
                     </p>
                 </div>

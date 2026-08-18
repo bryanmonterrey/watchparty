@@ -18,7 +18,7 @@ export function CollectionSearch({ value, onChange }: CollectionSearchProps) {
                     placeholder="Search"
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
-                    className="h-[52px] w-full rounded-full border-none bg-white/[0.06] pl-12 pr-4 text-16 font-medium text-white transition-colors placeholder:text-zinc-400 focus:bg-white/[0.09] focus:outline-none"
+                    className="h-[52px] w-full rounded-full border-none bg-white/[0.06] pl-12 pr-4 text-15 font-medium text-white transition-colors placeholder:text-zinc-400 focus:bg-white/[0.09] focus:outline-none"
                 />
             </div>
         </div>

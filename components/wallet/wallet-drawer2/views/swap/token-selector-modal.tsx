@@ -93,7 +93,7 @@ export function TokenSelectorModal({
         >
             <DialogTrigger asChild>
                 {selectedToken ? (
-                    <button className="flex items-center gap-2 bg-white/[0.06] hover:bg-white/[0.10] text-white px-3 py-1.5 rounded-full text-lg font-semibold outline-none transition-colors border border-baseborder/20">
+                    <button className="flex items-center gap-2 bg-white/[0.06] hover:bg-white/[0.10] text-white px-3 py-1.5 rounded-full text-15 font-semibold outline-none transition-colors border border-baseborder/20">
                         <TokenIcon
                             src={selectedToken.logoURI}
                             symbol={selectedToken.symbol}
@@ -123,7 +123,7 @@ export function TokenSelectorModal({
 
                 {/* Search Bar */}
                 <div className="px-4 pb-3">
-                    <div className="relative flex items-center bg-white/[0.06] rounded-2xl border border-baseborder/20 focus-within:border-zinc-700 transition-colors">
+                    <div className="relative flex items-center bg-white/[0.06] rounded-full border border-baseborder/20 transition-colors focus-within:bg-white/[0.09]">
                         <HugeiconsIcon icon={Search01Icon} className="absolute left-4 w-[18px] h-[18px] text-zinc-400" />
                         <input
                             type="text"
@@ -150,7 +150,7 @@ export function TokenSelectorModal({
                                     showChainBadge
                                     type="token"
                                 />
-                                <span className="font-semibold text-15">{token.symbol}</span>
+                                <span className="font-semibold text-14">{token.symbol}</span>
                             </button>
                         ))}
                     </div>
@@ -158,8 +158,8 @@ export function TokenSelectorModal({
 
                 {/* Divider Title */}
                 {!searchQuery && (
-                    <div className="px-5 pb-2 pt-1 border-t border-baseborder/20 mt-1">
-                        <span className="text-14 font-medium text-zinc-400 flex items-center gap-2">
+                    <div className="px-5 pb-2 pt-4">
+                        <span className="flex items-center gap-2 text-12 font-semibold text-zinc-500">
                             <HugeiconsIcon icon={ArrowDataTransferVerticalIcon} className="w-3.5 h-3.5" />
                             Tokens by 24H volume
                         </span>
@@ -170,7 +170,7 @@ export function TokenSelectorModal({
                     {isLoadingTokens || isSearching ? (
                         <TokenSelectorSkeleton />
                     ) : filteredTokens.length === 0 ? (
-                        <div className="flex items-center justify-center p-8 text-zinc-500 text-15">
+                        <div className="flex items-center justify-center p-8 text-zinc-500 text-14">
                             No tokens found.
                         </div>
                     ) : (
@@ -190,8 +190,8 @@ export function TokenSelectorModal({
                                             type="token"
                                         />
                                         <div className="flex flex-col">
-                                            <span className="font-semibold text-16 text-zinc-100">{token.name}</span>
-                                            <span className="font-medium text-13 text-zinc-500 truncate max-w-[160px] sm:max-w-xs">{token.symbol}</span>
+                                            <span className="font-semibold text-15 text-zinc-100">{token.name}</span>
+                                            <span className="font-medium text-12 text-zinc-500 truncate max-w-[160px] sm:max-w-xs">{token.symbol}</span>
                                         </div>
                                     </div>
                                 </button>

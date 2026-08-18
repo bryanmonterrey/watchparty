@@ -37,7 +37,7 @@ export function WalletBalance({ totalUsdBalance, usdChange24h = 0, pctChange24h 
                     <div className="h-3 w-14 rounded-full shimmer-skeleton" />
                 ) : (
                     <>
-                        <p className="text-xs font-medium text-zinc-500">Balance</p>
+                        <p className="text-11 font-medium text-zinc-500">Balance</p>
                         <button
                             onClick={onToggleHideBalances}
                             aria-label={hideBalances ? "show balance" : "hide balance"}
@@ -82,15 +82,15 @@ export function WalletBalance({ totalUsdBalance, usdChange24h = 0, pctChange24h 
                 ) : hideBalances ? (
                     // Masked to the same height as the pills, so revealing doesn't
                     // shift the rows below it.
-                    <span className="text-15 font-bold leading-none tracking-[0.3em] text-zinc-600">•••••</span>
+                    <span className="text-14 font-bold leading-none tracking-[0.3em] text-zinc-600">•••••</span>
                 ) : (
                     <>
-                        <span className={cn("text-15 font-bold tabular-nums", changeColor)}>
+                        <span className={cn("text-14 font-bold tabular-nums", changeColor)}>
                             <PopNumber
                                 value={`${isPositive ? "+" : isNegative ? "-" : ""}$${Math.abs(usdChange24h).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                             />
                         </span>
-                        <div className={cn("rounded-full px-2 py-0.5 text-13 font-bold tabular-nums", changeBg)}>
+                        <div className={cn("rounded-full px-2 py-0.5 text-12 font-bold tabular-nums", changeBg)}>
                             <PopNumber value={`${isPositive ? "+" : ""}${pctChange24h.toFixed(2)}%`} />
                         </div>
                     </>

@@ -22,7 +22,7 @@ export function NFTGridItem({ nft, onClick }: NFTGridItemProps) {
                 type="nft"
             />
             <div className="absolute inset-x-2 bottom-2 translate-y-1 rounded-2xl bg-black/70 p-2 opacity-0 backdrop-blur-md transition-all group-hover:translate-y-0 group-hover:opacity-100">
-                <p className="text-12 font-bold text-white line-clamp-1 text-center">
+                <p className="text-11 font-bold text-white line-clamp-1 text-center">
                     {nft.name}
                 </p>
             </div>

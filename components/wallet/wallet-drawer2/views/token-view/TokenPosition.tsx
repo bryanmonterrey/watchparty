@@ -19,14 +19,14 @@ export function TokenPosition({ token, hideBalances }: TokenPositionProps) {
         ? currentVal - (currentVal / (1 + priceChange / 100))
         : (priceChange <= -100 ? -currentVal : 0);
 
-    // Labels are sentence case at 13px zinc-500 — they were uppercase with
+    // Labels are sentence case at 12px zinc-500 — they were uppercase with
     // tracking-wide, the one uppercase run left in the drawer.
-    const label = "text-13 font-medium text-zinc-500";
+    const label = "text-12 font-medium text-zinc-500";
     const value = "text-[17px] font-bold tabular-nums leading-none tracking-tight text-white";
 
     return (
         <section className="space-y-1">
-            <p className="px-1.5 pb-0.5 text-13 font-semibold text-zinc-500">Position</p>
+            <p className="px-1.5 pb-0.5 text-12 font-semibold text-zinc-500">Position</p>
             <div className="grid grid-cols-2 gap-1">
                 <div className={cn(DRAWER_CARD, "flex flex-col gap-1.5 p-4")}>
                     <span className={label}>Balance</span>
@@ -50,10 +50,10 @@ export function TokenPosition({ token, hideBalances }: TokenPositionProps) {
             <div className={cn(DRAWER_CARD, "flex items-center justify-between p-4")}>
                 <span className={label}>24h return</span>
                 {hideBalances ? (
-                    <span className="text-15 font-bold leading-none text-zinc-500">••••</span>
+                    <span className="text-14 font-bold leading-none text-zinc-500">••••</span>
                 ) : (
                     <span className={cn(
-                        "text-15 font-bold tabular-nums leading-none",
+                        "text-14 font-bold tabular-nums leading-none",
                         usdChange > 0 ? "text-lantern" : usdChange < 0 ? "text-pastelred" : "text-zinc-500"
                     )}>
                         {usdChange > 0 ? "+" : usdChange < 0 ? "-" : ""}${Math.abs(usdChange).toLocaleString(undefined, {

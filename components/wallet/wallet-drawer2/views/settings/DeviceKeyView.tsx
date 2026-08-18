@@ -10,7 +10,7 @@ interface DeviceKeyViewProps {
 }
 
 // Status is the whole screen, so it gets the ceremonial treatment: one large
-// glyph in a tinted disc, a 17px bold line, a 13px explanation. Colour is
+// glyph in a tinted disc, a 15px bold line, a 12px explanation. Colour is
 // semantic only — lantern for secured, sunset for "needs your attention",
 // neutral zinc for the two informational states. (Was emerald-400/yellow-400,
 // raw Tailwind ramps that appear nowhere else in the app.)
@@ -78,7 +78,7 @@ export function DeviceKeyView({ onBack }: DeviceKeyViewProps) {
                 </div>
                 <p className="text-[17px] font-bold tracking-tight text-white">{cfg.title}</p>
                 {cfg.description && (
-                    <p className="max-w-[280px] text-13 font-medium leading-relaxed text-zinc-500">
+                    <p className="max-w-[280px] text-12 font-medium leading-relaxed text-zinc-500">
                         {cfg.description}
                     </p>
                 )}
@@ -88,7 +88,7 @@ export function DeviceKeyView({ onBack }: DeviceKeyViewProps) {
                 <button
                     onClick={recover}
                     disabled={isRecovering}
-                    className="flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-white text-15 font-bold text-black transition-opacity hover:opacity-90 active:scale-[0.99] disabled:opacity-50"
+                    className="flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-white text-14 font-bold text-black transition-opacity hover:opacity-90 active:scale-[0.99] disabled:opacity-50"
                 >
                     {isRecovering ? (
                         <>

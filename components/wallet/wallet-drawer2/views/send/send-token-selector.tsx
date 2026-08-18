@@ -64,12 +64,12 @@ export function SendTokenSelector({
 
                 {/* Header */}
                 <div className="px-5 pt-5 pb-3 flex items-center justify-between flex-shrink-0">
-                    <span className="text-16 font-semibold text-white">Select a coin</span>
+                    <span className="text-15 font-semibold text-white">Select a coin</span>
                 </div>
 
                 {/* Search */}
                 <div className="px-4 pb-3 flex-shrink-0">
-                    <div className="relative flex items-center bg-white/[0.06] rounded-2xl border border-baseborder/20 focus-within:border-zinc-700 transition-colors">
+                    <div className="relative flex items-center bg-white/[0.06] rounded-full border border-baseborder/20 transition-colors focus-within:bg-white/[0.09]">
                         <HugeiconsIcon icon={Search01Icon} className="absolute left-4 w-[18px] h-[18px] text-zinc-400" />
                         <input
                             type="text"
@@ -85,11 +85,11 @@ export function SendTokenSelector({
                 {/* Token list */}
                 <div className="overflow-y-auto flex-1 px-3 pb-4">
                     <div className="px-2 pb-2">
-                        <span className="text-12 font-semibold text-zinc-500 uppercase tracking-wide">Your coins</span>
+                        <span className="text-11 font-semibold text-zinc-500">Your coins</span>
                     </div>
                     <div className="space-y-0.5">
                         {filtered.length === 0 ? (
-                            <div className="py-10 text-center text-14 text-zinc-500">No coins found</div>
+                            <div className="py-10 text-center text-13 text-zinc-500">No coins found</div>
                         ) : (
                             filtered.map((token) => (
                                 <button
@@ -97,7 +97,7 @@ export function SendTokenSelector({
                                     onClick={() => handleSelect(token)}
                                     className={`cursor-pointer w-full flex items-center gap-3 px-3 py-3 rounded-2xl transition-colors ${token.mint === selectedMint
                                         ? "bg-white/[0.08]"
-                                        : "hover:bg-white/[0.10]/40"
+                                        : "hover:bg-white/[0.06]"
                                         }`}
                                 >
                                     {/* Logo. The chain badge is load-bearing here,
@@ -116,18 +116,18 @@ export function SendTokenSelector({
 
                                     {/* Name / symbol */}
                                     <div className="flex-1 text-left min-w-0">
-                                        <p className="text-14 font-semibold text-white leading-tight truncate">{token.name}</p>
-                                        <p className="text-12 text-zinc-500 leading-tight">{token.symbol}</p>
+                                        <p className="text-13 font-semibold text-white leading-tight truncate">{token.name}</p>
+                                        <p className="text-11 text-zinc-500 leading-tight">{token.symbol}</p>
                                     </div>
 
                                     {/* Balance */}
                                     <div className="text-right flex-shrink-0">
                                         {token.usdValue !== undefined && (
-                                            <p className="text-14 font-semibold text-white">
+                                            <p className="text-13 font-semibold text-white">
                                                 ${token.usdValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </p>
                                         )}
-                                        <p className="text-12 text-zinc-500">
+                                        <p className="text-11 text-zinc-500">
                                             {token.balance < 0.0001 && token.balance > 0
                                                 ? "<0.0001"
                                                 : token.balance.toLocaleString(undefined, { maximumFractionDigits: 4 })}

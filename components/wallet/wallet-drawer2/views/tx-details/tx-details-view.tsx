@@ -27,10 +27,10 @@ export function TransactionDetailsView({
 
     return (
         <div className="flex h-full flex-col overflow-y-auto hidden-scrollbar bg-canvas text-white">
-            {/* Header — 56px and 16px bold, the drawer's one header size. */}
+            {/* Header — 56px and 15px bold, the drawer's one header size. */}
             <div className="sticky top-0 z-20 flex h-14 items-center justify-between gap-2 bg-canvas/80 px-3 backdrop-blur-md">
                 <div className="w-9 shrink-0" />
-                <h2 className="min-w-0 flex-1 truncate text-center text-16 font-bold tracking-tight text-white">
+                <h2 className="min-w-0 flex-1 truncate text-center text-15 font-bold tracking-tight text-white">
                     {isSwap ? "Coin swap" : (transaction.isOutgoing ? "Sent" : "Received")}
                 </h2>
                 <button
@@ -57,14 +57,14 @@ export function TransactionDetailsView({
                     {/* h-12 — the wide-CTA height from the design system. */}
                     <button
                         onClick={onBack}
-                        className="h-12 w-full cursor-pointer rounded-full bg-white text-15 font-bold text-black transition-opacity hover:opacity-90 active:scale-[0.99]"
+                        className="h-12 w-full cursor-pointer rounded-full bg-white text-14 font-bold text-black transition-opacity hover:opacity-90 active:scale-[0.99]"
                     >
                         Close
                     </button>
                     {onReportSpam && !transaction.isSpam && (
                         <button
                             onClick={() => onReportSpam(transaction.signature)}
-                            className="h-11 w-full cursor-pointer rounded-full text-13 font-semibold text-pastelred/80 transition-colors hover:bg-pastelred/10 hover:text-pastelred"
+                            className="h-11 w-full cursor-pointer rounded-full text-12 font-semibold text-pastelred/80 transition-colors hover:bg-pastelred/10 hover:text-pastelred"
                         >
                             Report as spam
                         </button>

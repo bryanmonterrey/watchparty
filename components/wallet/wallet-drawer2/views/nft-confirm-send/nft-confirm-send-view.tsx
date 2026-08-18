@@ -28,7 +28,7 @@ export function NFTConfirmSendView({
     isSending = false,
 }: NFTConfirmSendViewProps) {
     return (
-        <div className="flex flex-col h-full bg-canvas rounded-2xl overflow-hidden">
+        <div className="flex h-full flex-col overflow-hidden bg-canvas">
             <DrawerHeader
                 title="Confirm send"
                 onBack={onBack}

@@ -7,7 +7,7 @@ interface EmptyStateProps {
     description: string;
 }
 
-// Two lines, the house pattern: a bold zinc-400 title and a 12px zinc-600 hint.
+// Two lines, the house pattern: a bold zinc-400 title and an 11px zinc-600 hint.
 // The icon prop used to be typed `LucideIcon`, which is what kept lucide alive
 // in every caller — it takes a node now, so callers pass whatever icon set they
 // already use.
@@ -19,8 +19,8 @@ export function EmptyState({ icon, title, description }: EmptyStateProps) {
                     {icon}
                 </div>
             ) : null}
-            <p className="text-15 font-bold tracking-tight text-zinc-400">{title}</p>
-            <p className="mt-1 max-w-[240px] text-12 font-medium leading-relaxed text-zinc-600">
+            <p className="text-14 font-bold tracking-tight text-zinc-400">{title}</p>
+            <p className="mt-1 max-w-[240px] text-11 font-medium leading-relaxed text-zinc-600">
                 {description}
             </p>
         </div>

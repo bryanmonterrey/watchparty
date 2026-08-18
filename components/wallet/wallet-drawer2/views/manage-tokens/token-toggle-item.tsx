@@ -29,11 +29,11 @@ export function TokenToggleItem({ token, shown, onToggle }: TokenToggleItemProps
                 />
                 <div className="flex flex-col gap-0.5">
                     <div className="flex items-center gap-1.5">
-                        <h3 className="max-w-[160px] truncate text-15 font-bold leading-tight tracking-tight text-white">
+                        <h3 className="max-w-[160px] truncate text-14 font-bold leading-tight tracking-tight text-white">
                             {token.name}
                         </h3>
                     </div>
-                    <p className="text-13 font-medium tabular-nums text-zinc-500">
+                    <p className="text-12 font-medium tabular-nums text-zinc-500">
                         {token.balance.toLocaleString(undefined, { maximumFractionDigits: 5 })} {token.symbol}
                     </p>
                 </div>

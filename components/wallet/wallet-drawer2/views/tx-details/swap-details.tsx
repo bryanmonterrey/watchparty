@@ -129,7 +129,7 @@ export function SwapDetails({ transaction, onSwapWith, tokens }: SwapDetailsProp
 
             {/* Swap Details Section */}
             <div className="w-full space-y-1">
-                <h3 className="px-1.5 text-13 font-semibold text-zinc-500">Swap details</h3>
+                <h3 className="px-1.5 text-12 font-semibold text-zinc-500">Swap details</h3>
                 <div className="w-full overflow-hidden rounded-3xl border border-baseborder/20 bg-panel2">
                     <DetailRow
                         label="Provider"
@@ -149,7 +149,7 @@ export function SwapDetails({ transaction, onSwapWith, tokens }: SwapDetailsProp
                     />
                     <button
                         onClick={() => window.open(`https://orbmarkets.io/tx/${transaction.signature}`, '_blank')}
-                        className="mt-1 w-full cursor-pointer py-3.5 text-14 font-semibold text-zinc-400 transition-colors hover:bg-white/[0.04] hover:text-white"
+                        className="mt-1 w-full cursor-pointer py-3.5 text-13 font-semibold text-zinc-400 transition-colors hover:bg-white/[0.04] hover:text-white"
                     >
                         View on Orb
                     </button>
@@ -162,9 +162,9 @@ export function SwapDetails({ transaction, onSwapWith, tokens }: SwapDetailsProp
 function DetailRow({ label, value, valueClassName = "text-white" }: { label: string; value: React.ReactNode; valueClassName?: string }) {
     return (
         <div className="flex items-center justify-between gap-4 px-5 py-3">
-            <span className="shrink-0 text-13 font-medium text-zinc-500">{label}</span>
+            <span className="shrink-0 text-12 font-medium text-zinc-500">{label}</span>
             {typeof value === 'string' ? (
-                <span className={`min-w-0 truncate text-14 font-semibold ${valueClassName}`}>{value}</span>
+                <span className={`min-w-0 truncate text-13 font-semibold ${valueClassName}`}>{value}</span>
             ) : value}
         </div>
     );
@@ -179,9 +179,9 @@ function InteractiveRow({ label, value, valueClassName = "text-white", onClick }
             className="flex w-full items-center justify-between gap-4 px-5 py-3 transition-colors hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-50"
             disabled={!onClick}
         >
-            <span className="shrink-0 text-13 font-medium text-zinc-500">{label}</span>
+            <span className="shrink-0 text-12 font-medium text-zinc-500">{label}</span>
             <div className="flex items-center gap-1">
-                <span className={`min-w-0 truncate text-14 font-semibold ${valueClassName}`}>{value}</span>
+                <span className={`min-w-0 truncate text-13 font-semibold ${valueClassName}`}>{value}</span>
                 <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0 text-zinc-600" strokeWidth={2.5} />
             </div>
         </button>

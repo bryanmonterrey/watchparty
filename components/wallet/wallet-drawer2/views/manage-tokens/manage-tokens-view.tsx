@@ -1,6 +1,6 @@
 "use client";
 
-import { DrawerHeader } from "../../components/drawer-chrome";
+import { DrawerHeader, DrawerEmptyState as EmptyState } from "../../components/drawer-chrome";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
@@ -54,7 +54,7 @@ export function ManageTokensView({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
-            className="flex flex-col h-full bg-canvas rounded-2xl overflow-hidden"
+            className="flex h-full flex-col overflow-hidden bg-canvas"
         >
             <DrawerHeader
                 title="Manage coins"
@@ -65,7 +65,7 @@ export function ManageTokensView({
             <TokenSearch value={searchQuery} onChange={setSearchQuery} />
 
             {/* Tokens List */}
-            <div className="flex-1 overflow-y-auto px-4 pb-20 space-y-3 hidden-scrollbar">
+            <div className="flex-1 overflow-y-auto hidden-scrollbar space-y-1 px-4 pb-20">
                 <AnimatePresence mode="popLayout">
                     {filteredTokens.map((token) => (
                         <TokenToggleItem
@@ -78,9 +78,10 @@ export function ManageTokensView({
                 </AnimatePresence>
 
                 {filteredTokens.length === 0 && (
-                    <div className="flex flex-col items-center justify-center pt-20 text-zinc-500">
-                        <p className="text-lg font-medium">No coins found</p>
-                    </div>
+                    <EmptyState
+                        title="No coins found"
+                        description="Nothing here matches that search."
+                    />
                 )}
             </div>
         </motion.div>

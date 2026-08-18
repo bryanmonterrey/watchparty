@@ -51,14 +51,14 @@ export function TokenAbout({ token }: TokenAboutProps) {
             {hasDescription && (
                 <div className="relative">
                     <p className={cn(
-                        "text-14 font-medium leading-relaxed text-zinc-400",
+                        "text-13 font-medium leading-relaxed text-zinc-400",
                         !isExpanded && "line-clamp-3"
                     )}>
                         {token.description}
                     </p>
                     <button
                         onClick={() => setIsExpanded(!isExpanded)}
-                        className="mt-2 cursor-pointer text-13 font-bold text-zinc-500 transition-colors hover:text-white"
+                        className="mt-2 cursor-pointer text-12 font-bold text-zinc-500 transition-colors hover:text-white"
                     >
                         {isExpanded ? "Show less" : "Show more"}
                     </button>
@@ -73,7 +73,7 @@ export function TokenAbout({ token }: TokenAboutProps) {
                             href={link.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex cursor-pointer items-center gap-2 rounded-full bg-white/[0.06] px-4 py-2 text-13 font-bold text-zinc-300 transition-colors hover:bg-white/[0.12] hover:text-white"
+                            className="flex cursor-pointer items-center gap-2 rounded-full bg-white/[0.06] px-4 py-2 text-12 font-bold text-zinc-300 transition-colors hover:bg-white/[0.12] hover:text-white"
                         >
                             <LinkIcon type={link.type} />
                             {linkLabel(link)}

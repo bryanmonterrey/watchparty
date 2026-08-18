@@ -87,7 +87,7 @@ export function SwapInputContainer({
             }}
         >
             <div className="flex justify-between items-center text-zinc-400 px-1">
-                <span className="text-14 font-medium">{label}</span>
+                <span className="text-13 font-medium">{label}</span>
                 {label === "Sell" && (
                     <div className="flex items-center gap-2 relative h-6 w-40 justify-end">
                         <AnimatePresence>
@@ -103,7 +103,7 @@ export function SwapInputContainer({
                                         <motion.button
                                             key={percent}
                                             variants={itemVariants}
-                                            className="cursor-pointer rounded-full bg-white/[0.08] px-2 py-0.5 text-12 font-semibold text-zinc-300 transition-colors hover:bg-white/[0.16] hover:text-white"
+                                            className="cursor-pointer rounded-full bg-white/[0.08] px-2 py-0.5 text-11 font-semibold text-zinc-300 transition-colors hover:bg-white/[0.16] hover:text-white"
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 if (!balance || !onAmountChange) return;
@@ -167,7 +167,7 @@ export function SwapInputContainer({
                                                         />
                                                     </motion.button>
                                                 </TooltipTrigger>
-                                                <TooltipContent className="relative z-50 border border-baseborder/20 bg-grokdropdown px-2 py-1.5 text-xs text-zinc-200">
+                                                <TooltipContent className="relative z-50 border border-baseborder/20 bg-grokdropdown px-2 py-1.5 text-11 text-zinc-200">
                                                     {popularToken.symbol}
                                                 </TooltipContent>
                                             </Tooltip>
@@ -192,11 +192,11 @@ export function SwapInputContainer({
             </div>
 
             <div className="flex justify-between items-center px-1 pt-0.5 opacity-80 h-5">
-                <div className="text-14 text-zinc-500 font-medium">
+                <div className="text-13 text-zinc-500 font-medium">
                     {usdValue ? `$${usdValue}` : "$0.00"}
                 </div>
                 {balance && (
-                    <div className="text-14 text-zinc-500 font-medium">
+                    <div className="text-13 text-zinc-500 font-medium">
                         {balance}
                     </div>
                 )}

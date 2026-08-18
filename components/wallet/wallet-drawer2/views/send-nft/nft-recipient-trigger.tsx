@@ -16,7 +16,7 @@ export function NFTRecipientTrigger({ recipient, recipientDisplay, recipientMeta
     return (
         <button
             onClick={onClick}
-            className="cursor-pointer w-full rounded-3xl border border-baseborder/20 bg-panel2 rounded-xl px-4 py-3.5 flex items-center gap-3 hover:border-baseborder/20 transition-colors text-left"
+            className="cursor-pointer w-full rounded-3xl border border-baseborder/20 bg-panel2 px-4 py-3.5 flex items-center gap-3 transition-colors hover:bg-white/[0.05] text-left"
         >
             {recipient ? (
                 recipientMeta?.avatar_url ? (
@@ -34,12 +34,12 @@ export function NFTRecipientTrigger({ recipient, recipientDisplay, recipientMeta
             ) : null}
             <div className="flex-1 min-w-0">
                 {recipient ? (
-                    <p className="text-15 font-medium text-white truncate">{recipientDisplay}</p>
+                    <p className="text-14 font-medium text-white truncate">{recipientDisplay}</p>
                 ) : (
-                    <p className="text-15 font-medium text-zinc-600">Recipient's Solana address</p>
+                    <p className="text-14 font-medium text-zinc-600">Recipient's Solana address</p>
                 )}
                 {recipient && (
-                    <p className="text-12 text-zinc-500 leading-tight">{shortenWalletAddress(recipient)}</p>
+                    <p className="text-11 text-zinc-500 leading-tight">{shortenWalletAddress(recipient)}</p>
                 )}
             </div>
             <HugeiconsIcon icon={ArrowDown01Icon} className="w-4 h-4 text-zinc-500 flex-shrink-0" />

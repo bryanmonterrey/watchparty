@@ -29,10 +29,10 @@ export function CollectionToggleItem({ collection, shown, onToggle }: Collection
                     type="nft"
                 />
                 <div className="flex flex-col gap-0.5">
-                    <h3 className="text-15 font-bold leading-tight tracking-tight text-white">
+                    <h3 className="text-14 font-bold leading-tight tracking-tight text-white">
                         {collection.name}
                     </h3>
-                    <p className="text-13 font-medium text-zinc-500">
+                    <p className="text-12 font-medium text-zinc-500">
                         {collection.count} {collection.count === 1 ? "item" : "items"}
                     </p>
                 </div>

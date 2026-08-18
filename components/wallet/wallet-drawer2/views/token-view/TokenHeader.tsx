@@ -50,13 +50,13 @@ export function TokenHeader({ token, hoveredValue, periodStartValue }: TokenHead
             </h1>
             <div className="flex items-center gap-2">
                 <span className={cn(
-                    "text-15 font-bold tabular-nums",
+                    "text-14 font-bold tabular-nums",
                     isPositive ? "text-lantern" : isNegative ? "text-pastelred" : "text-zinc-500"
                 )}>
                     {isPositive ? "+" : isNegative ? "-" : ""}${formatChangeAmount(usdChange)}
                 </span>
                 <div className={cn(
-                    "rounded-full px-2 py-0.5 text-13 font-bold tabular-nums",
+                    "rounded-full px-2 py-0.5 text-12 font-bold tabular-nums",
                     isPositive ? "bg-lantern/15 text-lantern" : isNegative ? "bg-pastelred/15 text-pastelred" : "bg-white/[0.06] text-zinc-500"
                 )}>
                     {isPositive ? "+" : ""}{pctChange.toFixed(2)}%

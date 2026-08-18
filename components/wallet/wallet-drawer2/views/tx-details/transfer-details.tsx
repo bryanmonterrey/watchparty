@@ -103,7 +103,7 @@ export function TransferDetails({ transaction, tokens }: TransferDetailsProps) {
 
                     <button
                         onClick={() => window.open(`https://orbmarkets.io/tx/${transaction.signature}`, '_blank')}
-                        className="mt-1 w-full cursor-pointer py-3.5 text-14 font-semibold text-zinc-400 transition-colors hover:bg-white/[0.04] hover:text-white"
+                        className="mt-1 w-full cursor-pointer py-3.5 text-13 font-semibold text-zinc-400 transition-colors hover:bg-white/[0.04] hover:text-white"
                     >
                         View on Orb
                     </button>
@@ -116,8 +116,8 @@ export function TransferDetails({ transaction, tokens }: TransferDetailsProps) {
 function DetailRow({ label, value, valueClassName = "text-white" }: { label: string, value: string, valueClassName?: string }) {
     return (
         <div className="flex items-center justify-between gap-4 px-5 py-3">
-            <span className="shrink-0 text-13 font-medium text-zinc-500">{label}</span>
-            <span className={`min-w-0 truncate text-14 font-semibold ${valueClassName}`}>{value}</span>
+            <span className="shrink-0 text-12 font-medium text-zinc-500">{label}</span>
+            <span className={`min-w-0 truncate text-13 font-semibold ${valueClassName}`}>{value}</span>
         </div>
     );
 }

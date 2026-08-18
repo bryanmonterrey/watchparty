@@ -14,7 +14,7 @@ interface ActivityGroupProps {
 export function ActivityGroup({ label, txs, tokens, hideBalances, onTransactionClick }: ActivityGroupProps) {
     return (
         <div className="space-y-1">
-            <h3 className="px-1.5 pb-0.5 text-13 font-semibold text-zinc-500">{label}</h3>
+            <h3 className="px-1.5 pb-0.5 text-12 font-semibold text-zinc-500">{label}</h3>
             <div className="space-y-1">
                 {txs.map((tx) => (
                     <TransactionItem

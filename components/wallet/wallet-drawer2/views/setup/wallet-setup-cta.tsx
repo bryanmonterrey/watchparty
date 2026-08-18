@@ -99,7 +99,7 @@ export function WalletSetupCta({
                     <DialogTitle className="text-center text-[20px] font-bold tracking-tight text-white">
                         Save your recovery phrase
                     </DialogTitle>
-                    <DialogDescription className="text-center text-13 font-medium text-zinc-500">
+                    <DialogDescription className="text-center text-12 font-medium text-zinc-500">
                         12 words, in order — the only way to recover this wallet.
                     </DialogDescription>
                 </DialogHeader>
@@ -120,7 +120,7 @@ export function WalletSetupCta({
                 <button
                     onClick={handleCreate}
                     disabled={step === 'generating'}
-                    className="flex h-18 w-full cursor-pointer items-center justify-center gap-2.5 rounded-full bg-white/5 text-15 font-bold text-zinc-200 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex h-18 w-full cursor-pointer items-center justify-center gap-2.5 rounded-full bg-white/5 text-14 font-bold text-zinc-200 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
                     {step === 'generating' ? (
                         <>
@@ -130,7 +130,7 @@ export function WalletSetupCta({
                     ) : 'Create a new wallet'}
                 </button>
                 {error && (
-                    <p className="text-center text-13 font-medium text-pastelred">{error}</p>
+                    <p className="text-center text-12 font-medium text-pastelred">{error}</p>
                 )}
                 {turnstileWidget}
                 {seedDialog}
@@ -149,20 +149,20 @@ export function WalletSetupCta({
 
                     <div className="space-y-1.5">
                         <p className="text-[20px] font-bold tracking-tight text-white">No wallet yet</p>
-                        <p className="max-w-[250px] text-13 font-medium leading-relaxed text-zinc-500">
+                        <p className="max-w-[250px] text-12 font-medium leading-relaxed text-zinc-500">
                             Create a Solana wallet to send, receive, and swap tokens right from the app.
                         </p>
                     </div>
 
                     {error && (
-                        <p className="text-center text-13 font-medium text-pastelred">{error}</p>
+                        <p className="text-center text-12 font-medium text-pastelred">{error}</p>
                     )}
                 </div>
 
                 <button
                     onClick={handleCreate}
                     disabled={step === 'generating'}
-                    className="mb-4 mt-8 flex h-18 w-full cursor-pointer items-center justify-center gap-2.5 rounded-full bg-white text-16 font-bold text-black transition-transform hover:bg-white/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="mb-4 mt-8 flex h-18 w-full cursor-pointer items-center justify-center gap-2.5 rounded-full bg-white text-15 font-bold text-black transition-transform hover:bg-white/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
 >
                     {step === 'generating' ? (
                         <>

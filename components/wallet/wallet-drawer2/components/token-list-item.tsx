@@ -66,15 +66,15 @@ export function TokenListItem({
                     {/* `text-md` is not a Tailwind class and is not declared in
                         globals.css, so every line in this row was inheriting its
                         size rather than setting one. The drawer's scale is 15px
-                        bold for the primary value, 13px for the secondary. */}
-                    <p className="flex items-center gap-1.5 text-15 font-bold tracking-tight text-white">
+                        bold for the primary value, 12px for the secondary. */}
+                    <p className="flex items-center gap-1.5 text-14 font-bold tracking-tight text-white">
                         {symbol}
                         {verified && <VerifiedTokenBadge />}
                         {nativeChain && (
-                            <span className="text-13 font-medium text-zinc-500">{nativeChain}</span>
+                            <span className="text-12 font-medium text-zinc-500">{nativeChain}</span>
                         )}
                     </p>
-                    <p className="text-13 font-medium tabular-nums text-zinc-500">
+                    <p className="text-12 font-medium tabular-nums text-zinc-500">
                         {hideBalances ? "••••••" : (
                             <PopNumber
                                 value={balance.toLocaleString(undefined, {
@@ -91,12 +91,12 @@ export function TokenListItem({
             <div className="flex flex-col items-end">
                 {hideBalances ? (
                     <>
-                        <p className="text-15 font-bold tracking-tight text-white">••••••</p>
-                        <p className="text-13 font-medium text-zinc-500">••••</p>
+                        <p className="text-14 font-bold tracking-tight text-white">••••••</p>
+                        <p className="text-12 font-medium text-zinc-500">••••</p>
                     </>
                 ) : (
                     <>
-                        <p className="text-15 font-bold tabular-nums tracking-tight text-white">
+                        <p className="text-14 font-bold tabular-nums tracking-tight text-white">
                             <PopNumber
                                 value={`$${(usdValue ?? 0).toLocaleString(undefined, {
                                     minimumFractionDigits: 2,
@@ -108,7 +108,7 @@ export function TokenListItem({
                             colours. These were #75ba80 / #e07d6f, hexes minted
                             for this row and nowhere else. */}
                         <p className={cn(
-                            "text-13 font-semibold tabular-nums",
+                            "text-12 font-semibold tabular-nums",
                             (priceChange24h ?? 0) > 0 ? "text-lantern" : (priceChange24h ?? 0) < 0 ? "text-pastelred" : "text-zinc-500"
                         )}>
                             {(() => {

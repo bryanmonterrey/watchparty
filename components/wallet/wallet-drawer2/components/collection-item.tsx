@@ -30,11 +30,11 @@ export function CollectionItem({ collection, onClick }: CollectionItemProps) {
             <div className="absolute inset-x-2 bottom-2 flex items-center justify-between rounded-2xl bg-black/70 p-2 backdrop-blur-md">
                 <div className="flex min-w-0 items-center gap-1.5">
                     {hasPinned && <Pin2Icon className="size-3 shrink-0 text-white/60" />}
-                    <p className="line-clamp-1 text-13 font-bold tracking-tight text-white">
+                    <p className="line-clamp-1 text-12 font-bold tracking-tight text-white">
                         {collection.name}
                     </p>
                 </div>
-                <span className="ml-1 shrink-0 text-13 font-bold text-white/50">
+                <span className="ml-1 shrink-0 text-12 font-bold text-white/50">
                     {collection.count}
                 </span>
             </div>

@@ -49,7 +49,7 @@ export function SwapStatus({ step, inputSymbol, outputSymbol, inputAmount, outpu
                 className="rounded-3xl border border-baseborder/20 bg-panel2 p-5 flex flex-col gap-4"
             >
                 {/* Token summary */}
-                <div className="flex items-center justify-center gap-3 text-white font-semibold text-16">
+                <div className="flex items-center justify-center gap-3 text-white font-semibold text-15">
                     <span>{inputAmount} {inputSymbol}</span>
                     <HugeiconsIcon icon={ArrowRight01Icon} className="w-4 h-4 text-zinc-500 shrink-0" />
                     <span>{outputAmount} {outputSymbol}</span>
@@ -67,14 +67,14 @@ export function SwapStatus({ step, inputSymbol, outputSymbol, inputAmount, outpu
                         <HugeiconsIcon icon={CancelCircleIcon} className="w-5 h-5 text-pastelred shrink-0" />
                     )}
                     <div className="flex flex-col">
-                        <span className={`text-14 font-semibold ${isError ? "text-pastelred" : isSuccess ? "text-lantern" : "text-white"}`}>
+                        <span className={`text-13 font-semibold ${isError ? "text-pastelred" : isSuccess ? "text-lantern" : "text-white"}`}>
                             {config.label}
                         </span>
                         {config.sublabel && (
-                            <span className="text-12 text-zinc-500">{config.sublabel}</span>
+                            <span className="text-11 text-zinc-500">{config.sublabel}</span>
                         )}
                         {isError && error && (
-                            <span className="text-12 text-pastelred/80 mt-0.5 max-w-[240px] line-clamp-2">{error}</span>
+                            <span className="text-11 text-pastelred/80 mt-0.5 max-w-[240px] line-clamp-2">{error}</span>
                         )}
                     </div>
                 </div>
@@ -100,7 +100,7 @@ export function SwapStatus({ step, inputSymbol, outputSymbol, inputAmount, outpu
                 {(isError) && (
                     <button
                         onClick={onDone}
-                        className="text-13 font-semibold text-zinc-400 hover:text-white transition-colors text-center"
+                        className="text-12 font-semibold text-zinc-400 hover:text-white transition-colors text-center"
                     >
                         Dismiss
                     </button>

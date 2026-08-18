@@ -14,7 +14,7 @@ export function SendingState() {
             <div className="relative w-24 h-24">
                 <svg className="w-full h-full" viewBox="0 0 100 100">
                     <circle
-                        className="text-zinc-800"
+                        className="text-white/[0.08]"
                         strokeWidth="8"
                         stroke="currentColor"
                         fill="transparent"
@@ -46,8 +46,8 @@ export function SendingState() {
             </div>
 
             <div className="space-y-2">
-                <h2 className="text-[32px] font-bold text-white tracking-tight">Sending...</h2>
-                <button className="text-zinc-400 text-15 font-medium flex items-center gap-1.5 mx-auto hover:opacity-80 transition-opacity">
+                <h2 className="text-[32px] font-bold text-white tracking-tight">Sending…</h2>
+                <button className="text-zinc-400 text-14 font-medium flex items-center gap-1.5 mx-auto hover:opacity-80 transition-opacity">
                     View transaction
                 </button>
             </div>

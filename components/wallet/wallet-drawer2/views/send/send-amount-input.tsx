@@ -69,7 +69,7 @@ export function SendAmountInput({
             >
                 {/* Amount section */}
                 <div className="px-5 pt-5 pb-4">
-                    <p className="text-13 font-medium text-zinc-500 mb-5">You're sending</p>
+                    <p className="text-12 font-medium text-zinc-500 mb-5">You're sending</p>
 
                     {/* Large amount display */}
                     <div className="flex items-center justify-center min-h-[72px] relative overflow-hidden">
@@ -100,7 +100,7 @@ export function SendAmountInput({
 
                     {/* Secondary amount + toggle */}
                     <div className="flex items-center justify-center gap-1.5 mt-3">
-                        <span className="text-14 font-medium text-zinc-500">{secondaryAmount}</span>
+                        <span className="text-13 font-medium text-zinc-500">{secondaryAmount}</span>
                         <button
                             onClick={(e) => { e.stopPropagation(); onToggleMode(); }}
                             className="cursor-pointer p-0.5 rounded-full text-zinc-500 hover:text-zinc-300 transition-colors"
@@ -111,13 +111,10 @@ export function SendAmountInput({
                     </div>
                 </div>
 
-                {/* Divider */}
-                <div className="border-t border-baseborder/20" />
-
                 {/* Token selector row */}
                 <button
                     onClick={(e) => { e.stopPropagation(); setSelectorOpen(true); }}
-                    className="cursor-pointer w-full flex items-center gap-3 px-5 py-4 hover:bg-white/[0.10]/20 transition-colors"
+                    className="cursor-pointer w-full flex items-center gap-3 px-5 py-4 hover:bg-white/[0.04] transition-colors"
                 >
                     {/* Logo, badged with its network — which asset is selected
                         decides which chain the send goes out on. */}
@@ -132,11 +129,11 @@ export function SendAmountInput({
 
                     {/* Name + balance */}
                     <div className="flex-1 text-left min-w-0">
-                        <p className="text-15 font-semibold text-white leading-tight">
+                        <p className="text-14 font-semibold text-white leading-tight">
                             {token?.symbol ?? "—"}
                             {network && <span className="text-zinc-500 font-medium"> on {network}</span>}
                         </p>
-                        <p className="text-12 text-zinc-500 leading-tight">
+                        <p className="text-11 text-zinc-500 leading-tight">
                             Balance: {balanceStr}
                             {balanceUsd !== undefined && ` ($${balanceUsd.toFixed(2)})`}
                         </p>

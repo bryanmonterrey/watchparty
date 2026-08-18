@@ -124,12 +124,12 @@ export function SendRecipientSelector({
 
                 {/* Header */}
                 <div className="px-5 pt-5 pb-3 flex-shrink-0">
-                    <span className="text-16 font-semibold text-white">Send to</span>
+                    <span className="text-15 font-semibold text-white">Send to</span>
                 </div>
 
                 {/* Search */}
                 <div className="px-4 pb-3 flex-shrink-0">
-                    <div className="relative flex items-center bg-white/[0.06] rounded-2xl border border-baseborder/20 focus-within:border-zinc-700 transition-colors">
+                    <div className="relative flex items-center bg-white/[0.06] rounded-full border border-baseborder/20 transition-colors focus-within:bg-white/[0.09]">
                         <HugeiconsIcon icon={Search01Icon} className="absolute left-4 w-[18px] h-[18px] text-zinc-400" />
                         <input
                             type="text"
@@ -139,7 +139,7 @@ export function SendRecipientSelector({
                             autoFocus
                             spellCheck={false}
                             autoComplete="off"
-                            className="w-full bg-transparent pl-11 pr-4 py-3.5 text-15 font-medium placeholder:text-zinc-500 focus:outline-none"
+                            className="w-full bg-transparent pl-11 pr-4 py-3.5 text-14 font-medium placeholder:text-zinc-500 focus:outline-none"
                         />
                     </div>
                 </div>
@@ -151,14 +151,14 @@ export function SendRecipientSelector({
                     {isAddress && (
                         <button
                             onClick={() => handleSelect({ address: search.trim(), display: shortenWalletAddress(search.trim()) })}
-                            className="cursor-pointer w-full flex items-center gap-3 px-3 py-3 rounded-2xl hover:bg-white/[0.10]/40 transition-colors"
+                            className="cursor-pointer w-full flex items-center gap-3 px-3 py-3 rounded-2xl hover:bg-white/[0.06] transition-colors"
                         >
                             <div className="w-9 h-9 rounded-full bg-white/[0.08] flex items-center justify-center flex-shrink-0">
                                 <span className="text-11 font-bold text-zinc-400">◎</span>
                             </div>
                             <div className="flex-1 text-left min-w-0">
-                                <p className="text-14 font-semibold text-white leading-tight">Send to address</p>
-                                <p className="text-12 text-zinc-500 leading-tight">{shortenWalletAddress(search.trim())}</p>
+                                <p className="text-13 font-semibold text-white leading-tight">Send to address</p>
+                                <p className="text-11 text-zinc-500 leading-tight">{shortenWalletAddress(search.trim())}</p>
                             </div>
                         </button>
                     )}
@@ -167,17 +167,17 @@ export function SendRecipientSelector({
                     {shouldSearch && (
                         <>
                             <div className="px-2 pb-2">
-                                <span className="text-12 font-semibold text-zinc-500 uppercase tracking-wide">Users</span>
+                                <span className="text-11 font-semibold text-zinc-500">Users</span>
                             </div>
                             {isFetching && userResults.length === 0 && (
-                                <div className="py-6 text-center text-14 text-zinc-500">Searching...</div>
+                                <div className="py-6 text-center text-13 text-zinc-500">Searching...</div>
                             )}
                             {userResults.map((u) => (
                                 <button
                                     key={u.id}
                                     onClick={() => handleUserSelect(u)}
                                     disabled={!u.wallet_address || resolvingUserId === u.id}
-                                    className={`cursor-pointer w-full flex items-center gap-3 px-3 py-3 rounded-2xl transition-colors ${u.wallet_address ? "hover:bg-white/[0.10]/40" : "opacity-40 cursor-not-allowed"}`}
+                                    className={`cursor-pointer w-full flex items-center gap-3 px-3 py-3 rounded-2xl transition-colors ${u.wallet_address ? "hover:bg-white/[0.06]" : "opacity-40 cursor-not-allowed"}`}
                                 >
                                     <Avatar className="w-9 h-9 flex-shrink-0">
                                         <AvatarImage src={u.avatar_url ?? undefined} />
@@ -185,10 +185,10 @@ export function SendRecipientSelector({
                                         </AvatarFallback>
                                     </Avatar>
                                     <div className="flex-1 text-left min-w-0">
-                                        <p className="text-14 font-semibold text-white leading-tight truncate">
+                                        <p className="text-13 font-semibold text-white leading-tight truncate">
                                             {u.name || u.username}
                                         </p>
-                                        <p className="text-12 text-zinc-500 leading-tight">
+                                        <p className="text-11 text-zinc-500 leading-tight">
                                             {u.username ? `@${u.username}` : ""}
                                             {!u.wallet_address && " · no wallet"}
                                         </p>
@@ -197,18 +197,18 @@ export function SendRecipientSelector({
                                         where a Base or BTC send lands, so name
                                         the network being resolved instead. */}
                                     {!isSolana ? (
-                                        <span className="text-12 text-zinc-600 flex-shrink-0">
+                                        <span className="text-11 text-zinc-600 flex-shrink-0">
                                             {resolvingUserId === u.id ? "resolving…" : chainConfig.name}
                                         </span>
                                     ) : u.wallet_address ? (
-                                        <span className="text-12 text-zinc-600 flex-shrink-0">
+                                        <span className="text-11 text-zinc-600 flex-shrink-0">
                                             {shortenWalletAddress(u.wallet_address)}
                                         </span>
                                     ) : null}
                                 </button>
                             ))}
                             {!isFetching && userResults.length === 0 && (
-                                <div className="py-6 text-center text-14 text-zinc-500">No users found</div>
+                                <div className="py-6 text-center text-13 text-zinc-500">No users found</div>
                             )}
                         </>
                     )}
@@ -217,7 +217,7 @@ export function SendRecipientSelector({
                     {!shouldSearch && !isAddress && chainRecents.length > 0 && (
                         <>
                             <div className="px-2 pb-2">
-                                <span className="text-12 font-semibold text-zinc-500 uppercase tracking-wide">Recents</span>
+                                <span className="text-11 font-semibold text-zinc-500">Recents</span>
                             </div>
                             {chainRecents.slice(0, 5).map((r) => (
                                 <button
@@ -229,7 +229,7 @@ export function SendRecipientSelector({
                                         name: r.name,
                                         avatar_url: r.avatar_url,
                                     })}
-                                    className="cursor-pointer w-full flex items-center gap-3 px-3 py-3 rounded-2xl hover:bg-white/[0.10]/40 transition-colors"
+                                    className="cursor-pointer w-full flex items-center gap-3 px-3 py-3 rounded-2xl hover:bg-white/[0.06] transition-colors"
                                 >
                                     {r.avatar_url ? (
                                         <Avatar className="w-9 h-9 flex-shrink-0">
@@ -243,16 +243,16 @@ export function SendRecipientSelector({
                                         </div>
                                     )}
                                     <div className="flex-1 text-left min-w-0">
-                                        <p className="text-14 font-semibold text-white leading-tight truncate">
+                                        <p className="text-13 font-semibold text-white leading-tight truncate">
                                             {r.username ? `@${r.username}` : shortenWalletAddress(r.address)}
                                         </p>
                                         {r.username && (
-                                            <p className="text-12 text-zinc-500 leading-tight">
+                                            <p className="text-11 text-zinc-500 leading-tight">
                                                 {shortenWalletAddress(r.address)}
                                             </p>
                                         )}
                                     </div>
-                                    <span className="text-12 text-zinc-500 flex-shrink-0">
+                                    <span className="text-11 text-zinc-500 flex-shrink-0">
                                         {r.sendCount} {r.sendCount === 1 ? "transfer" : "transfers"}
                                     </span>
                                 </button>
@@ -262,7 +262,7 @@ export function SendRecipientSelector({
 
                     {/* Empty state */}
                     {!shouldSearch && !isAddress && chainRecents.length === 0 && (
-                        <div className="py-10 text-center text-14 text-zinc-500">
+                        <div className="py-10 text-center text-13 text-zinc-500">
                             Search for a user or paste a wallet address
                         </div>
                     )}

@@ -142,7 +142,7 @@ export function WalletHeader({
             {loading && !username ? (
                 <div className="-ml-2 flex items-center gap-3 px-2 py-1.5">
                     <div className="h-10 w-10 rounded-full shimmer-skeleton shrink-0" />
-                    {/* h-7 is the text-lg line box, the bar is the ink — the row
+                    {/* h-7 is the text-15 line box, the bar is the ink — the row
                         has to stand the same height as what replaces it or the
                         balance below jumps on load. */}
                     <div className="flex h-7 items-center">
@@ -171,7 +171,7 @@ export function WalletHeader({
                                 one is against house rules anyway (Copy Address on
                                 the power menu is the functional path). */}
                             <div className="flex min-w-0 items-center justify-start gap-1 text-left">
-                                <p className="truncate text-lg font-bold text-white">{username}</p>
+                                <p className="truncate text-15 font-bold text-white">{username}</p>
                                 <VerifiedBadge
                                     tier={activeUser?.verifiedTier}
                                     hidden={activeUser?.hideVerifiedBadge}
@@ -197,7 +197,7 @@ export function WalletHeader({
                             the adapter; the embedded wallet is simply "no adapter
                             connected", so switching to it is a disconnect.
                             Nothing here changes the main wallet. */}
-                        <p className="px-3 pt-2 pb-1.5 text-xs font-semibold text-zinc-500">
+                        <p className="px-3 pt-2 pb-1.5 text-11 font-semibold text-zinc-500">
                             Wallet in use
                         </p>
                         <ul>
@@ -270,13 +270,13 @@ export function WalletHeader({
                                                     canonical helper, which is
                                                     the only place allowed to
                                                     truncate one. */}
-                                                <span className="block truncate text-sm font-semibold text-white">
+                                                <span className="block truncate text-13 font-semibold text-white">
                                                     {shortenWalletAddress(w.address)}
                                                 </span>
-                                                <span className="flex items-center gap-1.5 text-xs font-medium text-zinc-500">
+                                                <span className="flex items-center gap-1.5 text-11 font-medium text-zinc-500">
                                                     {isEmbedded ? "Built in" : "Extension"}
                                                     {w.isPrimary ? (
-                                                        <span className="rounded-full bg-white/[0.06] px-1.5 py-0.5 text-xs font-semibold text-zinc-400">
+                                                        <span className="rounded-full bg-white/[0.06] px-1.5 py-0.5 text-11 font-semibold text-zinc-400">
                                                             Main
                                                         </span>
                                                     ) : null}
@@ -296,7 +296,7 @@ export function WalletHeader({
                             without it the lists read as one. */}
                         <div className="mx-3 my-1.5 h-px bg-white/10" />
 
-                        <p className="px-3 pt-2 pb-1.5 text-xs font-semibold text-zinc-500">
+                        <p className="px-3 pt-2 pb-1.5 text-11 font-semibold text-zinc-500">
                             Accounts
                         </p>
                         <ul>
@@ -331,7 +331,7 @@ export function WalletHeader({
                                                 it. */}
                                             <span className="min-w-0 flex-1">
                                                 <span className="flex items-center gap-1">
-                                                    <span className="truncate text-sm font-semibold text-white">
+                                                    <span className="truncate text-13 font-semibold text-white">
                                                         {a.user.name || handle}
                                                     </span>
                                                     {!a.user.name && (
@@ -342,7 +342,7 @@ export function WalletHeader({
                                                     )}
                                                 </span>
                                                 {a.user.name && (
-                                                    <span className="flex items-center gap-1 text-xs font-medium text-zinc-500">
+                                                    <span className="flex items-center gap-1 text-11 font-medium text-zinc-500">
                                                         <span className="truncate">{handle}</span>
                                                         <VerifiedBadge
                                                             tier={a.user.verifiedTier}
@@ -384,10 +384,10 @@ export function WalletHeader({
                                 }
                             }}
                         >
-                            <span className="grid size-8 shrink-0 place-items-center rounded-full bg-white/[0.06] text-lg font-medium text-zinc-400">
+                            <span className="grid size-8 shrink-0 place-items-center rounded-full bg-white/[0.06] text-15 font-medium text-zinc-400">
                                 +
                             </span>
-                            <span className="text-sm font-semibold text-white">Add an existing account</span>
+                            <span className="text-13 font-semibold text-white">Add an existing account</span>
                         </a>
 
                     </MorphPopoverContent>

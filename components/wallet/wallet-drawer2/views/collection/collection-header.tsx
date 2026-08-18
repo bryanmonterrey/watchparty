@@ -22,10 +22,10 @@ export function CollectionHeader({ collection, onBack }: CollectionHeaderProps) 
                     innerClassName="rounded-none"
                 />
                 <div className="flex min-w-0 flex-col">
-                    <h2 className="truncate text-16 font-bold leading-none tracking-tight text-white">
+                    <h2 className="truncate text-15 font-bold leading-none tracking-tight text-white">
                         {collection.name}
                     </h2>
-                    <p className="mt-1 text-13 font-medium leading-none text-zinc-500">
+                    <p className="mt-1 text-12 font-medium leading-none text-zinc-500">
                         {collection.count} {collection.count === 1 ? "item" : "items"}
                     </p>
                 </div>

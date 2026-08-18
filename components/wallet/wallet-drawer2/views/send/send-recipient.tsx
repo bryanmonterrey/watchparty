@@ -161,13 +161,13 @@ export function SendRecipient({ value, displayValue, onChange, recents, variant 
             {showRecents && (
                 <>
                     <div className="px-4 pt-3 pb-1.5">
-                        <span className="text-11 font-semibold text-zinc-500 uppercase tracking-wider">Recents</span>
+                        <span className="text-11 font-semibold text-zinc-500">Recents</span>
                     </div>
                     {recents.slice(0, 5).map((r) => (
                         <button
                             key={r.address}
                             onMouseDown={(e) => { e.preventDefault(); selectRecent(r); }}
-                            className="cursor-pointer w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.10]/40 transition-colors"
+                            className="cursor-pointer w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.06] transition-colors"
                         >
                             {r.avatar_url ? (
                                 <Avatar className="w-9 h-9 flex-shrink-0">
@@ -181,14 +181,14 @@ export function SendRecipient({ value, displayValue, onChange, recents, variant 
                                 </div>
                             )}
                             <div className="flex-1 text-left min-w-0">
-                                <p className="text-14 font-semibold text-white leading-tight">
+                                <p className="text-13 font-semibold text-white leading-tight">
                                     {r.username ? `@${r.username}` : shortenWalletAddress(r.address)}
                                 </p>
                                 {r.username && (
-                                    <p className="text-12 text-zinc-500 leading-tight">{shortenWalletAddress(r.address)}</p>
+                                    <p className="text-11 text-zinc-500 leading-tight">{shortenWalletAddress(r.address)}</p>
                                 )}
                             </div>
-                            <span className="text-12 text-zinc-500 flex-shrink-0">
+                            <span className="text-11 text-zinc-500 flex-shrink-0">
                                 {r.sendCount} {r.sendCount === 1 ? "transfer" : "transfers"}
                             </span>
                         </button>
@@ -201,14 +201,14 @@ export function SendRecipient({ value, displayValue, onChange, recents, variant 
             {showUserResults && (
                 <>
                     {isFetching && userResults.length === 0 && (
-                        <div className="px-4 py-4 text-13 text-zinc-500">Searching...</div>
+                        <div className="px-4 py-4 text-12 text-zinc-500">Searching...</div>
                     )}
                     {userResults.map((u) => (
                         <button
                             key={u.id}
                             onMouseDown={(e) => { e.preventDefault(); if (u.wallet_address) selectUser(u); }}
                             disabled={!u.wallet_address}
-                            className={`cursor-pointer w-full flex items-center gap-3 px-4 py-3 transition-colors ${u.wallet_address ? "hover:bg-white/[0.10]/40" : "opacity-40 cursor-not-allowed"
+                            className={`cursor-pointer w-full flex items-center gap-3 px-4 py-3 transition-colors ${u.wallet_address ? "hover:bg-white/[0.06]" : "opacity-40 cursor-not-allowed"
                                 }`}
                         >
                             <Avatar className="w-9 h-9 flex-shrink-0">
@@ -217,23 +217,23 @@ export function SendRecipient({ value, displayValue, onChange, recents, variant 
                                 </AvatarFallback>
                             </Avatar>
                             <div className="flex-1 text-left min-w-0">
-                                <p className="text-14 font-semibold text-white leading-tight">
+                                <p className="text-13 font-semibold text-white leading-tight">
                                     {u.name || u.username}
                                 </p>
-                                <p className="text-12 text-zinc-500 leading-tight">
+                                <p className="text-11 text-zinc-500 leading-tight">
                                     {u.username ? `@${u.username}` : ""}
                                     {!u.wallet_address && " · no wallet"}
                                 </p>
                             </div>
                             {u.wallet_address && (
-                                <span className="text-12 text-zinc-600 flex-shrink-0">
+                                <span className="text-11 text-zinc-600 flex-shrink-0">
                                     {shortenWalletAddress(u.wallet_address)}
                                 </span>
                             )}
                         </button>
                     ))}
                     {!isFetching && userResults.length === 0 && (
-                        <div className="px-4 py-4 text-13 text-zinc-500">No users found</div>
+                        <div className="px-4 py-4 text-12 text-zinc-500">No users found</div>
                     )}
                     <div className="h-2" />
                 </>
@@ -246,7 +246,7 @@ export function SendRecipient({ value, displayValue, onChange, recents, variant 
             <div ref={containerRef} className="w-full relative group">
                 <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none">
                     <div className="w-8 h-8 rounded-full bg-white/[0.08] flex items-center justify-center">
-                        <span className="text-zinc-400 text-sm font-bold">@</span>
+                        <span className="text-zinc-400 text-13 font-bold">@</span>
                     </div>
                 </div>
                 <input
@@ -258,7 +258,7 @@ export function SendRecipient({ value, displayValue, onChange, recents, variant 
                     placeholder="Recipient's Solana address"
                     spellCheck={false}
                     autoComplete="off"
-                    className="w-full h-14 rounded-3xl border border-baseborder/20 bg-panel2 rounded-xl px-4 pr-14 text-15 text-white placeholder:text-zinc-600 outline-none focus:border-baseborder/20 transition-all shadow-inner"
+                    className="h-14 w-full rounded-3xl border border-baseborder/20 bg-panel2 px-4 pr-14 text-14 text-white placeholder:text-zinc-600 outline-none transition-colors focus:bg-white/[0.05]"
                 />
                 
                 <AnimatePresence>
@@ -277,11 +277,11 @@ export function SendRecipient({ value, displayValue, onChange, recents, variant 
             {/* Input card */}
             <div
                 onClick={() => inputRef.current?.focus()}
-                className={`bg-panel2 border cursor-pointer transition-colors rounded-3xl px-5 py-4 flex items-start gap-3 ${focused ? "border-zinc-700/80" : "border-baseborder/20"
+                className={`cursor-pointer rounded-3xl border border-baseborder/20 bg-panel2 px-5 py-4 flex items-start gap-3 transition-colors ${focused ? "bg-white/[0.05]" : ""
                     }`}
             >
                 <div className="flex-1 min-w-0">
-                    <p className="text-13 font-medium text-zinc-500 mb-1">To</p>
+                    <p className="text-12 font-medium text-zinc-500 mb-1">To</p>
                     <input
                         ref={inputRef}
                         type="text"
@@ -291,7 +291,7 @@ export function SendRecipient({ value, displayValue, onChange, recents, variant 
                         placeholder="@username or wallet address"
                         spellCheck={false}
                         autoComplete="off"
-                        className="bg-transparent cursor-pointer text-14 font-medium text-white placeholder-zinc-600 outline-none w-full"
+                        className="bg-transparent cursor-pointer text-13 font-medium text-white placeholder-zinc-600 outline-none w-full"
                     />
                 </div>
                 {(isValid || isInvalid) && (

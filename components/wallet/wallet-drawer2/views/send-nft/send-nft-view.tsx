@@ -40,7 +40,7 @@ export function SendNFTView({ nft, onBack, onNext }: SendNFTViewProps) {
     }, []);
 
     return (
-        <div className="flex flex-col h-full bg-canvas rounded-2xl overflow-hidden">
+        <div className="flex h-full flex-col overflow-hidden bg-canvas">
             <DrawerHeader
                 title={nft.name}
                 onBack={onBack}
@@ -50,11 +50,11 @@ export function SendNFTView({ nft, onBack, onNext }: SendNFTViewProps) {
             <div className="flex-1 px-6 flex flex-col items-center">
                 <div className="w-full max-w-[320px] pt-4 space-y-8 flex flex-col items-center">
                     {/* Image */}
-                    <div className="relative aspect-square w-full rounded-2xl overflow-hidden">
+                    <div className="relative aspect-square w-full overflow-hidden rounded-3xl">
                         <TokenIcon
                             src={nft.image}
                             symbol={nft.name}
-                            className="w-full h-full rounded-2xl object-cover"
+                            className="size-full rounded-none object-cover"
                             type="nft"
                         />
                     </div>
@@ -83,7 +83,7 @@ export function SendNFTView({ nft, onBack, onNext }: SendNFTViewProps) {
             <div className="p-6 pb-8 flex gap-3 z-10">
                 <button
                     onClick={onBack}
-                    className="flex-1 h-14 rounded-2xl bg-white/[0.08] text-15 font-bold text-white hover:bg-white/[0.14] transition-colors cursor-pointer"
+                    className="h-12 flex-1 cursor-pointer rounded-full bg-white/[0.08] text-13 font-bold text-white transition-colors hover:bg-white/[0.14] active:scale-[0.99]"
                 >
                     Cancel
                 </button>
@@ -91,7 +91,7 @@ export function SendNFTView({ nft, onBack, onNext }: SendNFTViewProps) {
                     onClick={() => onNext(recipient, recipientDisplay, recipientMeta)}
                     disabled={!recipient}
                     className={cn(
-                        "flex-1 h-14 rounded-2xl text-[17px] font-bold transition-all cursor-pointer",
+                        "h-12 flex-1 cursor-pointer rounded-full text-13 font-bold transition-colors active:scale-[0.99]",
                         recipient
                             ? "bg-white/[0.08] text-white hover:bg-white/[0.14]"
                             : "bg-white/[0.04] text-zinc-600 cursor-not-allowed"

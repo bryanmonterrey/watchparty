@@ -296,14 +296,14 @@ export function SwapView({
 
                 {quote && outputAmount && (
                     <div className="px-2 pt-2 pb-1 space-y-1.5">
-                        <div className="flex justify-between items-center text-13">
+                        <div className="flex justify-between items-center text-12">
                             <span className="text-zinc-500 font-medium">Rate</span>
                             <span className="text-zinc-300 font-medium tracking-wide">
                                 1 {inputToken?.symbol} ≈ {(parseFloat(outputAmount) / parseFloat(inputAmount)).toFixed(6)} {outputToken?.symbol}
                             </span>
                         </div>
                         {quote.priceImpactPct && (
-                            <div className="flex justify-between items-center text-13">
+                            <div className="flex justify-between items-center text-12">
                                 <span className="font-medium text-zinc-500">Price impact</span>
                                 <span className={`font-semibold ${parseFloat(String(quote.priceImpactPct)) > 1 ? "text-sunset" : "text-lantern"}`}>
                                     {parseFloat(String(quote.priceImpactPct)).toFixed(2)}%
@@ -317,14 +317,14 @@ export function SwapView({
                     {(!inputToken || !outputToken) ? (
                         <Button
                             disabled
-                            className="h-12 w-full cursor-not-allowed rounded-full border-none bg-white/10 text-15 font-bold text-white/50"
+                            className="h-12 w-full cursor-not-allowed rounded-full border-none bg-white/10 text-14 font-bold text-white/50"
                         >
                             Select a token
                         </Button>
                     ) : !inputAmount ? (
                         <Button
                             disabled
-                            className="h-12 w-full cursor-not-allowed rounded-full border-none bg-white/10 text-15 font-bold text-white/50"
+                            className="h-12 w-full cursor-not-allowed rounded-full border-none bg-white/10 text-14 font-bold text-white/50"
                         >
                             Enter an amount
                         </Button>
@@ -332,7 +332,7 @@ export function SwapView({
                         <Button
                             onClick={handleSwap}
                             disabled={!quote || isLoadingQuote || parseFloat(inputAmount) <= 0}
-                            className="h-12 w-full rounded-full border-none bg-white text-15 font-bold text-black transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="h-12 w-full rounded-full border-none bg-white text-14 font-bold text-black transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             {isLoadingQuote ? "Getting quote…" : "Swap"}
                         </Button>

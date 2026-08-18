@@ -50,7 +50,7 @@ export function NetworkView({ onSelect, onClose, availableKinds }: NetworkViewPr
         >
           <HugeiconsIcon icon={Cancel01Icon} className="size-5" strokeWidth={2.5} />
         </button>
-        <span className="pointer-events-none absolute left-0 right-0 text-center text-16 font-bold tracking-tight text-white">
+        <span className="pointer-events-none absolute left-0 right-0 text-center text-15 font-bold tracking-tight text-white">
           Receive on
         </span>
       </div>
@@ -64,8 +64,8 @@ export function NetworkView({ onSelect, onClose, availableKinds }: NetworkViewPr
               className="group flex w-full cursor-pointer items-center gap-3.5 rounded-3xl px-3 py-2.5 text-left transition-colors hover:bg-white/[0.05]"
             >
               <ChainIcon chain={chain.id} size={40} />
-              <span className="flex-1 text-15 font-bold tracking-tight text-white">{chain.name}</span>
-              <span className="text-13 font-medium text-zinc-500">
+              <span className="flex-1 text-14 font-bold tracking-tight text-white">{chain.name}</span>
+              <span className="text-12 font-medium text-zinc-500">
                 {chain.nativeCurrency.symbol}
               </span>
             </button>

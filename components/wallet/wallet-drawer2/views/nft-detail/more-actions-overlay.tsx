@@ -31,7 +31,7 @@ export function MoreActionsOverlay({ nft, onClose, onHideCollections, onReportSp
                 >
                     <HugeiconsIcon icon={Cancel01Icon} className="size-5" strokeWidth={2.5} />
                 </button>
-                <h2 className="truncate px-12 text-16 font-bold tracking-tight text-white">{nft.name}</h2>
+                <h2 className="truncate px-12 text-15 font-bold tracking-tight text-white">{nft.name}</h2>
             </div>
 
             <div className="flex-1 overflow-y-auto hidden-scrollbar p-4 flex flex-col pt-6">
@@ -44,7 +44,7 @@ export function MoreActionsOverlay({ nft, onClose, onHideCollections, onReportSp
                         className="flex cursor-pointer items-center gap-3 rounded-3xl border border-baseborder/20 bg-panel2 px-4 py-3.5 text-white transition-colors hover:bg-white/[0.05]"
                     >
                         <ViewOffIcon className="size-5" />
-                        <span className="text-15 font-bold tracking-tight">Hide collection</span>
+                        <span className="text-14 font-bold tracking-tight">Hide collection</span>
                     </button>
                     <button
                         onClick={() => {
@@ -54,7 +54,7 @@ export function MoreActionsOverlay({ nft, onClose, onHideCollections, onReportSp
                         className="flex cursor-pointer items-center gap-3 rounded-3xl border border-baseborder/20 bg-panel2 px-4 py-3.5 text-pastelred transition-colors hover:bg-pastelred/10"
                     >
                         <FlagIcon className="size-5" />
-                        <span className="text-15 font-bold tracking-tight">Report as spam</span>
+                        <span className="text-14 font-bold tracking-tight">Report as spam</span>
                     </button>
                     <button
                         onClick={() => {
@@ -64,7 +64,7 @@ export function MoreActionsOverlay({ nft, onClose, onHideCollections, onReportSp
                         className="flex cursor-pointer items-center gap-3 rounded-3xl border border-baseborder/20 bg-panel2 px-4 py-3.5 text-white transition-colors hover:bg-white/[0.05]"
                     >
                         <LinkIcon className="size-5" />
-                        <span className="text-15 font-bold tracking-tight">View on Orb</span>
+                        <span className="text-14 font-bold tracking-tight">View on Orb</span>
                     </button>
                 </div>
             </div>
@@ -72,7 +72,7 @@ export function MoreActionsOverlay({ nft, onClose, onHideCollections, onReportSp
             <div className="relative z-10 bg-canvas p-4 pb-8">
                 <button
                     onClick={onClose}
-                    className="h-12 w-full cursor-pointer rounded-full bg-white/[0.08] text-15 font-bold text-white transition-colors hover:bg-white/[0.14] active:scale-[0.99]"
+                    className="h-12 w-full cursor-pointer rounded-full bg-white/[0.08] text-14 font-bold text-white transition-colors hover:bg-white/[0.14] active:scale-[0.99]"
                 >
                     Close
                 </button>

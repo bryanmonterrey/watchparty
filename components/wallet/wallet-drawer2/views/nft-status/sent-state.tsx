@@ -31,7 +31,7 @@ export function SentState({ recipientDisplay, recipientAddress, txHash }: SentSt
 
             <div className="space-y-4 max-w-[280px]">
                 <h2 className="text-[32px] font-bold text-white tracking-tight">Sent!</h2>
-                <p className="text-15 text-zinc-500 leading-relaxed">
+                <p className="text-14 text-zinc-500 leading-relaxed">
                     Your tokens were successfully sent to{" "}
                     <span className="text-white font-medium">{recipientDisplay}</span>{" "}
                     ({recipientAddress.slice(0, 4)}...{recipientAddress.slice(-4)})
@@ -41,7 +41,7 @@ export function SentState({ recipientDisplay, recipientAddress, txHash }: SentSt
                         href={`https://orbmarkets.io/tx/${txHash}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-zinc-400 text-15 font-medium flex items-center gap-1.5 mx-auto hover:opacity-80 transition-opacity"
+                        className="text-zinc-400 text-14 font-medium flex items-center gap-1.5 mx-auto hover:opacity-80 transition-opacity"
                     >
                         View transaction
                     </a>

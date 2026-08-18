@@ -78,7 +78,7 @@ export function AppDataView({ onBack }: AppDataViewProps) {
                 design system — it was py-4 on an unnamed height before. */}
             <button
                 onClick={handleClearAll}
-                className="flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-pastelred/15 text-15 font-bold text-pastelred transition-colors hover:bg-pastelred/25 active:scale-[0.99]"
+                className="flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-pastelred/15 text-14 font-bold text-pastelred transition-colors hover:bg-pastelred/25 active:scale-[0.99]"
             >
                 <HugeiconsIcon icon={Delete02Icon} className="size-5" strokeWidth={2} />
                 Clear all data

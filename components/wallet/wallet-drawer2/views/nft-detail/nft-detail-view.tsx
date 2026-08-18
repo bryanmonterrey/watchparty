@@ -60,8 +60,8 @@ export function NFTDetailView({ nft, onBack, onSend, onPin, onAvatar, onMore, on
                     every NFT without a description showed another NFT's copy. */}
                 {nft.description && (
                     <div className="space-y-1 rounded-3xl border border-baseborder/20 bg-panel2 p-4">
-                        <p className="text-13 font-medium text-zinc-500">Description</p>
-                        <p className="text-14 font-medium leading-relaxed text-white">
+                        <p className="text-12 font-medium text-zinc-500">Description</p>
+                        <p className="text-13 font-medium leading-relaxed text-white">
                             {nft.description}
                         </p>
                     </div>

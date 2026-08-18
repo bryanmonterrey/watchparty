@@ -25,7 +25,7 @@ interface NFTActionsProps {
 export function NFTActions({ nft, onSend, onPin, onAvatar, onMore }: NFTActionsProps) {
     const tile = cn(DRAWER_CARD_INTERACTIVE, "flex flex-col items-center gap-2 px-2 py-3.5 active:scale-95");
     const iconClass = "size-5 text-white";
-    const labelClass = "text-12 font-semibold text-zinc-400";
+    const labelClass = "text-11 font-semibold text-zinc-400";
 
     return (
         <div className="grid grid-cols-4 gap-1">

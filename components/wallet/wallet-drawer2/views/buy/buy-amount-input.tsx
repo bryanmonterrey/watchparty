@@ -18,7 +18,7 @@ export function BuyAmountInput({ amount, onAmountChange }: BuyAmountInputProps) 
                 onClick={() => inputRef.current?.focus()}
                 className="group cursor-pointer rounded-3xl border border-baseborder/20 bg-panel2 p-6 text-center transition-colors hover:bg-white/[0.05]"
             >
-                <p className="mb-2 text-13 font-medium text-zinc-500">You pay</p>
+                <p className="mb-2 text-12 font-medium text-zinc-500">You pay</p>
                 
                 <div className="flex items-center justify-center">
                     <span className="text-4xl font-bold text-white/40 mr-2 select-none">$</span>
@@ -38,7 +38,7 @@ export function BuyAmountInput({ amount, onAmountChange }: BuyAmountInputProps) 
                     </div>
                 </div>
                 
-                <p className="mt-2 text-13 font-medium text-zinc-500">USD</p>
+                <p className="mt-2 text-12 font-medium text-zinc-500">USD</p>
             </div>
 
             {/* Quick Select */}
@@ -51,7 +51,7 @@ export function BuyAmountInput({ amount, onAmountChange }: BuyAmountInputProps) 
                             // Pills, and neutral — the selected state was a
                             // white border on a white fill, i.e. two elevation
                             // languages in one control.
-                            "h-11 flex-1 cursor-pointer rounded-full px-1 text-14 font-bold transition-colors",
+                            "h-11 flex-1 cursor-pointer rounded-full px-1 text-13 font-bold transition-colors",
                             amount === amt
                                 ? "bg-white text-black"
                                 : "bg-white/[0.06] text-zinc-400 hover:bg-white/[0.12] hover:text-white"

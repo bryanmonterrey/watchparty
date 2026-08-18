@@ -73,7 +73,7 @@ export function ReceiveView({
                             className="flex cursor-pointer items-center gap-2 rounded-full bg-white/[0.06] py-1.5 pl-1.5 pr-3.5 transition-colors hover:bg-white/[0.1]"
                         >
                             <ChainIcon chain={config.id} size={24} />
-                            <span className="text-14 font-semibold text-white">{config.name}</span>
+                            <span className="text-13 font-semibold text-white">{config.name}</span>
                             <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 text-zinc-400" />
                         </button>
                     </div>
@@ -84,13 +84,13 @@ export function ReceiveView({
                 ) : missingAddress ? (
                     <div className="mb-8 flex justify-center">
                         <div className="flex size-[224px] flex-col items-center justify-center gap-3 rounded-[32px] border border-baseborder/20 px-6 text-center">
-                            <p className="text-13 font-medium text-zinc-400">
+                            <p className="text-12 font-medium text-zinc-400">
                                 No {config.name} address yet
                             </p>
                             {onRetryAddress && (
                                 <button
                                     onClick={onRetryAddress}
-                                    className="cursor-pointer rounded-full bg-white/[0.06] px-3.5 py-1.5 text-13 font-semibold text-white transition-colors hover:bg-white/[0.1]"
+                                    className="cursor-pointer rounded-full bg-white/[0.06] px-3.5 py-1.5 text-12 font-semibold text-white transition-colors hover:bg-white/[0.1]"
                                 >
                                     Try again
                                 </button>
@@ -105,10 +105,10 @@ export function ReceiveView({
 
                 <div className="flex-1 flex flex-col justify-end mt-auto space-y-3">
                     <div className="text-center px-4 space-y-1">
-                        <p className="text-14 text-zinc-400 font-medium">
+                        <p className="text-13 text-zinc-400 font-medium">
                             Scan this QR code or copy the address below
                         </p>
-                        <p className="text-13 text-zinc-500">
+                        <p className="text-12 text-zinc-500">
                             {DEPOSIT_WARNING[config.id]}
                         </p>
                     </div>

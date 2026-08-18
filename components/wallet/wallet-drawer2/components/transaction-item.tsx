@@ -105,18 +105,18 @@ export function TransactionItem({ tx, tokens = [], hideBalances, onClick }: Tran
                 </div>
 
                 <div className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate text-15 font-bold tracking-tight text-white">{label}</span>
-                    <span className="line-clamp-1 text-13 font-medium text-zinc-500">{shortDesc}</span>
+                    <span className="truncate text-14 font-bold tracking-tight text-white">{label}</span>
+                    <span className="line-clamp-1 text-12 font-medium text-zinc-500">{shortDesc}</span>
                 </div>
 
                 {hideBalances ? (
-                    <span className="shrink-0 text-15 font-bold tracking-tight text-white">••••••</span>
+                    <span className="shrink-0 text-14 font-bold tracking-tight text-white">••••••</span>
                 ) : (amountSol || (isSwap && secondaryAmount)) ? (
                     <div className="flex shrink-0 flex-col items-end gap-0.5">
                         {amountSol && (
                             <span
                                 className={cn(
-                                    "text-15 font-bold tabular-nums tracking-tight",
+                                    "text-14 font-bold tabular-nums tracking-tight",
                                     // Incoming value is the only thing worth a
                                     // colour here; sends stay white.
                                     (isSwap || !tx.isOutgoing) ? "text-lantern" : "text-white",
@@ -126,7 +126,7 @@ export function TransactionItem({ tx, tokens = [], hideBalances, onClick }: Tran
                             </span>
                         )}
                         {isSwap && secondaryAmount && (
-                            <span className="text-13 font-medium tabular-nums text-zinc-500">
+                            <span className="text-12 font-medium tabular-nums text-zinc-500">
                                 -{secondaryAmount} {secondaryTokenSymbol}
                             </span>
                         )}

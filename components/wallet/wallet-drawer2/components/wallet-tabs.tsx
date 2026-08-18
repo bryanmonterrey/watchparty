@@ -117,7 +117,7 @@ export function WalletTabs({
                             key={tab.id}
                             onClick={() => onTabChange(tab.id)}
                             className={cn(
-                                "relative z-10 flex cursor-pointer items-center gap-1.5 rounded-full px-3.5 py-1.5 text-15 font-bold tracking-tight transition-colors",
+                                "relative z-10 flex cursor-pointer items-center gap-1.5 rounded-full px-3.5 py-1.5 text-14 font-bold tracking-tight transition-colors",
                                 activeTab === tab.id
                                     ? "text-white"
                                     : "text-zinc-500 hover:text-white"
@@ -228,7 +228,7 @@ export function WalletTabs({
                             <div className="flex justify-end pt-1">
                                 <button
                                     onClick={onAllTokens}
-                                    className="flex cursor-pointer items-center gap-1 px-2 py-1.5 text-13 font-semibold text-zinc-500 transition-colors hover:text-white"
+                                    className="flex cursor-pointer items-center gap-1 px-2 py-1.5 text-12 font-semibold text-zinc-500 transition-colors hover:text-white"
                                 >
                                     All coins
                                     <HugeiconsIcon icon={ArrowRight01Icon} className="size-4" strokeWidth={2.5} />
@@ -282,7 +282,7 @@ export function WalletTabs({
                             }
                             return groups.map(group => (
                                 <div key={group.label} className="space-y-1 pb-4">
-                                    <p className="px-1.5 text-13 font-semibold text-zinc-500">{group.label}</p>
+                                    <p className="px-1.5 text-12 font-semibold text-zinc-500">{group.label}</p>
                                     {group.txs.map((tx) => (
                                         <TransactionItem
                                             key={tx.signature}

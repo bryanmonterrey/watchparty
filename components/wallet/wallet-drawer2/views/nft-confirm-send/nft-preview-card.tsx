@@ -25,7 +25,7 @@ export function NFTPreviewCard({ nft, recipientAddress, recipientDisplay }: NFTP
                 <h3 className="mb-1 text-[28px] font-bold leading-tight tracking-tight text-white">
                     {nft.name}
                 </h3>
-                <p className="text-13 font-medium text-zinc-500">
+                <p className="text-12 font-medium text-zinc-500">
                     to {recipientDisplay} ({shortenWalletAddress(recipientAddress)})
                 </p>
             </div>

@@ -25,7 +25,10 @@ import { cn } from "@/lib/utils";
  *             for the whole drawer.
  *   rows      SEPARATE cards with `space-y-1` between them, never one card
  *             subdivided by hairlines — house rule is no divider borders.
- *   type      15px bold tracking-tight primary / 13px medium zinc-500 secondary.
+ *   type      14px bold tracking-tight primary / 12px medium zinc-500 secondary.
+ *             One step down from where this landed first — the owner asked for
+ *             smaller copy, so the whole ladder moved rather than individual
+ *             rows, and 11px is the floor (the app never goes below it).
  *   icons     HugeIcons only.
  */
 
@@ -117,7 +120,7 @@ export function DrawerHeader({
             </div>
             <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
                 {typeof title === "string" ? (
-                    <h2 className="truncate text-16 font-bold tracking-tight text-white">
+                    <h2 className="truncate text-15 font-bold tracking-tight text-white">
                         {title}
                     </h2>
                 ) : (
@@ -130,7 +133,7 @@ export function DrawerHeader({
 }
 
 /**
- * A labelled group of rows. The label is 13px zinc-500 sentence case and sits
+ * A labelled group of rows. The label is 12px zinc-500 sentence case and sits
  * OUTSIDE the cards — grouping by heading rather than by shared card body is
  * what lets the rows stay separate objects.
  */
@@ -146,7 +149,7 @@ export function DrawerSection({
     return (
         <section className={cn("space-y-1", className)}>
             {label ? (
-                <p className="px-1.5 pb-0.5 text-13 font-semibold text-zinc-500">{label}</p>
+                <p className="px-1.5 pb-0.5 text-12 font-semibold text-zinc-500">{label}</p>
             ) : null}
             {children}
         </section>
@@ -198,20 +201,20 @@ export function DrawerRow({
             <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left">
                 <span
                     className={cn(
-                        "text-15 font-bold tracking-tight",
+                        "text-14 font-bold tracking-tight",
                         danger ? "text-pastelred" : "text-white",
                     )}
                 >
                     {title}
                 </span>
                 {description ? (
-                    <span className="text-13 font-medium leading-snug text-zinc-500">
+                    <span className="text-12 font-medium leading-snug text-zinc-500">
                         {description}
                     </span>
                 ) : null}
             </span>
             {value ? (
-                <span className="shrink-0 text-13 font-semibold text-zinc-400">{value}</span>
+                <span className="shrink-0 text-12 font-semibold text-zinc-400">{value}</span>
             ) : null}
             {control}
             {selected ? (
@@ -267,8 +270,8 @@ export function DrawerDataRow({
 }) {
     return (
         <div className={cn("flex items-center justify-between gap-4 px-4 py-3", className)}>
-            <span className="shrink-0 text-13 font-medium text-zinc-500">{label}</span>
-            <span className="min-w-0 truncate text-14 font-semibold text-white">
+            <span className="shrink-0 text-12 font-medium text-zinc-500">{label}</span>
+            <span className="min-w-0 truncate text-13 font-semibold text-white">
                 {children}
             </span>
         </div>

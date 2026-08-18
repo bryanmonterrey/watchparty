@@ -38,7 +38,7 @@ function NFTSendToastContent({
             {/* NFT + recipient */}
             <div className="flex items-center gap-3">
                 <motion.div
-                    className="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-white/[0.08]"
+                    className="size-10 shrink-0 overflow-hidden rounded-2xl bg-white/[0.08]"
                     layoutId="nft-thumb"
                 >
                     {nftImage && (
@@ -46,8 +46,8 @@ function NFTSendToastContent({
                     )}
                 </motion.div>
                 <div className="flex-1 min-w-0">
-                    <p className="text-14 font-semibold text-white truncate">{nftName}</p>
-                    <p className="text-12 text-zinc-500 truncate">to {recipientDisplay}</p>
+                    <p className="text-13 font-semibold text-white truncate">{nftName}</p>
+                    <p className="text-11 text-zinc-500 truncate">to {recipientDisplay}</p>
                 </div>
                 <button
                     onClick={() => toast.dismiss(toastId)}
@@ -105,7 +105,7 @@ function NFTSendToastContent({
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 4 }}
                         transition={{ duration: 0.18, ease: "easeOut" }}
-                        className={`text-13 font-medium flex-1 ${isSent ? "text-lantern" : isError ? "text-pastelred" : "text-zinc-300"
+                        className={`text-12 font-medium flex-1 ${isSent ? "text-lantern" : isError ? "text-pastelred" : "text-zinc-300"
                             }`}
                     >
                         {isSending && "Sending NFT..."}
@@ -125,7 +125,7 @@ function NFTSendToastContent({
                             initial={{ opacity: 0, x: 8 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.1, duration: 0.2, ease: "easeOut" }}
-                            className="flex items-center gap-1 text-12 text-zinc-400 hover:opacity-80 transition-opacity font-medium shrink-0"
+                            className="flex items-center gap-1 text-11 text-zinc-400 hover:opacity-80 transition-opacity font-medium shrink-0"
                         >
                             View tx
                             <HugeiconsIcon icon={ArrowUpRight01Icon} className="w-3 h-3" />

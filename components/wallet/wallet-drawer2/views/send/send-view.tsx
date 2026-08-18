@@ -464,11 +464,11 @@ export function SendView({
                         )
                     ) : null}
                     <div className="flex-1 min-w-0">
-                        <p className="text-13 font-medium text-zinc-500 mb-0.5">To</p>
+                        <p className="text-12 font-medium text-zinc-500 mb-0.5">To</p>
                         {recipient ? (
-                            <p className="text-14 font-semibold text-white truncate">{recipientDisplay}</p>
+                            <p className="text-13 font-semibold text-white truncate">{recipientDisplay}</p>
                         ) : (
-                            <p className="text-14 font-medium text-zinc-600">@username or wallet address</p>
+                            <p className="text-13 font-medium text-zinc-600">@username or wallet address</p>
                         )}
                     </div>
                     <HugeiconsIcon icon={ArrowDown01Icon} className="w-4 h-4 text-zinc-500 flex-shrink-0" />
@@ -488,7 +488,7 @@ export function SendView({
                     address. Either way the sender covers it and the recipient
                     receives the full amount. Gas is quoted where we can. */}
                 {hasAmount && (
-                    <p className="text-center text-12 text-zinc-500">
+                    <p className="text-center text-11 text-zinc-500">
                         0.5% platform fee ·{" "}
                         {((parsedTokenAmount * PLATFORM_FEE_BPS) / 10000).toFixed(Math.min(6, sendDecimals))}{" "}
                         {selectedToken?.symbol ?? "SOL"}
@@ -521,13 +521,14 @@ export function SendView({
                     SOL"), and there is nothing to confirm — asking someone to
                     hold a disabled button would be nonsense.
 
-                    h-14/text-lg preserves this button's existing size rather
-                    than adopting the h-12 wide-button standard; resizing the
-                    wallet's primary action isn't part of this change. */}
+                    h-14 keeps this button taller than the h-12 wide-button
+                    standard on purpose — it is the wallet's primary action and
+                    the last step before funds leave. Its LABEL came down with
+                    the rest of the drawer's copy (it was text-lg). */}
                 {!canSend ? (
                     <button
                         disabled
-                        className="w-full py-4 rounded-full font-semibold text-lg transition-all flex items-center justify-center gap-2 bg-white/[0.06] text-zinc-500 cursor-not-allowed"
+                        className="w-full py-4 rounded-full font-semibold text-15 transition-all flex items-center justify-center gap-2 bg-white/[0.06] text-zinc-500 cursor-not-allowed"
                     >
                         {buttonLabel}
                     </button>
@@ -535,7 +536,7 @@ export function SendView({
                     // Extension: tap, then confirm in the wallet's own sheet.
                     <button
                         onClick={handleSend}
-                        className="cursor-pointer w-full py-4 rounded-full font-semibold text-lg transition-all flex items-center justify-center gap-2 bg-white text-black hover:bg-zinc-100 active:scale-[0.98]"
+                        className="cursor-pointer w-full py-4 rounded-full font-semibold text-15 transition-all flex items-center justify-center gap-2 bg-white text-black hover:bg-zinc-100 active:scale-[0.98]"
                     >
                         {buttonLabel}
                     </button>
@@ -544,7 +545,7 @@ export function SendView({
                         label={buttonLabel}
                         holdingLabel="Keep holding…"
                         onConfirm={handleSend}
-                        className="h-14 text-lg"
+                        className="h-14 text-15"
                     />
                 )}
             </div>

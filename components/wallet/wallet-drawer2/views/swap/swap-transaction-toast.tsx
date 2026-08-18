@@ -41,7 +41,7 @@ function TokenPill({ symbol, icon }: { symbol: string; icon?: string }) {
                     <span className="text-[8px] font-bold text-zinc-400">{symbol.slice(0, 2)}</span>
                 )}
             </div>
-            <span className="text-13 font-semibold text-white">{symbol}</span>
+            <span className="text-12 font-semibold text-white">{symbol}</span>
         </div>
     );
 }
@@ -84,7 +84,7 @@ function SwapToastContent({
             </div>
 
             {/* Amounts */}
-            <p className="text-12 text-zinc-500">
+            <p className="text-11 text-zinc-500">
                 {inputAmount} {inputSymbol} → {outputAmount} {outputSymbol}
             </p>
 
@@ -134,7 +134,7 @@ function SwapToastContent({
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 4 }}
                         transition={{ duration: 0.18, ease: "easeOut" }}
-                        className={`text-13 font-medium flex-1 ${
+                        className={`text-12 font-medium flex-1 ${
                             isSuccess ? "text-lantern" : isError ? "text-pastelred" : "text-zinc-300"
                         }`}
                     >
@@ -152,7 +152,7 @@ function SwapToastContent({
                             initial={{ opacity: 0, x: 8 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.1, duration: 0.2, ease: "easeOut" }}
-                            className="flex items-center gap-1 text-12 text-zinc-400 hover:opacity-80 transition-opacity font-medium shrink-0"
+                            className="flex items-center gap-1 text-11 text-zinc-400 hover:opacity-80 transition-opacity font-medium shrink-0"
                         >
                             View tx
                             <HugeiconsIcon icon={ArrowUpRight01Icon} className="w-3 h-3" />

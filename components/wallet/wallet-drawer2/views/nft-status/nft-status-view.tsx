@@ -24,7 +24,7 @@ export function NFTStatusView({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="flex flex-col rounded-2xl h-full bg-canvas relative items-center justify-center px-8"
+            className="relative flex h-full flex-col bg-canvas items-center justify-center px-8"
         >
             <AnimatePresence mode="wait">
                 {status === "sending" && <SendingState />}
@@ -40,7 +40,7 @@ export function NFTStatusView({
             <div className="absolute bottom-10 left-6 right-6">
                 <button
                     onClick={onClose}
-                    className="w-full h-14 rounded-2xl bg-white/[0.08] text-15 font-bold text-white hover:bg-white/[0.14] transition-all active:scale-[0.98] cursor-pointer"
+                    className="h-12 w-full cursor-pointer rounded-full bg-white/[0.08] text-13 font-bold text-white transition-colors hover:bg-white/[0.14] active:scale-[0.99]"
                 >
                     Close
                 </button>

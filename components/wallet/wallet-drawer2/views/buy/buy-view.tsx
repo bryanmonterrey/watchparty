@@ -73,7 +73,7 @@ export function BuyView({ walletAddress, onBack }: BuyViewProps) {
                         onClick={handleBuy}
                         disabled={isGeneratingUrl}
                         size="wide"
-                        className="w-full cursor-pointer rounded-full bg-white text-15 font-bold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
+                        className="w-full cursor-pointer rounded-full bg-white text-14 font-bold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
                     >
                         {isGeneratingUrl ? "Opening MoonPay…" : "Continue to MoonPay"}
                     </Button>
