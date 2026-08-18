@@ -73,8 +73,8 @@ export function CopyTokenAddress({ address }: { address: string }) {
                 }}
                 aria-label={copied ? "token address copied" : "copy token address"}
                 className={cn(
-                    "relative grid h-6 shrink-0 cursor-pointer place-items-center bg-soft-gray/5 px-2 text-13 font-medium transition-colors",
-                    copied ? "text-emerald-400" : "text-zinc-500 hover:bg-soft-gray/10 hover:text-white",
+                    "relative grid h-6 shrink-0 cursor-pointer place-items-center bg-soft-gray/5 px-2 text-11 font-medium transition-colors",
+                    copied ? "text-long" : "text-zinc-500 hover:bg-soft-gray/10 hover:text-white",
                 )}
             >
                 {/* Invisible sizers, stacked in one grid cell: they pin the

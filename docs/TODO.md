@@ -1,6 +1,6 @@
 # watchparty — running TODO (handoff)
 
-Consolidated state across sessions so work can resume in a fresh chat. Last updated 2026-08-07.
+Consolidated state across sessions so work can resume in a fresh chat. Last updated 2026-08-18.
 
 ## 🚨 Ops maturity (2026-08-07 — "run it like a consumer company")
 
@@ -309,6 +309,53 @@ Reference clone was reviewed 2026-07-21; patterns worth adopting then:
 - **Who-to-follow row morph** — when discover's right rail gets real follow
   suggestions (still mock data today), animate the followed row out
   (motion layoutId or ViewTransition share="morph").
+
+## 🏛️ Incorporate + Stripe onramp (2026-08-18 — BLOCKS card funding)
+
+Card funding is built and inert; it turns on with one env var. What it is
+waiting on is not code — it is a legal entity Stripe can verify.
+
+1. **Decide the entity.** There is an EIN but no LLC. On a KYB form the
+   **legal entity name must match IRS records for that EIN** — for a sole
+   proprietor that is usually the OWNER'S PERSONAL NAME, not a brand. A name
+   that does not match is the most common reason verification stalls, and on a
+   crypto application it reads as a discrepancy rather than a typo.
+   "Watchparty" belongs in **Public business name / Trading name (DBA)**, which
+   is a different field and is what customers see.
+   - Verify the exact registered name from the IRS CP 575 letter before typing
+     anything.
+2. **Form the LLC BEFORE applying, not after.** Onramp approval attaches to the
+   entity applied as; incorporating later likely means redoing verification and
+   re-entering a ~48h review queue. Forming an LLC also often means a NEW EIN
+   depending on structure/taxation. Stripe Atlas is their own suggested path on
+   the form.
+3. **Set Public business name + Business website** in Dashboard → Settings →
+   Public. Not cosmetic: session creation fails with
+   `crypto_onramp_merchant_not_properly_setup` while either is blank.
+4. **Submit the Crypto Onramp application** —
+   dashboard.stripe.com/crypto-onramp/get-started. ~48h review, and it **gates
+   the sandbox too**: a valid key still errors until it clears.
+5. **After approval:** put `STRIPE_SECRET_KEY` (sk_live_…) into the
+   **`DOTENV_OVERRIDES`** GitHub secret — appended after DOTENV_PRODUCTION and
+   wins, so the unreadable wholesale secret needs no rewrite — then deploy. The
+   card row appears in the buy dialog on its own; no code change.
+   Only the SECRET key is needed; the publishable key is for Stripe's embedded
+   JS SDK and we use the hosted redirect.
+
+**Business description draft** (in the session that wrote this; rewrite to match
+what is actually operating). Two things to get right rather than fast:
+- **Custody.** The non-custodial framing — keys derived from a seed the user
+  controls, we never hold or direct funds — is the paragraph that decides
+  whether this reads as payments facilitation or money transmission. Confirm it
+  is true of EVERY path before submitting.
+- **Scope.** The app also has perps and prediction markets. Whether they are
+  live is a deliberate disclosure decision; a discrepancy found later is far
+  worse than one disclosed now.
+
+**Limits that are NOT bugs, once live:** US + EU only (excluding Hawaii); Base
+and MATIC unavailable in the EU; and Stripe can NEVER fund BNB, HyperEVM or
+Robinhood — those are not on its network list. MoonPay covers BNB and is
+already in the tree (Solana-only today); generalising it is the smaller job.
 
 ## 🔭 Bigger workstreams (own focus / own chat)
 - **Multi-wallet: up to 25 wallets linked/created per user** (owner, 2026-07-21).

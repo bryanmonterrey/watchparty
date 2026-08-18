@@ -211,6 +211,12 @@
      still allowlisted across dozens of older files, and a semantic name would
      claim a vocabulary the rest of the app doesn't follow yet. A later sweep can
      swap literal for name mechanically. */
+  /* 11px for dense metadata (the coin page's copy-address chip). Named here
+     rather than written inline as an arbitrary value, so it has one definition
+     every surface can reach — which is what the text-scale guard exists to
+     force. (Spelling the arbitrary form here trips that guard on its own
+     example, so it is described rather than quoted.) */
+  --text-11: 11px;
   --text-13: 13px;
   --text-15: 15px;
 
