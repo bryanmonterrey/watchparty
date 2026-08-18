@@ -27,6 +27,7 @@ import { stableHoverColor } from "@/lib/stable-hover-color";
 import { CoinTradePanel } from "./coin-trade-panel";
 import { CoinRiskCard } from "./coin-risk-card";
 import { CopyTokenAddress } from "./copy-token-address";
+import { SwapsTable, MentionsTable } from "./coin-board-tables";
 import { TokenBondingCurve } from "@/components/tokens/token-bonding-curve";
 import { TokenDescription } from "@/components/tokens/token-description";
 import { TokenChatCard } from "@/components/tokens/token-chat-card";
@@ -481,6 +482,14 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
 
     const rows = React.useMemo(() => foldTraders(trades, coin.priceUsd), [trades, coin.priceUsd]);
 
+    // Posts that wrote this ticker. Same query the chart's Tag bubbles use, so
+    // it is answered from the same 30s server cache rather than costing a second
+    // trip; only fetched once the tab is actually opened.
+    const { data: mentions = [], isLoading: mentionsLoading } = trpc.tags.forCoin.useQuery(
+        { network: coin.network, tokenAddress: coin.tokenAddress, poolAddress: coin.poolAddress },
+        { enabled: tab === "mentions", staleTime: 60_000, retry: retryTransient(1) },
+    );
+
     // How much the table actually has to show, per fetch. `trades` is raw swaps
     // and `rows` is traders folded out of them, so both are worth seeing: zero
     // rows off a non-zero swap count means the fold dropped everything, which
@@ -612,7 +621,10 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
     const TABS: { id: TableTab; label: string }[] = [
         { id: "holders", label: "Holders" },
         { id: "swaps", label: "Swaps" },
-        { id: "mentions", label: `Tags (${rows.length})` },
+        // Counts TAGS, not traders. It read `rows.length` — the folded trader
+        // count — under a label that says Tags, so the number was always about
+        // a different thing than the word next to it.
+        { id: "mentions", label: `Tags${mentions.length ? ` (${mentions.length})` : ""}` },
     ];
 
     return (
@@ -663,20 +675,30 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                 </div>
             </div>
 
-            <DataTable
-                data={rows.slice(0, 25)}
-                columns={columns}
-                getRowId={(r) => r.account}
-                rowHeight={68}
-                loading={isLoading}
-                skeletonRows={6}
-                rowHoverRadius={12}
-                rowHoverColor={(r) => stableHoverColor(r.account)}
-                className="px-1.5 pb-1.5"
-                emptyState={<p className="px-4 py-6 text-left text-sm text-zinc-500">No trader activity yet.</p>}
-            />
+            {/* The tab actually SWITCHES the board now. It used to set state
+                that only recoloured the active label, so Holders, Swaps and
+                Tags all rendered this same folded-trader table — a "Swaps" tab
+                showing one row per trader is not a list of swaps. */}
+            {tab === "holders" ? (
+                <DataTable
+                    data={rows.slice(0, 25)}
+                    columns={columns}
+                    getRowId={(r) => r.account}
+                    rowHeight={68}
+                    loading={isLoading}
+                    skeletonRows={6}
+                    rowHoverRadius={12}
+                    rowHoverColor={(r) => stableHoverColor(r.account)}
+                    className="px-1.5 pb-1.5"
+                    emptyState={<p className="px-4 py-6 text-left text-sm text-zinc-500">No trader activity yet.</p>}
+                />
+            ) : tab === "swaps" ? (
+                <SwapsTable trades={trades} loading={isLoading} />
+            ) : (
+                <MentionsTable mentions={mentions} loading={mentionsLoading} />
+            )}
 
-            {rows.length > 0 && !isLoading && (
+            {tab === "holders" && rows.length > 0 && !isLoading && (
                 <p className="px-4 py-3 text-[12px] text-zinc-600">
                     From swaps in the last 24h — not full chain history.
                 </p>
