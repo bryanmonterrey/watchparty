@@ -161,17 +161,47 @@ the swap card gained the dialog's protections.
 ## 6. Genuinely open
 
 - The funded test above. Everything else is downstream of it.
-- **LI.FI integrator registration — the largest uncollected line, and only you
-  can do it.** Every EVM and cross-chain swap earns $0 because LI.FI is called
-  with no `integrator` and no `fee`, and it refuses both until `watchparty` is
-  registered with a fee wallet at https://portal.li.fi/. That covers all six EVM
-  chains and every bridge route. Nothing in the code can proceed without it.
-- **`TREASURY_BTC_ADDRESS` is set locally but NOT in production.** `.env*` is
-  gitignored, and prod env comes from the `DOTENV_PRODUCTION` secret with
-  `DOTENV_OVERRIDES` appended after it (later wins). Add
-  `TREASURY_BTC_ADDRESS=bc1qx644xg0llew9ct40s2h70mu6lj86vl83862uuh` to
-  `DOTENV_OVERRIDES` — do not rewrite it blind, it is write-only and already
-  holds other keys.
+- **LI.FI integrator registration — the largest uncollected line, and only the
+  owner can do it.** Every EVM and cross-chain swap earns $0: LI.FI is called
+  with no `integrator` and no `fee`, and refuses both until registration.
+  Confirmed against the live API 2026-08-19:
+
+  ```
+  no integrator (today)              -> 200  quote OK      (earns $0)
+  integrator=watchparty + fee=0.01   -> 400  "Integrator \"watchparty\" is not
+                                             configured for collecting fees"
+  ```
+
+  Steps, in order:
+  1. Sign up at https://portal.li.fi/.
+  2. Create the integrator keyed **exactly** `watchparty` — that string is what
+     `lib/chains/swap/lifi.ts` sends; any other spelling needs a code change.
+  3. Configure TWO fee wallets, because one integrator covers both ecosystems:
+     EVM `0x93496D3B5b9bd4E0355Db047c9FA7df05C97c972` (payingheavy.eth) and
+     Solana `NEXT_PUBLIC_TREASURY_PUBKEY` (`C9kxy…`), since `solana-lifi.ts`
+     routes Solana through LI.FI too.
+  4. Set the fee to `0.01` (1%), matching every other chain.
+  5. Take an API key if offered — `li.quest` is called unauthenticated today.
+
+  Then the wiring is small: add `integrator` and `fee` to the quote params in
+  `lib/chains/swap/lifi.ts`. The 400 above turning into a 200 is the proof.
+- **Rates are 1% on every chain** (`lib/chains/fee-bps.ts`, dependency-free so
+  client and server share it). Sends were 0.5% until 2026-08-19. The 5% in
+  `subscription.ts` is deliberately untouched — that is the platform's cut of
+  creator revenue, not a chain fee.
+- **Treasury addresses are committed defaults** in `lib/chains/treasury.ts`,
+  env-overridable. They are receive addresses, public on-chain the moment they
+  are used, and a missing env var here does not fail loudly — it just stops
+  charging.
+  ⚠️ The EVM one is payingheavy.eth, which is a LINKED USER WALLET rather than a
+  treasury. Harmless while volume is zero; wants a dedicated wallet before it
+  is not.
+- **Env now reaches every deploy path.** All six `Restore .env` steps across
+  deploy.yml (4), deploy-container.yml and preview.yml apply
+  `DOTENV_PRODUCTION` + `DOTENV_OVERRIDES` identically. Before 2026-08-19 only
+  deploy.yml's first step read the overrides secret — and
+  **deploy-container.yml serves the domains**, so a var added via overrides was
+  live on one path and silently absent on the one that matters.
 - **Tags have zero usage**: `post_tags` has 0 rows and not one of 81 posts
   contains a cashtag. The feature is complete end to end — the lever is
   discoverability of the composer's `$` picker, not code. Note that typing
