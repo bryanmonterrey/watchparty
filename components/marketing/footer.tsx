@@ -118,8 +118,10 @@ export function MarketingFooter() {
                 <div className="mt-5 flex flex-col gap-3 px-2 text-xs font-semibold text-black/40 sm:flex-row sm:items-center sm:justify-between">
                     <span>© 2026 watchparty</span>
                     <div className="flex items-center gap-5">
-                        <Link href="/safety" className="transition-colors hover:text-black/70">Terms</Link>
-                        <Link href="/safety" className="transition-colors hover:text-black/70">Privacy</Link>
+                        <Link href="/terms" className="transition-colors hover:text-black/70">Terms</Link>
+                        <Link href="/privacy" className="transition-colors hover:text-black/70">Privacy</Link>
+                        <Link href="/cookies" className="transition-colors hover:text-black/70">Cookies</Link>
+                        <Link href="/guidelines" className="transition-colors hover:text-black/70">Guidelines</Link>
                     </div>
                 </div>
             </div>

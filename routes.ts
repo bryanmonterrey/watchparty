@@ -15,6 +15,15 @@ export const publicRoutes: string[] = [
   "/developer",
   // Public "Connect with watchparty" app directory (app/(directory)/apps).
   "/apps",
+  // Policy pages (app/(legal)). Listed so they stay reachable if
+  // PUBLIC_BROWSING is ever flipped off — a login wall in front of the terms
+  // is exactly the wrong place for one.
+  "/terms",
+  "/privacy",
+  "/cookies",
+  "/accessibility",
+  "/ads-info",
+  "/guidelines",
 ];
 
 // Public PREFIXES (dynamic public pages, e.g. the embeddable server widget

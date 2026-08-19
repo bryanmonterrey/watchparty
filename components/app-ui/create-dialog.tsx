@@ -632,9 +632,9 @@ export function CreateDialog({ children, open: openProp, onOpenChange, initialTa
                                                 select files
                                             </Button>
                                             <p className="text-xs text-zinc-500 text-center max-w-sm leading-relaxed px-4">
-                                                By submitting your videos to Watchparty, you acknowledge that you agree to Watchparty's <a href="#" onClick={(e) => e.stopPropagation()} className="underline hover:text-zinc-300">Terms of Service</a> and <a href="#" onClick={(e) => e.stopPropagation()} className="underline hover:text-zinc-300">Community Guidelines</a>.
+                                                By submitting your videos to Watchparty, you acknowledge that you agree to Watchparty's <a href="/terms" target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="underline hover:text-zinc-300">Terms of Service</a> and <a href="/guidelines" target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="underline hover:text-zinc-300">Community Guidelines</a>.
                                                 <br />
-                                                Please be sure not to violate others' copyright or privacy rights. <a href="#" onClick={(e) => e.stopPropagation()} className="underline hover:text-zinc-300">Learn more</a>
+                                                Please be sure not to violate others' copyright or privacy rights. <a href="/guidelines#ip" target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="underline hover:text-zinc-300">Learn more</a>
                                             </p>
                                         </div>
                                     ) : (
