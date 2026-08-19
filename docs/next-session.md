@@ -45,10 +45,27 @@ decisions rather than edits.
   *"Integrator 'watchparty' is not configured for collecting fees. Sign up on
   https://portal.li.fi/ and configure your fee wallet."*
 
-**OPEN QUESTION worth answering before the fee work**: does passing a
-NON-EXISTENT `feeAccount` make Jupiter reject the swap build, or silently skip
-the fee? If it rejects, this is not lost revenue — it is a reason board buys
-FAIL, which matters far more than the money. Untested.
+**ANSWERED 2026-08-19 — it was the second thing, and worse (`5692a8d2`).** A
+non-existent `feeAccount` does not reject the build: `POST /swap` returns **200
+with a transaction**, and it reverts at EXECUTION as Jupiter error `6025`. So
+every Solana board buy was failing on-chain *after the user signed*, which
+presents as a wallet/signing fault, not a config one — **24 of the top 25
+Solana board coins had no referral ATA** (only SOL; USDC is the other one that
+exists but is not on the board).
+
+Fixed: the fee is requested at QUOTE time only when the ATA exists, and the
+swap derives `feeAccount` from the quote's own `platformFee`
+(`lib/jupiter/referral-fee.ts`). Verified by simulating against mainnet state —
+USDC still charges, BONK went from `6025` to clean.
+
+Note for §0: this would have hit the first funded test, and the obvious suspect
+would have been the `Keypair.fromSeed` line flagged there. It wasn't.
+
+**STILL OPEN — collecting the fee at all.** Buys now succeed but earn nothing
+on any mint without an ATA. Creating one is an on-chain init per mint,
+~0.00204 SOL rent, needing a funded signer (the collector could do it on a cron
+over the top N board coins). That is a recurring spend, so it is a decision,
+not an edit.
 
 ---
 
@@ -131,7 +148,8 @@ the swap card gained the dialog's protections.
 ## 6. Genuinely open
 
 - The funded test above. Everything else is downstream of it.
-- Jupiter fee ATAs + LI.FI integrator registration (§1).
+- Jupiter fee ATAs (buys WORK now, they just earn $0) + LI.FI integrator
+  registration (§1).
 - **Tags have zero usage**: `post_tags` has 0 rows and not one of 81 posts
   contains a cashtag. The feature is complete end to end — the lever is
   discoverability of the composer's `$` picker, not code. Note that typing
