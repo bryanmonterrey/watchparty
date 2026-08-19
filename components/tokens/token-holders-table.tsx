@@ -132,6 +132,7 @@ export function TokenHoldersTable({ token }: TokenHoldersTableProps) {
                 data={holders}
                 columns={columns}
                 getRowId={(h) => h.owner}
+                reorderable
                 rowHeight={44}
                 loading={isLoading}
                 skeletonRows={6}

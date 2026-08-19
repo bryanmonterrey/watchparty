@@ -128,6 +128,7 @@ export function SwapsTable({ trades, loading }: { trades: SwapRow[]; loading: bo
             // Two swaps by one wallet in the same second are different rows;
             // keying on the account alone would collapse them.
             getRowId={(r, i) => `${r.account}-${r.ts}-${i}`}
+            reorderable
             rowHeight={56}
             loading={loading}
             skeletonRows={6}
@@ -177,6 +178,7 @@ export function MentionsTable({ mentions, loading }: { mentions: MentionRow[]; l
             data={mentions.slice(0, 50)}
             columns={columns}
             getRowId={(r) => r.id}
+            reorderable
             rowHeight={56}
             loading={loading}
             skeletonRows={4}

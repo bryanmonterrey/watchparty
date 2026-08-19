@@ -523,6 +523,7 @@ export function TrendingTable({ className }: { className?: string }) {
                     data={rows}
                     columns={columns}
                     getRowId={(r) => r.id}
+                    reorderable
                     sorting={sorting}
                     onSortingChange={(updater) =>
                         setSorting((prev) => {

@@ -19,7 +19,9 @@
 // LAYOUT follows two references the owner picked, in watchparty's palette
 // rather than theirs: the coin header and the amount-carrying CTA ("Buy $200")
 // from the first, the big centred amount card with presets beneath it from the
-// second. Accent is `lantern`, used on exactly one thing per state.
+// second. Accent is `twitter2` — the app's accent — used on exactly one
+// thing per state. It was `lantern` here, which is the price-UP green: a
+// selected preset or wallet is a choice, not a gain.
 
 import * as React from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -732,7 +734,7 @@ export function BuyDialog({
                                                 // by clip-path, so no rounded-*.
                                                 "h-11 cursor-pointer text-15 font-bold tabular-nums transition-colors disabled:opacity-50",
                                                 active
-                                                    ? "bg-lantern/15 text-lantern"
+                                                    ? "bg-twitter2/15 text-twitter2"
                                                     : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white",
                                             )}
                                         >
@@ -947,7 +949,7 @@ export function BuyDialog({
                                         className={cn(
                                             "flex h-14 w-full cursor-pointer items-center gap-3 px-3.5 text-left transition-colors",
                                             isActive
-                                                ? "bg-lantern/12 text-lantern"
+                                                ? "bg-twitter2/12 text-twitter2"
                                                 : "text-zinc-300 hover:bg-white/[0.06] hover:text-white",
                                         )}
                                     >

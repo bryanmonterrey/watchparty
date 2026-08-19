@@ -684,6 +684,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                     data={rows.slice(0, 25)}
                     columns={columns}
                     getRowId={(r) => r.account}
+                    reorderable
                     rowHeight={68}
                     loading={isLoading}
                     skeletonRows={6}

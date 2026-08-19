@@ -102,9 +102,13 @@ export function DataTableHeader<TData extends RowData>({
                                     "z-10 p-0 text-base font-semibold text-zinc-400",
                                     meta?.hideClassName,
                                     // Drop indicators for the reorder drag — a hairline on the
-                                    // edge the column would land against.
-                                    "data-[drop=true]:before:absolute data-[drop=true]:before:inset-y-0 data-[drop=true]:before:left-0 data-[drop=true]:before:w-0.5 data-[drop=true]:before:bg-lantern",
-                                    "data-[dropend=true]:after:absolute data-[dropend=true]:after:inset-y-0 data-[dropend=true]:after:right-0 data-[dropend=true]:after:w-0.5 data-[dropend=true]:after:bg-lantern",
+                                    // edge the column would land against. twitter2,
+                                    // like the resize handle below: this is the app's
+                                    // accent, and `lantern` (which these used to be) is
+                                    // the PRICE-UP green, so table chrome wearing it read
+                                    // as a value judgement about the column.
+                                    "data-[drop=true]:before:absolute data-[drop=true]:before:inset-y-0 data-[drop=true]:before:left-0 data-[drop=true]:before:w-0.5 data-[drop=true]:before:bg-twitter2",
+                                    "data-[dropend=true]:after:absolute data-[dropend=true]:after:inset-y-0 data-[dropend=true]:after:right-0 data-[dropend=true]:after:w-0.5 data-[dropend=true]:after:bg-twitter2",
                                     className,
                                 )}
                             >
@@ -173,7 +177,7 @@ export function DataTableHeader<TData extends RowData>({
                                         onPointerDown={(e) => onResizeStart(column.id, e)}
                                         onPointerMove={onResizeMove}
                                         onPointerUp={onResizeEnd}
-                                        className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize touch-none bg-transparent transition-colors hover:bg-lantern/40"
+                                        className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize touch-none bg-transparent transition-colors hover:bg-twitter2/40"
                                     />
                                 ) : null}
                             </th>

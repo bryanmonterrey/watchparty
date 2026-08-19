@@ -231,6 +231,7 @@ export function TokenTradesTable({ token }: { token: Token }) {
                 data={filteredTrades}
                 columns={columns}
                 getRowId={(t, i) => t.txHash || String(i)}
+                reorderable
                 rowHeight={56}
                 loading={isLoading}
                 skeletonRows={8}
