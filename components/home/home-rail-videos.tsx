@@ -10,6 +10,7 @@ import { HomeRailTabs } from "./home-rail-tabs";
 import { cn } from "@/lib/utils";
 import { stableHoverColor } from "@/lib/stable-hover-color";
 import { useHomeFeed } from "./home-feed-context";
+import { useForceLoading } from "@/lib/debug-loading";
 import { RailRowMenu } from "@/components/rails/rail-row-menu";
 
 // The rail's video list — this is the carousel's picker, relocated. Clicking a
@@ -72,6 +73,11 @@ export function HomeRailVideos() {
     // playing whatever it was on underneath.
     const onOnline = tab === RAIL_TAB_ONLINE;
 
+    // `?debug-loading` pins the skeleton on prod — the rail was the one card in
+    // this column that ignored the switch, so its loading state could only be
+    // reviewed in the 200ms flash before the first page landed.
+    const forceLoading = useForceLoading();
+
     const scrollRef = useRef<HTMLDivElement>(null);
     const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -120,22 +126,20 @@ export function HomeRailVideos() {
     // The skeleton wears the same shell as the real list — a container that
     // appears only once the rows land would read as a layout shift.
     //
+    // ONE SHELL, not two. This used to early-return a SEPARATE
+    // `<RailShell bordered>` for the loading state, and the loading card came
+    // out with no outline. Nothing in the markup explained that — both branches
+    // passed `bordered` — but they were two different elements at two different
+    // places in the tree, so the swap tore the whole card down and built a new
+    // one. The outline isn't a CSS border: RailShell hands it to Lisse as an
+    // `innerBorder`, which is stroked into a wrapper Lisse sizes from a
+    // ResizeObserver, so a card that mounts and remeasures at an awkward moment
+    // can come up unstroked. A shell that is never rebuilt can't. The loading
+    // and loaded states are the same element now, and only the ROWS swap.
+    //
     // Not on Online: that tab's list isn't this feed, and RailOnlineList carries
     // its own skeleton — the feed still loading shouldn't blank it.
-    if (isLoading && !onOnline) {
-        return (
-            <RailShell className={CARD_MB} radius={25} bordered>
-                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                    {railTabs}
-                    <div className={cn("flex flex-col bg-canvas", CARD_PX)}>
-                        {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
-                            <RailRowSkeleton key={i} index={i} count={SKELETON_COUNT} />
-                        ))}
-                    </div>
-                </div>
-            </RailShell>
-        );
-    }
+    const showSkeleton = (isLoading || forceLoading) && !onOnline;
 
     // The rail is a fixed-height sticky column, so the list scrolls inside it
     // rather than growing the page. RailShell owns the height; this element
@@ -154,7 +158,11 @@ export function HomeRailVideos() {
             <div ref={scrollRef} className="hidden-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto">
                 {railTabs}
                 <div className={cn("flex flex-col bg-canvas", CARD_PX)}>
-                {onOnline ? (
+                {showSkeleton ? (
+                    Array.from({ length: SKELETON_COUNT }).map((_, i) => (
+                        <RailRowSkeleton key={i} index={i} count={SKELETON_COUNT} />
+                    ))
+                ) : onOnline ? (
                     <RailOnlineList />
                 ) : (
                     <>
