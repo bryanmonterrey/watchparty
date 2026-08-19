@@ -10,24 +10,26 @@ const AUTH_URL =
   process.env.NEXT_PUBLIC_AUTH_URL ??
   (typeof window !== "undefined" ? `${window.location.origin}/api/auth` : "http://localhost:3001/api/auth");
 
-export async function siweNonce(walletAddress?: string, chainId?: number): Promise<string> {
+// better-auth 1.7 takes NO body here — the schema is
+// `z.object({}).strict().optional()`, so the `{walletAddress, chainId}` this
+// used to send is now an unknown-key rejection, not an ignored extra. The
+// nonce is no longer keyed by address either (it is stored under the nonce
+// itself), which is why the address doesn't need to exist yet.
+export async function siweNonce(): Promise<string> {
   const res = await fetch(`${AUTH_URL}/siwe/nonce`, {
     method: "POST",
     credentials: "include",
     keepalive: true,
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ walletAddress, chainId }),
   });
   if (!res.ok) throw new Error("Failed to start sign-in.");
   return (await res.json()).nonce;
 }
 
-export async function siweVerify(body: {
-  message: string;
-  signature: string;
-  walletAddress: string;
-  chainId: number;
-}) {
+// Also `.strict()` on 1.7, and it accepts only these two (plus an optional
+// `email`). The address and chainId it used to be told are now read out of the
+// signed message — which is stricter: they can no longer disagree with what the
+// user actually signed.
+export async function siweVerify(body: { message: string; signature: string }) {
   // `keepalive` lets this request finish even if mobile Safari backgrounds the
   // tab when returning from the wallet app — otherwise the POST is cancelled
   // (Vercel logs it as status 0, function never runs) and sign-in hangs. Retry
@@ -108,7 +110,7 @@ export async function signInWithInjectedEvm(chainId: number, provider?: any, opt
     // Chain may not be added in the wallet; continue and let signing surface any mismatch.
   }
 
-  const nonce = await siweNonce(address, chainId);
+  const nonce = await siweNonce();
   const message = createSiweMessage({
     address: address as `0x${string}`,
     chainId,
@@ -119,7 +121,7 @@ export async function signInWithInjectedEvm(chainId: number, provider?: any, opt
     statement: "Sign in to Watchparty.",
   });
   const signature: string = await eth.request({ method: "personal_sign", params: [message, address] });
-  return siweVerify({ message, signature, walletAddress: address, chainId });
+  return siweVerify({ message, signature });
 }
 
 // EVM WalletConnect (QR) — the EVM twin of the Solana wallet-adapter. Uses

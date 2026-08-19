@@ -10,6 +10,7 @@ import { betterAuth } from "better-auth";
 import { clearSlugMiss } from "@/lib/security/slug-miss-cache";
 import { dash } from "@better-auth/infra";
 import { siwsPlugin } from "better-auth-siws";
+import { walletAddressFromBody } from "./siwe-address";
 import { siwe } from "better-auth/plugins/siwe";
 import { withCache, TTL, redis } from "@/lib/cache";
 import { verifyEvmMessage } from "@/lib/chains/evm/verify";
@@ -468,14 +469,15 @@ export const auth = betterAuth({
     user: {
       create: {
         before: async (userData: any, ctx: any) => {
-          // SIWS sends `address`; EVM SIWE sends `walletAddress`.
+          // SIWS sends `address`; SIWE sends `walletAddress` on better-auth 1.6
+          // and nothing at all on 1.7, where it lives in the signed message.
           //
           // `ctx?.` — the hook also fires for users created OUTSIDE an HTTP
           // request (internalAdapter.createUser from a script, a seed, a
           // migration), where better-auth passes no context at all. Without the
           // optional chain that path throws "null is not an object" before any
           // user can be made; surfaced by scripts/dev/mint-test-session.mjs.
-          const walletAddress = ctx?.body?.address ?? ctx?.body?.walletAddress;
+          const walletAddress = walletAddressFromBody(ctx?.body);
           const now = new Date();
 
           // An EVM (SIWE) address must never be written to `user.wallet_address`.
@@ -610,7 +612,7 @@ export const auth = betterAuth({
             // `ctx?.` for the same reason as the user-create hook above: a
             // session made outside an HTTP request (scripts, seeds) gets no
             // context, and an unguarded deref throws before the session exists.
-            const address = ctx?.context?.address ?? ctx?.body?.address ?? ctx?.body?.walletAddress;
+            const address = ctx?.context?.address ?? walletAddressFromBody(ctx?.body);
 
             if (!address) {
               return { data: sessionData };

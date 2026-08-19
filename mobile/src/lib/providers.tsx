@@ -42,10 +42,16 @@ export function AppProviders({ children }: { children: ReactNode }) {
         httpBatchLink({
           url: `${getBaseUrl()}/api/trpc`,
           transformer: superjson,
-          headers() {
+          async headers() {
             // The expoClient plugin keeps the better-auth session cookie in
             // SecureStore; forward it so protectedProcedures see the session.
-            const cookie = authClient.getCookie();
+            //
+            // `getCookie()` returns a PROMISE as of @better-auth/expo 1.7 (the
+            // secure-storage migration). Without the await this sends the string
+            // "[object Promise]" as the Cookie header, which is not an error —
+            // just an unauthenticated request, so every protectedProcedure would
+            // start 401ing with nothing in the logs to explain it.
+            const cookie = await authClient.getCookie();
             return cookie ? { Cookie: cookie } : {};
           },
         }),

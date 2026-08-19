@@ -101,6 +101,20 @@ Package manager is **bun** (`bun.lock`). Runtime is Next.js 16 (App Router, Turb
   A real pass is **empty output**. Treat crash frames (`node::Start`, `dyld`) as
   a failure regardless of exit code.
 
+  ⚠️ **`rm -rf .next/dev/types` does NOT give you a cold check.** `tsconfig`
+  sets `incremental: true`, so a gitignored `tsconfig.tsbuildinfo` persists
+  between runs and a re-run with nothing changed reports success having checked
+  nothing — `--diagnostics` shows `Check time: 0.00s`, `Instantiations: 0`.
+  That is correct behaviour, but it is indistinguishable from a real pass, so
+  when you are verifying something that lives OUTSIDE your source (a dependency
+  swap, a lockfile change) delete `tsconfig.tsbuildinfo` too and confirm from
+  `--diagnostics` that checking actually ran.
+
+  Measured 2026-08-19 in a clean worktree: a genuine cold full check is
+  **192s** (150s of it checking, 3.9M instantiations), not the 786s recorded
+  above — that number was measured on a swapping machine and reflects memory
+  pressure, not the type-check itself.
+
 ### TypeScript stays on 6.x — do NOT bump to 7 (evaluated 2026-07-28)
 
 TS 7 (the native rewrite) is genuinely ~40x faster here (~10min → ~60s cold) and
@@ -552,22 +566,37 @@ The auth stack is sensitive to transitive versions. Two non-obvious pins/fixes w
 
 - **`kysely`: pin retired.** Historically pinned to 0.28.17 (better-auth statically imports `@better-auth/kysely-adapter` even on the Drizzle adapter, and kysely 0.29.0's bundled build broke that import with "export … doesn't exist"). As of better-auth ≥1.6.16 the adapter supports `^0.29.0` and the auth route boots on 0.29.2 (verified via `next start` + `/api/auth/ok`). kysely is still never used at runtime — it's import-time-only baggage.
 - **better-call is pinned via `overrides` to `1.4.0` (2026-08-12)** — the version better-auth 1.6.27 itself ships. The override exists because `@better-auth/infra` (dash()) still hard-depends on `1.3.7` and TWO better-call type identities in one tree is what produced the 31-error saga below; ONE forced 1.4.0 typechecks clean, dash() included (verified in a worktree before applying). Keep the override aligned with whatever better-call better-auth pins when bumping. `@better-auth/oauth-provider` **is ADOPTED (2026-08-12)** — the deprecated in-tree oidc-provider is gone; clients live in `oauthClient` (text[] arrays, hashed secrets, `public` flag), tokens/consents in the new-shape tables, old tables parked as `*_legacy`. Both DBs had ZERO live rows at cutover, so nothing was migrated live. Everything hard-won about the setup is in `docs/oauth-provider.md`; the smoke (`scripts/dev/smoke-oauth-flow.mjs`) is the gate.
-- **better-auth stays on 1.6.27 — do NOT bump to 1.7.x (checked 2026-08-19).** 1.7.1
-  rewrites the **SIWE wire contract**, and both of our endpoints break on it:
-  `/siwe/nonce` now takes **no body at all** (`z.object({}).strict().optional()`),
-  and `/siwe/verify` accepts only `{message, signature, email?}` — also `.strict()`.
-  `lib/chains/evm/sign-in.ts` posts `walletAddress` and `chainId` to both, so
-  every EVM/Base sign-in would 400 on an unknown key. 1.7 parses the address and
-  chainId **out of the signed message** instead, and keys the stored nonce by the
-  nonce itself rather than by `siwe:<address>:<chainId>`. Nothing about this is a
-  type error — it's a runtime body-schema rejection, so tsc stays green and only
-  a real sign-in shows it. `lib/auth/server.ts`'s user-create hook is downstream
-  of the same change: it reads `ctx.body.walletAddress`, which 1.7 no longer sends.
-  Migrating means rewriting the client to send only the message, and re-reading
-  the hook's wallet branch. Worth doing eventually — the address-keyed nonce is
-  what ruled out one-click Base sign-in, and 1.7 drops it — but it is its own task,
-  not a version bump. The better-call `overrides` pin stays correct either way:
-  better-auth@1.7.1 also depends on better-call 1.4.0.
+- **better-auth is on 1.7.1 (migrated 2026-08-19).** 1.7 is not a bump, it is a
+  migration, and none of it is visible to tsc:
+  - **The SIWE wire contract changed.** `/siwe/nonce` now takes **no body**
+    (`z.object({}).strict().optional()`) and `/siwe/verify` accepts only
+    `{message, signature, email?}` — also `.strict()`. The address and chainId
+    are parsed out of the **signed message** instead, and the nonce is stored
+    under itself rather than `siwe:<address>:<chainId>`. Sending the old fields
+    is a **400**, measured, not inferred:
+    `bun scripts/dev/smoke-siwe-contract.mjs` asserts the new shape works AND
+    that the legacy shape is rejected, so re-adding those fields fails loudly.
+  - **`ctx.body` no longer carries the address**, so both databaseHooks read it
+    through `lib/auth/siwe-address.ts`, which covers all three shapes (SIWS
+    `address`, SIWE 1.6 `walletAddress`, SIWE 1.7 parsed from `message`). A hook
+    that only read the body would not throw — it would silently stop doing the
+    wallet handling for every EVM sign-in.
+  - **Accounts are keyed on `(issuer, accountId)`**, with a new required
+    `account.issuer` column and a unique index. `db/better-auth-1.7.sql`
+    backfills it; the values are derived, never free-form (Google uses its own
+    issuer, other OAuth providers `local:oauth:<id>`, siws/siwe `local:<id>`),
+    and a wrong value means a duplicate user on every sign-in rather than an error.
+  - **`better-auth-siws` had to be updated first** (ours:
+    `bryanmonterrey/better-auth-siws`, now `0.2.0`). 0.1.4 calls
+    `internalAdapter.findAccountByProviderId`, which 1.7 removed in favour of
+    `findAccountByKey({issuer, accountId})` — so Solana login, the primary auth
+    path, died with a TypeError while tsc stayed green. 0.2.0 detects which
+    model the host exposes and works on both 1.6 and 1.7.
+  - **`@better-auth/expo`'s `getCookie()` returns a Promise now.** Un-awaited it
+    sends the string `"[object Promise]"` as the Cookie header — not an error,
+    just a silently unauthenticated app.
+  - better-call is still `1.4.0` on 1.7.1, so the `overrides` pin is unchanged.
+
 - **Don't add `better-call` as a direct dependency** — it's better-auth's *internal* RPC/endpoint framework (same authors), not a package we consume. No published better-auth has adopted better-call `2.x` (re-checked 2026-08-19: `@latest` 1.7.1 → `1.4.0`, `@rc` 1.7.0-rc.6 → `1.4.0`, `@beta` → `1.3.7`, `@canary` → `0.2.15-beta.7`). Forcing `better-call@2.0.5` in produced **31 type errors in `lib/auth/server.ts`** (verified 2026-06-27, mobile tsc): every plugin (`expo`, `siwe`, `custom-session`, `multi-session`, `two-factor`, `dash`) becomes *not assignable to `BetterAuthPlugin`*, because the plugins' `endpoints` carry better-call 1.3.7's `Endpoint` type while `BetterAuthPlugin` resolves `Endpoint` from 2.0.5 — two type identities colliding at the registration site. **Not fixable in our code** (only `as any` per plugin, which throws away auth type-safety) and **not a stale-install issue** (deterministic reinstall reproduces it). We get better-call 2.x *with types intact* automatically once better-auth adopts it upstream; until then stay on latest better-auth and let it pick its own better-call. Import `APIError` from `better-auth/api`, not `better-call`. **Watch for the upstream flip** with `npm view better-auth@beta dependencies.better-call` (also `@latest`/`@rc`) — when it returns `2.x`, better-auth has adopted it and a plain `bun update better-auth` brings it in cleanly. No GitHub issue tracks this migration (as of 2026-06-27); the npm dependency is the signal.
 - Email OTP has a **dev console fallback**: with no `RESEND_API_KEY`, the code is `console.log`ed instead of emailed. To test the flow locally without an inbox, run dev with `RESEND_API_KEY=` cleared and read the code from stdout.
 - **`@meteora-ag/dynamic-bonding-curve-sdk`: migrated to 1.5.10** (no pin). The 1.5.8+ breaking changes were renames/moves, applied in `hooks/use-token-launch.ts`: `TokenUpdateAuthorityOption`→`TokenAuthorityOption`, `TokenType.SPL`→`TokenType.SPLToken`, and `createConfigAndPoolWithFirstBuy` moved from `client.pool` to `client.partner` (same signature/return). Token-launch flow needs an on-chain smoke test before relying on it in prod.
