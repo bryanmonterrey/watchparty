@@ -52,8 +52,19 @@ export function CommunityServerSidebar({ serverId }: Props) {
         ...categories.flatMap((cat) => byCategory.get(cat.id) ?? []),
     ];
 
+    // border-l, not a bare colour: `border-xborder-soft-gray/12` was a find/
+    // replace that concatenated instead of replacing, and it is not a real
+    // utility — it generated nothing, so this sidebar has had no edge since
+    // 043717de. It also never carried a width class, so even the
+    // `border-soft-gray/12` it was meant to be would have rendered nothing.
+    // Left edge and xborder to match CommunityHomeSidebar, the sibling that
+    // renders in this exact slot.
+    //
+    // The comment is `//` above the return rather than a JSX block inside it:
+    // `{/* … */}` immediately after `return (` parses as an object literal and
+    // fails the Turbopack build.
     return (
-        <div className="flex flex-col h-full w-76 shrink-0 bg-background border-xborder-soft-gray/12 overflow-hidden max-md:w-full">
+        <div className="flex flex-col h-full w-76 shrink-0 border-l border-xborder bg-background overflow-hidden max-md:w-full">
             <CommunityServerHeader
                 server={server}
                 role={role}

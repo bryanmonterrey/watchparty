@@ -1,0 +1,24 @@
+# hover-lighter guard — pre-existing violations.
+#
+# Unlike the other guards' allowlists, this one is meant to stay TINY. Running
+# the guard repo-wide the first time produced 104 hits, of which 95 were
+# legitimate shapes (pure-white buttons with nowhere lighter to go, black
+# scrims that exist to darken, text that follows an inverting fill, light-theme
+# `dark:` branches) and 9 were real. The legitimate shapes are DECODED by the
+# guard rather than listed here — see the doc block in check-hover-lighter.mjs
+# — so an entry below should be a genuine one-off with a reason, not a batch.
+#
+# New entries should be rare and explained. Shrink this file, don't grow it.
+
+# A no-op hover that CANCELS an inherited one. Both of these sit on a component
+# whose own styles hover the background, and the point is to stop that so only
+# the text colour moves (which does go lighter in both cases). The guard cannot
+# see a primitive's base styles, so it cannot tell this apart from dead code.
+
+# radix day-cell: a SELECTED day must not react to hover at all.
+components/ui/calendar.tsx:bg-white->hover:bg-white
+components/ui/calendar.tsx:text-zinc-900->hover:text-zinc-900
+
+# Button primitive: kills its fill hover, keeps text-zinc-300 -> hover:text-white.
+# In the FROZEN v1 drawer (components/wallet/wallet-drawer/), kept as reference.
+components/wallet/wallet-drawer/views/swap/swap-view.tsx:bg-transparent->hover:bg-transparent

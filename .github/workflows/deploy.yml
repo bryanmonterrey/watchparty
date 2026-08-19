@@ -44,14 +44,16 @@ jobs:
       - name: Run tests
         run: bun test ./tests
 
-      # Rules tsc and the test suite structurally cannot see. Both are
-      # RATCHETS: existing violations are allowlisted, so these block new ones
-      # without demanding a repo-wide cleanup first.
+      # Rules tsc and the test suite structurally cannot see. All are RATCHETS:
+      # existing violations are allowlisted, so these block new ones without
+      # demanding a repo-wide cleanup first. ("Both" was accurate when there
+      # were two of them.)
       - name: Repo guards
         run: |
           node scripts/guards/check-wallet-address-display.mjs
           node scripts/guards/check-file-sizes.mjs
           node scripts/guards/check-text-scale.mjs
+          node scripts/guards/check-hover-lighter.mjs
 
   deploy:
     needs: [test]
