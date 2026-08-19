@@ -32,6 +32,7 @@ const MAX_RECENTS = 10;
 import { toPublicKey } from "@/lib/solana/pubkey";
 
 import { PLATFORM_FEE_BPS } from "@/lib/chains/fee-bps";
+import { formatUsd } from "@/lib/utils";
 
 const TREASURY = new PublicKey(process.env.NEXT_PUBLIC_TREASURY_PUBKEY!);
 const SOL_MINT = "So11111111111111111111111111111111111111111";
@@ -481,16 +482,25 @@ export function SendView({
                     chain={sendChain}
                 />
 
-                {/* What this send costs. The fee is charged on every path — as
-                    an instruction on Solana, an output on Bitcoin, and accrued
-                    for a batched sweep on EVM, where a transfer can only pay one
-                    address. Either way the sender covers it and the recipient
-                    receives the full amount. Gas is quoted where we can. */}
+                {/* What this send costs, in dollars.
+
+                    The fee is a percentage of value, and "0.0001 BTC" does not
+                    tell anyone what they are paying — the sender has to know the
+                    price and do the arithmetic to find out it is $6. Token units
+                    are the fallback, not the default, for when no price is known.
+
+                    Charged on every path: an instruction on Solana, an output on
+                    Bitcoin, and accrued for a batched sweep on EVM, where a
+                    transfer can only pay one address. The sender covers it and
+                    the recipient receives the full amount. Network gas stays in
+                    the chain's own currency, because that is what it is actually
+                    paid in and it is not our fee. */}
                 {hasAmount && (
                     <p className="text-center text-11 text-zinc-500">
                         {PLATFORM_FEE_BPS / 100}% platform fee ·{" "}
-                        {((parsedTokenAmount * PLATFORM_FEE_BPS) / 10000).toFixed(Math.min(6, sendDecimals))}{" "}
-                        {selectedToken?.symbol ?? "SOL"}
+                        {currentPrice
+                            ? formatUsd(((parsedTokenAmount * PLATFORM_FEE_BPS) / 10000) * currentPrice)
+                            : `${((parsedTokenAmount * PLATFORM_FEE_BPS) / 10000).toFixed(Math.min(6, sendDecimals))} ${selectedToken?.symbol ?? "SOL"}`}
                         {!isSolanaSend && feeQuote && (
                             <> · network fee ~{feeQuote.feeFormatted.toFixed(6)} {feeQuote.symbol}</>
                         )}
