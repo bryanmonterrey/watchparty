@@ -17,8 +17,8 @@ const FAQ = [
 
 export default function LivePage() {
     return (
-        <ColorScrollPage className="pt-28 sm:pt-32" initial="var(--color-soft-pink)">
-            <BgZone bg="var(--color-soft-pink)">
+        <ColorScrollPage className="pt-28 sm:pt-32" initial="#0d0b12">
+            <BgZone bg="#0d0b12">
                 <MarketingHero
                     eyebrow="Go live"
                     title={<>Go live in seconds</>}
@@ -46,39 +46,34 @@ export default function LivePage() {
                     title="A studio in your pocket"
                     sub="Everything a stream needs: chat, clips, and replays, with nothing to set up."
                     cards={[
-                        { tone: "bg-soft-blue", node: (<><p className="text-lg font-extrabold tracking-tight text-black">One-tap broadcast</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniLive /></div></>) },
-                        { tone: "bg-white", node: (<><p className="text-lg font-extrabold tracking-tight text-black">Live chat</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniChat /></div></>) },
-                        { tone: "bg-pastel-yellow", node: (<><p className="text-lg font-extrabold tracking-tight text-black">Clips & replays</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniShort bg="bg-white" /></div></>) },
+                        { tone: "bg-twitter/10", node: (<><p className="text-lg font-extrabold tracking-tight text-white">One-tap broadcast</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniLive /></div></>) },
+                        { tone: "bg-[#111]", node: (<><p className="text-lg font-extrabold tracking-tight text-white">Live chat</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniChat /></div></>) },
+                        { tone: "bg-sunset/10", node: (<><p className="text-lg font-extrabold tracking-tight text-white">Clips & replays</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniShort /></div></>) },
                     ]}
                 />
             </BgZone>
 
-            <BgZone bg="var(--color-soft-blue)">
+            <BgZone bg="#0e0f13">
                 <SplitShowcase
                     reverse
                     title="Earn while you're live"
                     body="Subscriptions, tips, and creator fees land in your wallet in real time, settled in USDC. Going live pays."
                     ctaLabel="Start earning"
                     ctaHref="/login"
-                    tone="bg-white"
                     visual={<EarningsCard />}
                 />
             </BgZone>
 
-            <BgZone bg="#ffffff">
+            <BgZone bg="#050505">
                 <PosterPanel
                     title="Your stream, front and center"
                     body="Live broadcasts surface across the feed, search, and categories, so new viewers find you while you're on air."
                     ctaLabel="Start streaming"
                     ctaHref="/login"
-                    tone="bg-pastel-yellow"
-                    dark={false}
                     visual={
                         <StackedCard
                             title="Live · 3.4K watching"
                             art={<BlobArt />}
-                            tone="bg-white"
-                            sheets={["bg-soft-blue", "bg-soft-pink"]}
                         />
                     }
                 />

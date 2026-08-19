@@ -26,17 +26,22 @@ export default async function MarketingLayout({
         if (!APP_REACHABLE.has(pathname)) redirect("/home");
     }
 
-    // Neutral base: each page paints its own scroll-reactive background
+    // Blacked-out base (owner call 2026-08-19: no more pastel canvases): each
+    // page still paints its own scroll-reactive background via ColorScrollPage,
+    // but every zone is now a near-black, so the base under them matches the
+    // app's canvas instead of white. Header and footer flip via their dark
+    // props — they are shared with the landing, which keeps its light lockup.
+    // Old note, still true about the mechanism: each page's scroll-reactive background
     // (ColorScrollPage), which covers main top-to-bottom, so the header floats
     // over the page's own first color and there are no band seams. Top padding
     // lives inside each page's ColorScrollPage so the background also fills the
     // header clearance.
     return (
         <MotionConfigProvider>
-            <div className="relative flex min-h-svh flex-col bg-white text-black">
-                <SiteHeader />
+            <div className="relative flex min-h-svh flex-col bg-[#050505] text-white">
+                <SiteHeader dark />
                 <main className="flex-1">{children}</main>
-                <MarketingFooter />
+                <MarketingFooter dark />
             </div>
         </MotionConfigProvider>
     );

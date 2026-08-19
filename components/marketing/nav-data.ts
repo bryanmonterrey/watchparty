@@ -16,7 +16,7 @@ export interface MarketingFeature {
 }
 
 export const MARKETING_FEATURES: MarketingFeature[] = [
-    { href: "/explore", title: "Explore", blurb: "Live streams, shorts, and your timeline in one feed.", icon: Compass01Icon, tone: "text-jewel" },
+    { href: "/explore", title: "Explore", blurb: "Live streams, shorts, and your timeline in one feed.", icon: Compass01Icon, tone: "text-lantern" },
     { href: "/live", title: "Go live", blurb: "Broadcast in seconds and keep every replay.", icon: LiveStreaming01Icon, tone: "text-pastelred" },
     { href: "/creators", title: "Creators", blurb: "Go live, grow, and get paid in USDC.", icon: SparklesIcon, tone: "text-sunset" },
     { href: "/coins", title: "Coins", blurb: "Launch a coin and trade it in-app.", icon: Rocket01Icon, tone: "text-twitter" },

@@ -18,8 +18,15 @@ const NAV_LINKS = [
   { label: "About", href: "/about" },
 ];
 
-export function SiteHeader() {
+// `dark` — the sub-pages' blacked-out chrome (2026-08-19): white wordmark and
+// inverted buttons on the near-black canvas. The landing still renders this
+// header without the prop and keeps its light lockup, which is why this is a
+// prop and not a rewrite — the component is shared with app/page.tsx.
+export function SiteHeader({ dark = false }: { dark?: boolean }) {
   const [open, setOpen] = useState(false);
+  // Everything that used to key off "menu open" now keys off "on black" —
+  // the open overlay is black, and dark mode is black from the start.
+  const onBlack = open || dark;
 
   // Close the menu on Escape.
   useEffect(() => {
@@ -81,8 +88,8 @@ export function SiteHeader() {
             aria-label="watchparty home"
             className="flex items-center gap-2 sm:gap-3"
           >
-            <BlackSquareStarIcon inverted={open} className="size-11 sm:size-11" />
-            <WatchpartyWordmark className={`h-5 w-auto transition-colors duration-300 ease-out sm:h-5 ${open ? "text-white" : "text-black"}`} />
+            <BlackSquareStarIcon inverted={onBlack} className="size-11 sm:size-11" />
+            <WatchpartyWordmark className={`h-5 w-auto transition-colors duration-300 ease-out sm:h-5 ${onBlack ? "text-white" : "text-black"}`} />
           </Link>
 
           {/* Right-side actions — buttons invert (black ↔ white) with the menu.
@@ -92,7 +99,7 @@ export function SiteHeader() {
             <Link
               href="/login"
               className={`rounded-full px-5 py-3.5 text-lg font-semibold tracking-tight active:scale-[0.97] [transition:background-color_.3s_ease-out,color_.3s_ease-out,transform_.16s_ease-out] sm:h-[55px] sm:px-12 ${
-                open ? "bg-white/90 text-black hover:bg-white" : "bg-black text-white hover:bg-black/90"
+                onBlack ? "bg-white/90 text-black hover:bg-white" : "bg-black text-white hover:bg-black/90"
               }`}
             >
               Log in
@@ -105,7 +112,7 @@ export function SiteHeader() {
               aria-expanded={open}
               aria-controls="site-menu"
               className={`grid place-items-center h-[55px] w-[55px] rounded-full active:scale-[0.94] [transition:background-color_.3s_ease-out,color_.3s_ease-out,transform_.16s_ease-out] sm:h-[55px] sm:w-[55px] ${
-                open ? "bg-white/90 text-black hover:bg-white" : "bg-black text-white hover:bg-black/90"
+                onBlack ? "bg-white/90 text-black hover:bg-white" : "bg-black text-white hover:bg-black/90"
               }`}
             >
               <MorphMenuIcon open={open} className="size-6" />

@@ -18,8 +18,8 @@ const FAQ = [
 
 export default function SafetyPage() {
     return (
-        <ColorScrollPage className="pt-28 sm:pt-32" initial="var(--color-soft-blue)">
-            <BgZone bg="var(--color-soft-blue)">
+        <ColorScrollPage className="pt-28 sm:pt-32" initial="#0e0f13">
+            <BgZone bg="#0e0f13">
                 <MarketingHero
                     variant="reverse"
                     eyebrow="Safety"
@@ -29,7 +29,7 @@ export default function SafetyPage() {
                     secondaryLabel="About us"
                     secondaryHref="/about"
                     visual={
-                        <div className="grid place-items-center rounded-[36px] bg-white/50 px-6 py-14 ring-1 ring-black/[0.04]">
+                        <div className="grid place-items-center rounded-[36px] bg-white/[0.04] px-6 py-14 ring-1 ring-white/[0.08]">
                             <SecurityCard />
                         </div>
                     }
@@ -37,7 +37,7 @@ export default function SafetyPage() {
 
                 <BigStatement>
                     Self-custodial means you control your funds.{" "}
-                    <span className="text-black/40">We never have access.</span> No seed phrase to
+                    <span className="text-white/40">We never have access.</span> No seed phrase to
                     lose, no balance snooping, and the safe choice is always the default.
                 </BigStatement>
             </BgZone>
@@ -48,14 +48,14 @@ export default function SafetyPage() {
                     title="Security you don't think about"
                     sub="The safe choice is the default. No settings to hunt for, no homework."
                     cards={[
-                        { tone: "bg-soft-blue", node: (<><p className="text-lg font-extrabold tracking-tight text-black">Swig wallets</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniShield /></div></>) },
-                        { tone: "bg-white", node: (<><p className="text-lg font-extrabold tracking-tight text-black">Encrypted messages</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniChat /></div></>) },
-                        { tone: "bg-soft-pink", node: (<><p className="text-lg font-extrabold tracking-tight text-black">Verified & protected</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniVerified /></div></>) },
+                        { tone: "bg-twitter/10", node: (<><p className="text-lg font-extrabold tracking-tight text-white">Swig wallets</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniShield /></div></>) },
+                        { tone: "bg-[#111]", node: (<><p className="text-lg font-extrabold tracking-tight text-white">Encrypted messages</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniChat /></div></>) },
+                        { tone: "bg-pastelred/10", node: (<><p className="text-lg font-extrabold tracking-tight text-white">Verified & protected</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniVerified /></div></>) },
                     ]}
                 />
             </BgZone>
 
-            <BgZone bg="var(--color-soft-gray)">
+            <BgZone bg="#0a0a0a">
                 <FeatureLedger
                     rows={[
                         { title: "Nothing to track", body: "No personally identifiable information, no asset-balance snooping. Your activity is yours." },
@@ -65,7 +65,7 @@ export default function SafetyPage() {
                 />
             </BgZone>
 
-            <BgZone bg="var(--color-soft-pink)">
+            <BgZone bg="#0d0b12">
                 <InsetBlock
                     title="Your privacy matters"
                     body="We never track any personally identifiable information or asset balances. What's yours stays yours, on-chain and off."

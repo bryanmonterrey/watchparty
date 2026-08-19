@@ -19,8 +19,8 @@ export const metadata: Metadata = {
 
 export default function InvestorsPage() {
     return (
-        <ColorScrollPage className="pt-28 sm:pt-32" initial="var(--color-pastel-yellow)">
-            <BgZone bg="var(--color-pastel-yellow)">
+        <ColorScrollPage className="pt-28 sm:pt-32" initial="#12100b">
+            <BgZone bg="#12100b">
                 <MarketingHero
                     variant="centered"
                     eyebrow="Investors"
@@ -35,13 +35,13 @@ export default function InvestorsPage() {
 
                 <BigStatement>
                     Social apps monetize attention with ads. watchparty monetizes it with{" "}
-                    <span className="text-black/40">rails</span> — subscriptions, creator
+                    <span className="text-white/40">rails</span> — subscriptions, creator
                     payouts, and trading settle in USDC inside the app, so the business earns
                     when creators and traders do, not just when advertisers show up.
                 </BigStatement>
             </BgZone>
 
-            <BgZone bg="var(--color-soft-gray)">
+            <BgZone bg="#0a0a0a">
                 <FeatureLedger
                     rows={[
                         { title: "Built, not pitched", body: "Live streaming, the social feed, non-custodial multichain wallets, coin launches, and USDC subscriptions are shipped and running in production." },
@@ -51,7 +51,7 @@ export default function InvestorsPage() {
                 />
             </BgZone>
 
-            <BgZone bg="var(--color-soft-blue)">
+            <BgZone bg="#0e0f13">
                 <InsetBlock
                     title="Talk to us"
                     body="We're raising from people who understand consumer crypto. If that's you, write to us — a deck and a live walkthrough are one reply away."
