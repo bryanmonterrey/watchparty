@@ -14,7 +14,8 @@ import { follows } from "@/db/schema/content/follow";
 import { tokens } from "@/db/schema/content/token";
 import { and, desc, eq, gt, inArray, lt, or, sql, type SQL } from "drizzle-orm";
 import { withCache } from "@/lib/cache";
-import { bannedTokenAddresses, brandSymbolPattern } from "@/lib/coin-feed/quality";
+import { bannedTokenAddresses, brandSymbolPattern, MIN_BOARD_LIQUIDITY_USD } from "@/lib/coin-feed/quality";
+import { trendingCoins } from "@/db/schema/content/trending";
 
 /** Cursor is `${iso}|${id}` — both halves of the ORDER BY, so it's total. */
 const encodeCursor = (occurredAt: Date, id: string) => `${occurredAt.toISOString()}|${id}`;
@@ -84,6 +85,52 @@ function buildFilters(input: FilterInput, viewerId: string | null): SQL[] {
                 sql`, `,
             )}))`,
         );
+    }
+
+    // ── The liquidity gate, read-time for the same append-log reason ────────
+    //
+    // 2026-08-19: SOLUG (8BvxLr…Y3j4) reached the rail as a 30-wallet, $119k
+    // cluster_buy — 24 holders, dev holding 91%, and $0.003 of real liquidity
+    // behind a claimed $16.8M of 24h volume. Wash trading fabricates volume,
+    // trader count and market cap for free; pooled liquidity is the number
+    // that costs real money to fake, so it is the one this filters on.
+    //
+    // Write-time can't do this alone: the paths that admit a coin often carry
+    // no dollar liquidity at all (Pulse maps it to null by design), and the
+    // budget-capped screens measured SOLUG hours AFTER its event fired. The
+    // emit gate in clusters.ts narrows that window; this clause is what erases
+    // the ones that got through, backlog included, the moment a measurement
+    // lands.
+    //
+    // Only a MEASURED figure may censor an event. `tracked_tokens` is trusted
+    // as written (GT reserves or the Mobula screen — both real dollars);
+    // `trending_coins` only counts once `liquidity_screened_at` proves the
+    // per-coin screen ran, because its unscreened values are provider claims —
+    // the very thing this gate exists to distrust. SQL's NULL comparisons make
+    // both EXISTS clauses pass unmeasured coins, mirroring
+    // clearsLiquidityFloor. Two tables because eviction deletes tracked rows
+    // (the scam's usual exit) while the board row, screened, lives on.
+    //
+    // watchparty launches are exempt: on-curve coins have no AMM pool by
+    // construction — the same carve-out every eviction in discovery makes.
+    if (MIN_BOARD_LIQUIDITY_USD > 0 && process.env.COIN_FEED_LIQUIDITY_GATE !== "off") {
+        where.push(sql`(
+            ${coinFeedEvents.wpTokenId} IS NOT NULL
+            OR (
+                NOT EXISTS (
+                    SELECT 1 FROM ${trackedTokens}
+                    WHERE ${trackedTokens.id} = ${coinFeedEvents.trackedTokenId}
+                      AND ${trackedTokens.liquidityUsd} < ${MIN_BOARD_LIQUIDITY_USD}
+                )
+                AND NOT EXISTS (
+                    SELECT 1 FROM ${trendingCoins}
+                    WHERE ${trendingCoins.network} = ${coinFeedEvents.network}
+                      AND ${trendingCoins.tokenAddress} = ${coinFeedEvents.tokenAddress}
+                      AND ${trendingCoins.liquidityScreenedAt} IS NOT NULL
+                      AND ${trendingCoins.liquidityUsd} < ${MIN_BOARD_LIQUIDITY_USD}
+                )
+            )
+        )`);
     }
 
     if (input.scope && input.scope !== "all") {

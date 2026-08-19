@@ -12,12 +12,16 @@
 import { db } from "@/db";
 import { coinFeedEvents, trackedTokens, type CoinFeedTrader, type NewCoinFeedEvent } from "@/db/schema/content/coin-feed";
 import { deliverCommunityCoinAlerts } from "@/lib/coin-feed/community-alerts";
-import { eq, inArray, sql } from "drizzle-orm";
+import { eq, gte, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { CallBudget, fetchPoolTrades, type PoolTrade } from "./geckoterminal";
 import { readPoolTrades } from "./local-trades";
 // Shared with the coin page's trades table — see lib/coins/resolve-traders.
 import { resolveTraders } from "@/lib/coins/resolve-traders";
+import { clearsLiquidityFloor, MIN_BOARD_LIQUIDITY_USD } from "./quality";
+import { fetchMobulaTokenSecurity, mobulaCadence, mobulaEnabled, securityCacheKey } from "@/lib/coins/mobula";
+import { withCache } from "@/lib/cache";
+import { backfillTrendingLiquidity } from "@/server/lib/backfill-liquidity";
 
 // ── Tuning ───────────────────────────────────────────────────────────────────
 // These are the knobs that decide whether the rail feels alive or noisy. They
@@ -52,8 +56,57 @@ export type ScannableToken = {
     wpTokenId: string | null;
     priceUsd: number | null;
     marketCapUsd: number | null;
+    liquidityUsd: number | null;
     lastTradeAt: Date | null;
 };
+
+/**
+ * The write-side liquidity gate: is this coin backed by a real market?
+ *
+ * Exists because of SOLUG (2026-08-19): a 24-holder coin with $0.003 of real
+ * liquidity wash-traded its way to a 30-wallet, $119k cluster alert. It was
+ * admitted through the paths that carry NO dollar liquidity — Pulse rows map
+ * `liquidity` to null by design (lib/coins/mobula.ts) — and the budget-capped
+ * screens only measured it hours after the event had already fired. Volume,
+ * trader count and market cap are all spoofable by trading with yourself;
+ * pooled liquidity is the one number that costs real money to fake, so it is
+ * the thing this checks.
+ *
+ * When the coin is still UNMEASURED at the moment a cluster fires, measure it
+ * NOW: one cached Mobula call, spent only when there is an alert to gate —
+ * which is exactly when the number is worth a credit. The figure is persisted
+ * through the same `backfillTrendingLiquidity` the screens use, so the board
+ * and the next pass both inherit it.
+ *
+ * Fail-open on provider failure, like every screen in discovery: a 429 is not
+ * evidence about the coin, and alerts must not be lost to a flaky key. And
+ * `clearsLiquidityFloor` still passes null — a coin Mobula cannot price at all
+ * is "unmeasured", not "none"; watchparty launches are exempt outright because
+ * an on-curve coin has no AMM pool by construction (the same exemption every
+ * eviction in discovery makes).
+ */
+async function clearsEmitLiquidityGate(token: ScannableToken): Promise<boolean> {
+    if (MIN_BOARD_LIQUIDITY_USD <= 0) return true;
+    if (token.wpTokenId != null) return true;
+
+    let liquidity = token.liquidityUsd;
+    if (liquidity == null && mobulaEnabled()) {
+        try {
+            const sec = await withCache(
+                securityCacheKey(token.network, token.tokenAddress),
+                mobulaCadence().securityTtl,
+                () => fetchMobulaTokenSecurity(token.network, token.tokenAddress),
+            );
+            if (sec?.liquidityUsd != null) {
+                liquidity = sec.liquidityUsd;
+                await backfillTrendingLiquidity(token.network, token.tokenAddress, liquidity);
+            }
+        } catch {
+            // 429/timeout — fail-open; retried free via the cache on the next burst.
+        }
+    }
+    return clearsLiquidityFloor(liquidity);
+}
 
 /**
  * Market cap at the moment of a trade. The cached column is a minute stale at
@@ -291,10 +344,21 @@ export async function scanToken(token: ScannableToken, budget: CallBudget): Prom
         });
     }
 
+    let written = 0;
     if (rows.length > 0) {
-        await db.insert(coinFeedEvents).values(rows).onConflictDoNothing({ target: coinFeedEvents.dedupeKey });
-        // Bot-managed community coin alerts (best-effort, never blocks the sweep).
-        void deliverCommunityCoinAlerts(rows);
+        // Gated at the moment of emission, not per-row: liquidity is a property
+        // of the coin, and every row in this batch is the same coin.
+        if (await clearsEmitLiquidityGate(token)) {
+            await db.insert(coinFeedEvents).values(rows).onConflictDoNothing({ target: coinFeedEvents.dedupeKey });
+            // Bot-managed community coin alerts (best-effort, never blocks the sweep).
+            void deliverCommunityCoinAlerts(rows);
+            written = rows.length;
+        } else {
+            console.log(
+                `[coin-feed] liquidity gate held ${rows.length} event(s) for ${token.id} ` +
+                `(measured < $${MIN_BOARD_LIQUIDITY_USD})`,
+            );
+        }
     }
 
     // Watermark last: if the insert above threw we want the next pass to retry
@@ -304,7 +368,7 @@ export async function scanToken(token: ScannableToken, budget: CallBudget): Prom
         .set({ lastScanAt: now, lastTradeAt: newest })
         .where(eq(trackedTokens.id, token.id));
 
-    return { events: rows.length, tradesSeen: fresh.length };
+    return { events: written, tradesSeen: fresh.length };
 }
 
 /**
@@ -334,9 +398,27 @@ export async function runClusterScan(
             wpTokenId: trackedTokens.wpTokenId,
             priceUsd: trackedTokens.priceUsd,
             marketCapUsd: trackedTokens.marketCapUsd,
+            liquidityUsd: trackedTokens.liquidityUsd,
             lastTradeAt: trackedTokens.lastTradeAt,
         })
         .from(trackedTokens)
+        // A coin MEASURED below the board's liquidity floor gets no scan slot —
+        // its clusters would be gated at emit anyway, so scanning it spends
+        // budget to learn nothing. NULL keeps its slot (unmeasured ≠ none), and
+        // recovery is automatic: rescreenTracked and the coin-page security card
+        // keep refreshing liquidity_usd on every tracked row regardless of this
+        // WHERE, so a coin whose pool refills re-enters the rotation by itself.
+        // Frozen ones stop advancing lastScanAt/lastTradeAt and age into
+        // pruneStale's 48h cut. wp launches exempt (on-curve = no AMM pool).
+        .where(
+            MIN_BOARD_LIQUIDITY_USD > 0
+                ? or(
+                      isNotNull(trackedTokens.wpTokenId),
+                      isNull(trackedTokens.liquidityUsd),
+                      gte(trackedTokens.liquidityUsd, MIN_BOARD_LIQUIDITY_USD),
+                  )
+                : undefined,
+        )
         .orderBy(
             // Never-scanned coins get a full day of implied staleness so they
             // are picked up on the pass right after discovery adopts them.
