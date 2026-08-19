@@ -15,12 +15,15 @@ export default async function MarketingLayout({
 }) {
     const session = await getServerSession();
     if (session) {
-        // /about is linked from the app's rail footer, so a signed-in reader
-        // has to be able to open it — every other marketing page keeps the
+        // Pages linked from the app's rail footer, so a signed-in reader has
+        // to be able to open them — every other marketing page keeps the
         // bounce (signed-in users skip the pitch). The pathname travels on the
         // x-pathname header middleware sets, same as (app)/layout reads it.
+        // Add here when the footer grows a new marketing destination
+        // (e.g. /investors).
+        const APP_REACHABLE = new Set(["/about"]);
         const pathname = (await headers()).get("x-pathname") ?? "";
-        if (pathname !== "/about") redirect("/home");
+        if (!APP_REACHABLE.has(pathname)) redirect("/home");
     }
 
     // Neutral base: each page paints its own scroll-reactive background
