@@ -130,9 +130,28 @@ export function ProfileHeader({ user, isMinimized, initialFollowCounts, onNameCl
                 )}
 
                 {!counts ? (
-                    <div className="flex items-center gap-5">
-                        <div className="shimmer-skeleton h-4 w-24 rounded-full" />
-                        <div className="shimmer-skeleton h-4 w-24 rounded-full" />
+                    /* Sized by INVISIBLE COPIES of the real strings, not by
+                       guessed widths — the same trick the coin page's address
+                       pill uses to stop its swap nudging the stat strip.
+                       
+                       Two fixed w-24 bars stood in for two different words at a
+                       different line height, so the row changed height AND width
+                       the moment counts arrived, shoving the coin row and tabs
+                       below it. A skeleton that has to be re-measured on arrival
+                       is doing the opposite of its job.
+                       
+                       "0" rather than a plausible number: the placeholder must
+                       not be mistaken for data mid-load, and the digit count is
+                       unknowable anyway — the words carry nearly all the width. */
+                    <div className="flex items-center gap-5 text-sm" aria-hidden>
+                        {["0 Following", "0 Followers"].map((label) => (
+                            <span key={label} className="inline-grid">
+                                <span className="invisible font-bold whitespace-nowrap [grid-area:1/1]">
+                                    {label}
+                                </span>
+                                <span className="shimmer-skeleton my-[3px] rounded-full [grid-area:1/1]" />
+                            </span>
+                        ))}
                     </div>
                 ) : (
                     <div className="flex items-center gap-5 text-sm">
