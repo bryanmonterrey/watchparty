@@ -161,30 +161,21 @@ the swap card gained the dialog's protections.
 ## 6. Genuinely open
 
 - The funded test above. Everything else is downstream of it.
-- **LI.FI integrator registration — the largest uncollected line, and only the
-  owner can do it.** Every EVM and cross-chain swap earns $0: LI.FI is called
-  with no `integrator` and no `fee`, and refuses both until registration.
-  Confirmed against the live API 2026-08-19:
+- **LI.FI: DONE 2026-08-19.** The integrator is registered and the 1% is
+  collected on every EVM and cross-chain swap (`1896da33`). Proven by scaling
+  rather than by the number merely changing — on a Base ETH->USDC quote,
+  `fee=0.01` adds $0.0191 and `fee=0.02` adds $0.0383, exactly 2x, so the delta
+  is ours and not LI.FI's own 0.25% moving.
 
-  ```
-  no integrator (today)              -> 200  quote OK      (earns $0)
-  integrator=watchparty + fee=0.01   -> 400  "Integrator \"watchparty\" is not
-                                             configured for collecting fees"
-  ```
+  Two things that will otherwise be misread:
+  - `integrator` must stay exactly **`watchparty`** — it is the key the portal
+    registration is filed under, and a typo reverts to charging nothing rather
+    than erroring.
+  - **`LIFI_API_KEY` is NOT what enables the fee.** Measured with and without:
+    the 1% is identical. It only raises rate limits, so an unset key costs
+    throughput and no revenue. It lives in `.env`/`.env.production` and is
+    deliberately NOT in `DOTENV_PRODUCTION` (see below).
 
-  Steps, in order:
-  1. Sign up at https://portal.li.fi/.
-  2. Create the integrator keyed **exactly** `watchparty` — that string is what
-     `lib/chains/swap/lifi.ts` sends; any other spelling needs a code change.
-  3. Configure TWO fee wallets, because one integrator covers both ecosystems:
-     EVM `0x93496D3B5b9bd4E0355Db047c9FA7df05C97c972` (payingheavy.eth) and
-     Solana `NEXT_PUBLIC_TREASURY_PUBKEY` (`C9kxy…`), since `solana-lifi.ts`
-     routes Solana through LI.FI too.
-  4. Set the fee to `0.01` (1%), matching every other chain.
-  5. Take an API key if offered — `li.quest` is called unauthenticated today.
-
-  Then the wiring is small: add `integrator` and `fee` to the quote params in
-  `lib/chains/swap/lifi.ts`. The 400 above turning into a 200 is the proof.
 - **Rates are 1% on every chain** (`lib/chains/fee-bps.ts`, dependency-free so
   client and server share it). Sends were 0.5% until 2026-08-19. The 5% in
   `subscription.ts` is deliberately untouched — that is the platform's cut of
@@ -196,6 +187,15 @@ the swap card gained the dialog's protections.
   ⚠️ The EVM one is payingheavy.eth, which is a LINKED USER WALLET rather than a
   treasury. Harmless while volume is zero; wants a dedicated wallet before it
   is not.
+- **Do not rewrite `DOTENV_OVERRIDES`** — it holds 7 keys that exist nowhere
+  else (MoonPay x2, the three `NEXT_PUBLIC_HELIUS_*` RPC URLs,
+  `COPY_EXECUTOR_SECRET`, `HELIUS_TRADES_BUDGET_PER_MIN`) and secrets cannot be
+  read back. Verified 2026-08-19 against the live workers: 95 secrets = 88
+  shared with local `.env.production` + 7 overrides-only.
+  `DOTENV_PRODUCTION` IS structurally safe to rewrite from the local file, but
+  it was still not done for `LIFI_API_KEY` — names reconcile, values cannot be
+  compared, and a peer who rotated a value without updating the file would be
+  silently reverted. Push it only when something actually needs it.
 - **Env now reaches every deploy path.** All six `Restore .env` steps across
   deploy.yml (4), deploy-container.yml and preview.yml apply
   `DOTENV_PRODUCTION` + `DOTENV_OVERRIDES` identically. Before 2026-08-19 only
