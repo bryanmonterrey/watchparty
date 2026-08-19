@@ -24,7 +24,18 @@
 /** bech32 P2WPKH. Fees ride as an extra output on the user's own send. */
 const BTC_DEFAULT = "bc1qx644xg0llew9ct40s2h70mu6lj86vl83862uuh";
 
-/** payingheavy.eth. Target of the accrued-fee sweep on every EVM chain. */
+/**
+ * payingheavy.eth — the EVM treasury. Target of the accrued-fee sweep on every
+ * EVM chain.
+ *
+ * One address serves all of them: the same secp256k1 key is the same account on
+ * Ethereum, Base, Polygon and BNB. The app never SIGNS with it, only sends to
+ * it, so no private key is needed anywhere in the codebase or in env.
+ *
+ * Note for anyone reading a query later: this address is ALSO linked to the
+ * owner's account in `linked_wallets`, so it shows up in wallet lookups. That
+ * is expected, not a data error.
+ */
 const EVM_DEFAULT = "0x93496D3B5b9bd4E0355Db047c9FA7df05C97c972";
 
 export function treasuryBtcAddress(): string {
