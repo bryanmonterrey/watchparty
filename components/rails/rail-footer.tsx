@@ -35,6 +35,7 @@ const MORE = [
     { label: "About", href: "/about" },
     { label: "Get app", href: "/download" },
     { label: "Developers", href: "/developer" },
+    { label: "Investors", href: "/investors" },
 ];
 
 const LINK_CLASS = "transition-colors hover:text-foreground hover:underline";

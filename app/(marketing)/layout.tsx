@@ -21,7 +21,7 @@ export default async function MarketingLayout({
         // x-pathname header middleware sets, same as (app)/layout reads it.
         // Add here when the footer grows a new marketing destination
         // (e.g. /investors).
-        const APP_REACHABLE = new Set(["/about"]);
+        const APP_REACHABLE = new Set(["/about", "/investors"]);
         const pathname = (await headers()).get("x-pathname") ?? "";
         if (!APP_REACHABLE.has(pathname)) redirect("/home");
     }

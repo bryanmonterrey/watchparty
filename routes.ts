@@ -12,6 +12,7 @@ export const publicRoutes: string[] = [
   "/community",
   "/safety",
   "/about",
+  "/investors",
   "/developer",
   // Public "Connect with watchparty" app directory (app/(directory)/apps).
   "/apps",
