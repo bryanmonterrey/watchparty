@@ -693,7 +693,18 @@ export const auth = betterAuth({
             // if it is their only one it is the wallet in use. Runs after the
             // ownership checks above so a mismatched wallet is never recorded,
             // and is best-effort inside — bookkeeping must not fail a sign-in.
-            await linkSignInWallet(sessionData.userId, String(address));
+            // The SIWE body carries the chainId the message was signed on
+            // (8453 = Base). Nothing about the address can recover it later, so
+            // it is captured here or not at all.
+            const signInChainId = Number(
+              (ctx?.body as { chainId?: unknown } | undefined)?.chainId ??
+                (ctx?.context as { chainId?: unknown } | undefined)?.chainId,
+            );
+            await linkSignInWallet(
+              sessionData.userId,
+              String(address),
+              Number.isFinite(signInChainId) && signInChainId > 0 ? signInChainId : null,
+            );
           }
 
           return { data: sessionData };

@@ -33,7 +33,18 @@ export function chainKindOfAddress(address: string): LinkedWalletChainKind {
  * — or evidence that sign-in resolved to the wrong account, which is worth a log
  * rather than an insert that would throw.
  */
-export async function linkSignInWallet(userId: string, address: string): Promise<void> {
+export async function linkSignInWallet(
+  userId: string,
+  address: string,
+  /**
+   * The EVM chain the SIWE message was signed on (8453 = Base). Recorded
+   * because nothing about the address can recover it later — one secp256k1
+   * address is the same account on every EVM chain. It is a fallback hint for
+   * the balance chip, which otherwise resolves the chain from where the user
+   * actually holds value.
+   */
+  chainId?: number | null,
+): Promise<void> {
   try {
     const [existing] = await db
       .select({ id: linkedWallets.id, userId: linkedWallets.user_id })
@@ -60,6 +71,7 @@ export async function linkSignInWallet(userId: string, address: string): Promise
       address,
       source: "extension",
       chain_kind: chainKindOfAddress(address),
+      chain_id: chainId ?? null,
       is_primary: !primary,
     });
   } catch (err) {

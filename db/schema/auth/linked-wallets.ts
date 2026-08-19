@@ -1,4 +1,4 @@
-import { boolean, index, pgPolicy, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgPolicy, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { user } from "./user";
 
@@ -50,6 +50,21 @@ export const linkedWallets = pgTable("linked_wallets", {
    * becoming the wallet in use.
    */
   chain_kind: text("chain_kind").$type<LinkedWalletChainKind>(),
+  /**
+   * The EVM chain this wallet SIGNED IN on (8453 = Base), or null.
+   *
+   * `chain_kind` cannot answer this: one secp256k1 address is the same account
+   * on Ethereum, Base, Polygon and BNB, so the address carries no chain and
+   * "evm" is the most the format can tell you. Sign-in does know — SIWE sends a
+   * chainId — and that knowledge was previously thrown away.
+   *
+   * It is a HINT, not the answer. What the balance chip shows is the chain the
+   * user actually holds value on, resolved live; this is the fallback for a
+   * wallet holding nothing anywhere, so a fresh Base account still reads as
+   * Base instead of defaulting to Ethereum. Treat it as possibly stale: the
+   * same address can sign in again on a different chain.
+   */
+  chain_id: integer("chain_id"),
   label: text("label"),
   is_primary: boolean("is_primary").default(false).notNull(),
   created_at: timestamp("created_at").defaultNow().notNull(),
