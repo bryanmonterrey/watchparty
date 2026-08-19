@@ -55,15 +55,20 @@ export async function siweVerify(body: {
 
 // "Sign in with Base" — opens the Base Account flow (popup to Base), connects the
 // smart wallet, and returns a SIWE message+signature via the signInWithEthereum capability.
-export async function signInWithBase() {
+export async function signInWithBase(opts?: { onConnected?: () => void }) {
   // Create the provider synchronously (static import) so the Base popup opens
   // within the click gesture. Base Account is an EIP-1193 provider, so we reuse
   // the injected flow: connect → request nonce WITH the address → SIWE sign.
   // (better-auth's SIWE nonce is keyed by address, so we must connect first.)
+  //
+  // Do NOT make this an `await import()` — the dynamic import resolves on a
+  // later microtask, by which point the browser no longer counts the call as
+  // user-initiated and blocks the popup. wallet-step is already behind
+  // next/dynamic, so the SDK still isn't in the login bundle.
   const provider = createBaseAccountSDK({
     appName: process.env.NEXT_PUBLIC_APP_NAME ?? "Watchparty",
   }).getProvider();
-  return signInWithInjectedEvm(BASE.chainId!, provider);
+  return signInWithInjectedEvm(BASE.chainId!, provider, opts);
 }
 
 // Rejects if an EIP-1193 request hangs. A broken/stale wallet-extension context
@@ -84,7 +89,7 @@ function rpcTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 // MetaMask / injected EVM wallet for any EVM chainId (Ethereum, Base, Hyperliquid).
 // Pass a specific EIP-1193 `provider` (from EIP-6963 discovery) or fall back to window.ethereum.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function signInWithInjectedEvm(chainId: number, provider?: any) {
+export async function signInWithInjectedEvm(chainId: number, provider?: any, opts?: { onConnected?: () => void }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const eth = provider ?? (typeof window !== "undefined" ? (window as any).ethereum : undefined);
   if (!eth) throw new Error("No EVM wallet found. Install MetaMask.");
@@ -92,6 +97,9 @@ export async function signInWithInjectedEvm(chainId: number, provider?: any) {
   const accounts: string[] = await rpcTimeout(eth.request({ method: "eth_requestAccounts" }), 60_000);
   const address = accounts[0];
   if (!address) throw new Error("No account selected.");
+  // Connected — the signature is the second and last step. Lets the caller move
+  // its progress meter off "connect" instead of guessing at a duration.
+  opts?.onConnected?.();
 
   const hexChain = `0x${chainId.toString(16)}`;
   try {

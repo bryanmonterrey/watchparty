@@ -6,16 +6,22 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletReadyState, type WalletName } from "@solana/wallet-adapter-base";
 import { SolanaProvider } from "./solana-provider";
 import { signInWithSolana } from "@/lib/chains/solana/sign-in";
+import { signInWithBase } from "@/lib/chains/evm/sign-in";
 import { isUserRejection } from "@/lib/is-user-rejection";
 import { POST_LOGIN_REDIRECT } from "@/lib/auth/constants";
 import { Squircle } from "@/components/ui/squircle";
 import { WaitingStep } from "./waiting-step";
-import { ArrowLeftIcon, SolanaMarkIcon } from "@/components/icons";
+import { ArrowLeftIcon, BaseSquareIcon, SolanaMarkIcon } from "@/components/icons";
 
-// Full-page wallet login — Solana only (this is a Solana app; EVM stays a
-// peripheral feature, not a sign-in method). One list: detected Solana wallets
-// (Phantom, Solflare, Backpack…) + a WalletConnect QR option. Lazy-loaded with
-// its scoped Solana provider.
+// Full-page wallet login. One list: detected Solana wallets (Phantom, Solflare,
+// Backpack…), a WalletConnect QR option, and Sign in with Base.
+//
+// Base is the one non-Solana method, and it earns the slot by needing no
+// extension at all — Base Account is a passkey smart wallet in a popup, so it
+// works for someone who has never installed a wallet. The other EVM chains
+// deliberately stay out of login: they'd only surface the same injected
+// extensions the Solana rows already list. Lazy-loaded with its scoped Solana
+// provider, which also keeps the Base SDK out of the login bundle.
 export default function WalletStep({
   onRegisterBack,
   onExit,
@@ -170,6 +176,30 @@ function WalletFlow({
     sol.select(name as WalletName);
   }
 
+  // Base Account isn't an adapter — it's one popup that connects and signs, so
+  // there's no pending-ref/effect dance: await it directly under the same flowId
+  // guard the Solana paths use, so backing out mid-popup can't complete a
+  // sign-in behind the user. Genuinely 2 steps (connect, then sign), so it gets
+  // the same progress meter as QR.
+  async function chooseBase() {
+    abortActiveFlow();
+    const id = flowId.current;
+    setWcStep({ current: 1, total: 2 });
+    startWaiting("Base", <BaseSquareIcon className="size-9 rounded-lg" />, () => {
+      void chooseBase();
+    });
+    try {
+      await signInWithBase({
+        onConnected: () => {
+          if (flowId.current === id) setWcStep({ current: 2, total: 2 });
+        },
+      });
+      if (flowId.current === id) done();
+    } catch (e) {
+      if (flowId.current === id) failed(e);
+    }
+  }
+
   let content: React.ReactNode;
 
   if (view === "waiting" && waiting) {
@@ -210,6 +240,14 @@ function WalletFlow({
               onClick={() => chooseSolanaWallet(walletConnect.adapter.name, "WalletConnect", <QrGlyph />)}
             />
           )}
+          <Row
+            name="Sign in with Base"
+            subtitle="No extension needed"
+            icon={<BaseSquareIcon className="size-7 rounded-md" />}
+            onClick={() => {
+              void chooseBase();
+            }}
+          />
         </div>
       </div>
     );

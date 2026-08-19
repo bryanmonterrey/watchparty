@@ -478,6 +478,22 @@ export const auth = betterAuth({
           const walletAddress = ctx?.body?.address ?? ctx?.body?.walletAddress;
           const now = new Date();
 
+          // An EVM (SIWE) address must never be written to `user.wallet_address`.
+          // That column is the SOLANA primary-wallet mirror, and its ~130 readers
+          // feed it straight into base58/PublicKey paths — a 0x… there doesn't
+          // degrade gracefully, it throws. better-auth's own `walletAddress`
+          // table already persists the EVM address (and the session hook below
+          // matches sign-ins against it), so leaving the mirror null costs
+          // nothing: a Base user is just a user with no Solana wallet yet,
+          // exactly like an email or OAuth signup.
+          const isEvmWallet = typeof walletAddress === "string" && /^0x[0-9a-fA-F]{40}$/.test(walletAddress);
+          // better-auth's siwe plugin seeds `name` with the FULL 0x address,
+          // which would then render as a display name app-wide. Truncate it to
+          // match what better-auth-siws does for Solana (`sol:AbCd…WxYz`).
+          const evmDisplayName = isEvmWallet
+            ? `evm:${walletAddress.slice(0, 6)}…${walletAddress.slice(-4)}`
+            : undefined;
+
           const isPasskeyOrEmailAuth = !walletAddress && userData.email;
 
           if (isPasskeyOrEmailAuth) {
@@ -524,8 +540,10 @@ export const auth = betterAuth({
                 id: existingUser.id,
                 // Keep their chosen primary. Signing in with a linked wallet
                 // should not silently promote it — switching primary is an
-                // explicit action.
-                wallet_address: existingUser.wallet_address ?? walletAddress,
+                // explicit action. The EVM guard also covers the fallback: an
+                // account whose primary is still null must not have it filled
+                // in with a 0x address.
+                wallet_address: existingUser.wallet_address ?? (isEvmWallet ? null : walletAddress),
                 role: existingUser.role ?? "user",
                 gender: existingUser.gender ?? false,
                 updatedAt: now,
@@ -538,7 +556,8 @@ export const auth = betterAuth({
             data: {
               ...userData,
               id: crypto.randomUUID(),
-              wallet_address: walletAddress,
+              name: evmDisplayName ?? userData.name,
+              wallet_address: isEvmWallet ? null : walletAddress,
               role: "user",
               gender: false,
               createdAt: now,
