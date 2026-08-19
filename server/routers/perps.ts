@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "@/server/trpc";
 import { db } from "@/db";
 import { user } from "@/db/schema/auth";
+import { linkedWallets } from "@/db/schema/auth/linked-wallets";
 import { eq } from "drizzle-orm";
 import { awardXP } from "@/server/lib/xp";
 import { recordQuestEvent } from "@/server/lib/quests";
@@ -45,15 +46,32 @@ export const perpsRouter = router({
     reportFill: protectedProcedure
         .input(z.object({ signature: z.string().min(64).max(120) }))
         .mutation(async ({ ctx, input }) => {
+            // EVERY wallet on the account, not just the primary.
+            //
+            // This compared the fill's account keys against
+            // `user.wallet_address`, which mirrors ONE of up to 15 linked
+            // wallets — so trading perps from any other wallet had the fill
+            // rejected as "doesn't belong to your wallet", losing the XP and
+            // the quest credit for a trade the user really made. Same shape as
+            // the sign-in 401 (0ec39828): matching the primary is SUFFICIENT
+            // evidence the wallet is theirs, never NECESSARY.
+            const mine = await db
+                .select({ address: linkedWallets.address })
+                .from(linkedWallets)
+                .where(eq(linkedWallets.user_id, ctx.user.id));
             const [me] = await db
                 .select({ wallet: user.wallet_address })
                 .from(user)
                 .where(eq(user.id, ctx.user.id));
-            if (!me?.wallet) throw new TRPCError({ code: "BAD_REQUEST", message: "No linked wallet" });
+
+            const wallets = new Set(
+                [...mine.map((w) => w.address), me?.wallet].filter(Boolean) as string[],
+            );
+            if (wallets.size === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "No linked wallet" });
 
             const keys = await fetchTxAccountKeys(input.signature);
             if (!keys) throw new TRPCError({ code: "NOT_FOUND", message: "Fill not found on the ER yet — it may still be settling" });
-            if (!keys.includes(me.wallet)) {
+            if (!keys.some((k) => wallets.has(k))) {
                 throw new TRPCError({ code: "FORBIDDEN", message: "That fill doesn't belong to your wallet" });
             }
 

@@ -51,6 +51,7 @@ import { getNativePrice, getTokenPrices } from "@/lib/chains/assets/prices";
 import { heliusQuotaOut, markHeliusQuotaOut } from "@/lib/helius/quota";
 import { resolveFeeAccount, feeAccountForSwap } from "@/lib/jupiter/referral-fee";
 import { PLATFORM_FEE_BPS } from "@/lib/chains/fee-bps";
+import { solanaAddressFor } from "@/server/lib/user-wallet";
 import { getEvmAssetsBatch } from "@/lib/chains/assets/evm";
 import {
     getActivityForChain,
@@ -1197,7 +1198,7 @@ export const walletRouter = router({
                     sig = await conn.sendRawTransaction(tx.serialize(), { skipPreflight: true, maxRetries: 0 });
                 }
                 // Balances changed — drop the SWR'd assets snapshot.
-                if (ctx.user.wallet_address) invalidateWalletAssets(ctx.user.wallet_address);
+                invalidateWalletAssets(await solanaAddressFor(ctx.user.id, ctx.user.wallet_address));  // resolved, not the mirror
                 return { type: "tx" as const, signature: sig };
             }
         }),
@@ -1264,7 +1265,7 @@ export const walletRouter = router({
 
                 await logWalletAccess({ userId: ctx.user.id, action: "sign_transaction", ipAddress, userAgent, success: true });
                 // Balances changed — drop the SWR'd assets snapshot.
-                if (ctx.user.wallet_address) invalidateWalletAssets(ctx.user.wallet_address);
+                invalidateWalletAssets(await solanaAddressFor(ctx.user.id, ctx.user.wallet_address));  // resolved, not the mirror
                 return { success: true, signature };
             } catch (error) {
                 await logWalletAccess({
@@ -1309,12 +1310,13 @@ export const walletRouter = router({
         }
 
         // Check if user has a wallet
-        if (!ctx.user.wallet_address) {
-            throw new TRPCError({
-                code: "NOT_FOUND",
-                message: "No wallet found",
-            });
-        }
+        // No mirror gate here on purpose. `user.wallet_address` mirrors the
+        // PRIMARY of up to 15 linked wallets and is NULL when that primary is
+        // an external EVM wallet, so gating on it returned "No wallet found"
+        // to users who have an embedded wallet. The encrypted_wallets lookup
+        // below is scoped to ctx.user.id and already answers the real
+        // question, with the correct error — this precondition was both
+        // redundant and wrong.
 
         try {
             console.log(`🔓 Exporting private key for user: ${ctx.user.id.slice(0, 8)}...`);
@@ -1386,9 +1388,7 @@ export const walletRouter = router({
             d2Iv: z.string(),        // base64 IV
         }))
         .mutation(async ({ ctx, input }) => {
-            if (!ctx.user.wallet_address) {
-                throw new TRPCError({ code: "NOT_FOUND", message: "No wallet found" });
-            }
+            // No mirror gate — see exportPrivateKey; the user-scoped lookup below is the real check.
 
             const { error } = await supabase
                 .from("encrypted_wallets")
@@ -1412,9 +1412,7 @@ export const walletRouter = router({
      * local d2, reconstructs the private key in the browser.
      */
     getEncryptedShare: protectedProcedure.query(async ({ ctx }) => {
-        if (!ctx.user.wallet_address) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "No wallet found" });
-        }
+        // No mirror gate — see exportPrivateKey; the user-scoped lookup below is the real check.
 
         const { data, error } = await supabase
             .from("encrypted_wallets")
@@ -1453,9 +1451,7 @@ export const walletRouter = router({
         const ipAddress = headersList.get("x-forwarded-for") || headersList.get("x-real-ip") || "unknown";
         const userAgent = headersList.get("user-agent") || "unknown";
 
-        if (!ctx.user.wallet_address) {
-            throw new TRPCError({ code: "NOT_FOUND", message: "No wallet found" });
-        }
+        // No mirror gate — see exportPrivateKey; the user-scoped lookup below is the real check.
 
         if (await checkRateLimit(ctx.user.id, "sign_transaction")) {
             const resetTime = await getResetTime(ctx.user.id, "sign_transaction");
@@ -1511,7 +1507,12 @@ export const walletRouter = router({
             const ipAddress = headersList.get("x-forwarded-for") || headersList.get("x-real-ip") || "unknown";
             const userAgent = headersList.get("user-agent") || "unknown";
 
-            if (!ctx.user.wallet_address) {
+            // The account's Solana address, resolved from linked_wallets rather
+            // than read off the primary mirror — `user.wallet_address` is NULL
+            // when the primary is an external EVM wallet, which made this
+            // refuse users who do have a Solana wallet.
+            const myWallet = await solanaAddressFor(ctx.user.id, ctx.user.wallet_address);
+            if (!myWallet) {
                 throw new TRPCError({ code: "NOT_FOUND", message: "No wallet found" });
             }
 
@@ -1524,7 +1525,7 @@ export const walletRouter = router({
 
                 await logWalletAccess({ userId: ctx.user.id, action: "sign_transaction", ipAddress, userAgent, success: true });
                 // Balances changed — drop the SWR'd assets snapshot.
-                invalidateWalletAssets(ctx.user.wallet_address);
+                invalidateWalletAssets(myWallet);
                 return { success: true, signature };
             } catch (error) {
                 await logWalletAccess({
@@ -1553,11 +1554,10 @@ export const walletRouter = router({
                 "unknown";
             const userAgent = headersList.get("user-agent") || "unknown";
 
-            if (!ctx.user.wallet_address) {
-                throw new TRPCError({
-                    code: "NOT_FOUND",
-                    message: "No wallet found",
-                });
+            // Resolved, not the primary mirror — see the note above.
+            const myWallet = await solanaAddressFor(ctx.user.id, ctx.user.wallet_address);
+            if (!myWallet) {
+                throw new TRPCError({ code: "NOT_FOUND", message: "No wallet found" });
             }
 
             try {
@@ -1630,7 +1630,7 @@ export const walletRouter = router({
 
                 // The tx changes balances — drop the SWR'd assets snapshot so
                 // the next fetch reflects it instead of serving stale.
-                invalidateWalletAssets(ctx.user.wallet_address);
+                invalidateWalletAssets(myWallet);
                 return { success: true, signature };
             } catch (error) {
                 console.error("Failed to sign and send transaction:", error);
@@ -1682,11 +1682,10 @@ export const walletRouter = router({
         }
 
         // Check if user has a wallet
-        if (!ctx.user.wallet_address) {
-            throw new TRPCError({
-                code: "NOT_FOUND",
-                message: "No wallet found",
-            });
+        // Resolved, not the primary mirror — see the note above.
+        const myWallet = await solanaAddressFor(ctx.user.id, ctx.user.wallet_address);
+        if (!myWallet) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "No wallet found" });
         }
 
         try {
@@ -2315,11 +2314,10 @@ export const walletRouter = router({
             amount: z.number().optional(),
         }))
         .query(async ({ ctx, input }) => {
-            if (!ctx.user.wallet_address) {
-                throw new TRPCError({
-                    code: "NOT_FOUND",
-                    message: "No wallet found",
-                });
+            // Resolved, not the primary mirror — see the note above.
+            const myWallet = await solanaAddressFor(ctx.user.id, ctx.user.wallet_address);
+            if (!myWallet) {
+                throw new TRPCError({ code: "NOT_FOUND", message: "No wallet found" });
             }
 
             const { constructMoonPayBuyUrl, signMoonPayUrl } = await import("@/lib/moonpay");
@@ -2337,7 +2335,7 @@ export const walletRouter = router({
 
             const baseUrl = constructMoonPayBuyUrl(
                 apiKey,
-                ctx.user.wallet_address,
+                myWallet,
                 input.amount
             );
 
@@ -2350,14 +2348,13 @@ export const walletRouter = router({
      * Fetch recent transaction history for the user's wallet using Helius
      */
     getTransactions: protectedProcedure.query(async ({ ctx }) => {
-        if (!ctx.user.wallet_address) {
-            throw new TRPCError({
-                code: "NOT_FOUND",
-                message: "No wallet found",
-            });
+        // Resolved, not the primary mirror — see the note above.
+        const myWallet = await solanaAddressFor(ctx.user.id, ctx.user.wallet_address);
+        if (!myWallet) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "No wallet found" });
         }
 
-        const walletAddress = ctx.user.wallet_address;
+        const walletAddress = myWallet;
         try {
             const heliusKey = process.env.HELIUS_API_KEY;
             const rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${heliusKey}`;
@@ -2517,8 +2514,10 @@ export const walletRouter = router({
                 }).filter(Boolean);
             });
 
+            // Resolved once — the address doesn't change per transaction row.
+            const userAddress = await solanaAddressFor(ctx.user.id, ctx.user.wallet_address);
+            if (!userAddress) throw new TRPCError({ code: "NOT_FOUND", message: "No wallet found" });
             const mappedTxs = (data || []).map((tx: any) => {
-                const userAddress = ctx.user.wallet_address!;
                 const isOutgoing = tx.feePayer === userAddress;
                 const type = tx.type || "UNKNOWN";
                 const isSwap = type.includes("SWAP");
@@ -2732,14 +2731,13 @@ export const walletRouter = router({
      * Fetch NFTs for the user's wallet using Helius
      */
     getNfts: protectedProcedure.query(async ({ ctx }) => {
-        if (!ctx.user.wallet_address) {
-            throw new TRPCError({
-                code: "NOT_FOUND",
-                message: "No wallet found",
-            });
+        // Resolved, not the primary mirror — see the note above.
+        const myWallet = await solanaAddressFor(ctx.user.id, ctx.user.wallet_address);
+        if (!myWallet) {
+            throw new TRPCError({ code: "NOT_FOUND", message: "No wallet found" });
         }
 
-        const nftWallet = ctx.user.wallet_address!;
+        const nftWallet = myWallet;
         try {
             const heliusKey = process.env.HELIUS_API_KEY;
             const url = `https://mainnet.helius-rpc.com/?api-key=${heliusKey}`;
@@ -3099,7 +3097,7 @@ export const walletRouter = router({
 
             if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to save" });
             // Bust the Redis cache so the next getWalletAssets fetch reflects the updated list
-            if (ctx.user.wallet_address) invalidateWalletAssets(ctx.user.wallet_address);
+            invalidateWalletAssets(await solanaAddressFor(ctx.user.id, ctx.user.wallet_address));  // resolved, not the mirror
             return { success: true };
         }),
 
@@ -3110,7 +3108,7 @@ export const walletRouter = router({
     getWalletAssets: protectedProcedure
         .input(z.object({ address: z.string().optional() }))
         .query(async ({ ctx, input }) => {
-            const address = input.address || ctx.user.wallet_address;
+            const address = input.address || (await solanaAddressFor(ctx.user.id, ctx.user.wallet_address));
             
             if (!address) {
                 throw new TRPCError({

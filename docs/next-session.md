@@ -125,6 +125,22 @@ Cleared in the same pass: the sign-in lookup (`lib/auth/server.ts:535`) already
 checks `linked_wallets` first. NOT bugs but future work: the two payout call
 sites, which belong to §7.
 
+**Server side is DONE as of 2026-08-19.** `server/routers/wallet.ts` went from
+24 mirror reads to zero; every one resolves through `server/lib/user-wallet.ts`.
+Also fixed: perps `reportFill` rejected fills signed by any non-primary wallet
+(losing XP + quest credit for a real trade), and `account.ts` undercounted
+sign-in methods so it refused unlinks that were safe.
+
+Four redundant gates were DELETED rather than rewritten — `exportPrivateKey`,
+the d2 store, `getEncryptedShare` and `signTransaction` each gated on the mirror
+and then did a `user_id`-scoped `encrypted_wallets` lookup that already returns
+the right error. The gate was redundant AND wrong.
+
+⚠️ **NOT audited: `components/` (71 refs), `lib/` (36), `app/` (11),
+`hooks/` (3).** The server is the half that can reject a request or send money
+to the wrong place; the client half mostly DISPLAYS the primary, which is wrong
+more quietly. Someone should still sweep it.
+
 Measured on prod: 22 linked wallets across 20 accounts. Multi-wallet is barely
 exercised — these are unexercised paths rather than rare ones, and ~160 further
 reads of the mirror remain.
@@ -197,18 +213,35 @@ Four distinct pieces, in dependency order:
 4. **Claim/unshield UI** — private funds land in a shielded balance and are
    claimed explicitly; the balance and the claim action both need surfaces.
 
-**Where it plugs in, found while auditing (this is the load-bearing part).**
-Exactly two places pay a user today, and both read the destination inline:
+**Where it plugs in — ALREADY BUILT (`server/lib/user-wallet.ts`).**
 
-    server/routers/content.ts:246   paywall unlock -> author's wallet_address
-    server/routers/subscription.ts:687  creator claim -> own wallet_address
+It is FIVE places that pay a user, not two (an earlier note in this file said
+two; that was wrong and cost nothing only because it was corrected before the
+work was scoped):
 
-Two files, two inline reads, two different error strings. Before a setting
-exists, that is two places to change and two places to forget. They should
-collapse into ONE resolver that owns both questions — which wallet, and
-shielded or not — the same shape and for the same reason as
-`server/lib/premium-entitlement.ts`, which exists because one predicate got
-hand-copied twice and drifted.
+    content.ts       paywall unlock   -> the AUTHOR's wallet
+    subscription.ts  creator claim
+    referral.ts      referral earnings
+    predictions.ts   prediction winnings
+    escrow.ts        escrow release (x3 reads)
+
+All five now call `payoutDestinationFor(userId, knownMirror?)`. The module
+deliberately exports TWO names over one rule:
+
+- `solanaAddressFor()` — "which wallet am I": cache invalidation, NFT reads,
+  transaction history, signature checks.
+- `payoutDestinationFor()` — "where do I get paid".
+
+Identical today. **When the receiving-wallet setting lands, only the second
+one changes** — a one-file edit rather than a five-file hunt. The privacy flag
+belongs there too: "which wallet, and shielded or not" is one question answered
+in one place.
+
+`knownMirror` is a performance argument, not a correctness one: callers inside a
+request already hold `user.wallet_address` on the session, and passing it makes
+the common case cost ZERO queries. Without it, fixing a bug that today affects
+nobody would have added a round trip to hot paths (asset invalidation on every
+signing op, getNfts, getTransactions).
 
 ⚠️ Both call sites already carry a LATENT failure that this work should fix
 rather than inherit: `user.wallet_address` is NULL when an account's only

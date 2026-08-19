@@ -6,6 +6,7 @@ import { eq, and } from "drizzle-orm";
 import { logWalletAccess } from "@/lib/security/audit-logger";
 import { headers } from "next/headers";
 import { TRPCError } from "@trpc/server";
+import { linkedWallets } from "@/db/schema/auth/linked-wallets";
 
 export const accountRouter = router({
     /**
@@ -45,7 +46,19 @@ export const accountRouter = router({
                 .from(account)
                 .where(eq(account.userId, ctx.user.id));
 
-            const hasWallet = !!ctx.user.wallet_address;
+            // Counted through linked_wallets, not the primary mirror.
+            //
+            // `user.wallet_address` is NULL for an account whose only wallet is
+            // external EVM, so this UNDERCOUNTED sign-in methods and refused an
+            // unlink that was actually safe. It failed closed, which is the
+            // right direction for a lockout guard — but "you can't unlink this"
+            // for someone holding three wallets is still wrong.
+            const [walletRow] = await db
+                .select({ id: linkedWallets.id })
+                .from(linkedWallets)
+                .where(eq(linkedWallets.user_id, ctx.user.id))
+                .limit(1);
+            const hasWallet = !!walletRow || !!ctx.user.wallet_address;
             const authMethodsCount = userAccounts.length + (hasWallet ? 1 : 0);
 
             if (authMethodsCount <= 1) {

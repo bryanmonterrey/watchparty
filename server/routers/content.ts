@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { posts, tokens, likes, bookmarks, polls, postUnlocks, seenPosts, videoProgress, videoHeatmap } from "@/db/schema/content";
 import { user } from "@/db/schema/auth";
 import { communityServers } from "@/db/schema/community";
+import { payoutDestinationFor } from "@/server/lib/user-wallet";
 import { eq, desc, and, count, like, or, ilike, sql, gt, inArray, asc, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { nanoid } from "nanoid";
@@ -243,10 +244,10 @@ export const contentRouter = router({
             const already = await db.query.postUnlocks.findFirst({ where: eq(postUnlocks.txSignature, input.txSignature) });
             if (already) throw new TRPCError({ code: "CONFLICT", message: "This payment was already redeemed" });
 
-            const [author] = await db.select({ wallet: user.wallet_address }).from(user).where(eq(user.id, post.userId)).limit(1);
-            if (!author?.wallet) throw new TRPCError({ code: "BAD_REQUEST", message: "This creator has no wallet on file to receive payment" });
+            const authorWallet = await payoutDestinationFor(post.userId);
+            if (!authorWallet) throw new TRPCError({ code: "BAD_REQUEST", message: "This creator has no wallet on file to receive payment" });
 
-            await verifySolPayment(input.txSignature, post.paywallPrice, author.wallet);
+            await verifySolPayment(input.txSignature, post.paywallPrice, authorWallet);
 
             await db.insert(postUnlocks).values({
                 id: nanoid(),

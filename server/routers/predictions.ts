@@ -22,6 +22,7 @@ import { awardXP } from "@/server/lib/xp";
 import { recordQuestEvent } from "@/server/lib/quests";
 import { getRpcUrl } from "@/lib/chains/solana/subscriptions/constants";
 import { getBoostTreasuryOwner } from "@/lib/premium/boosts";
+import { payoutDestinationFor } from "@/server/lib/user-wallet";
 
 const MIN_BET_USDC = BigInt(1_000_000); // $1
 const MAX_BET_USDC = BigInt(5_000_000_000); // $5k
@@ -284,7 +285,7 @@ export const predictionsRouter = router({
                 .returning({ id: predictionBets.id });
             if (!locked) throw new TRPCError({ code: "CONFLICT", message: "Already claimed" });
 
-            const wallet = ctx.user.wallet_address;
+            const wallet = await payoutDestinationFor(ctx.user.id, ctx.user.wallet_address);
             if (!wallet) {
                 // roll the gate back — nothing was paid
                 await db.update(predictionBets).set({ claimedAt: null, payoutUsdc: null }).where(eq(predictionBets.id, bet.id));
