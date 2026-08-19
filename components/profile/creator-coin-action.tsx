@@ -207,7 +207,35 @@ export function CreatorCoinAction({
         }
     };
 
-    if (isLoading || !ownershipResolved) return null;
+    if (isLoading || !ownershipResolved) {
+        // Reserve the row's height for the OWNER only.
+        //
+        // The owner always ends up with something here — the coin pill, or the
+        // "Creator coin" invitation when they have none — so the space is
+        // certain to be filled and holding it costs nothing. Without this the
+        // pill appears from nothing and shoves the coin row and tabs down, the
+        // same jump the follow counts had (1c24eea8).
+        //
+        // A visitor is the opposite case and deliberately gets nothing: this
+        // renders null for them whenever the profile has no coin, which is most
+        // profiles, so reserving would leave a gap that COLLAPSES on arrival —
+        // trading a push-down for a jump-up on the commoner path.
+        //
+        // `isOwner` is safe to branch on here in a way it is not below: false
+        // means "visitor OR not known yet", but TRUE is unambiguous, and true is
+        // the only case this reserves for.
+        if (!isOwner) return null;
+        return (
+            <span className="inline-grid" aria-hidden>
+                {/* Sized by an invisible copy of the real label rather than a
+                    guessed width, so the swap cannot re-measure. "Creator coin"
+                    is the wider of the two outcomes and the one an owner without
+                    a coin actually gets. */}
+                <span className={cn(PILL_BASE, "invisible [grid-area:1/1]")}>Creator coin</span>
+                <span className="shimmer-skeleton my-1 rounded-full [grid-area:1/1]" />
+            </span>
+        );
+    }
 
     // Someone else's profile.
     if (!isOwner) {
