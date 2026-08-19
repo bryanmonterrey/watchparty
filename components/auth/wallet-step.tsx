@@ -6,22 +6,29 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletReadyState, type WalletName } from "@solana/wallet-adapter-base";
 import { SolanaProvider } from "./solana-provider";
 import { signInWithSolana } from "@/lib/chains/solana/sign-in";
-import { signInWithBase } from "@/lib/chains/evm/sign-in";
+import { useEvmWallets } from "@/lib/chains/evm/use-evm-wallets";
+import { signInWithBase, signInWithInjectedEvm, signInWithEvmWalletConnect } from "@/lib/chains/evm/sign-in";
+import { ETHEREUM } from "@/lib/chains/registry";
 import { isUserRejection } from "@/lib/is-user-rejection";
 import { POST_LOGIN_REDIRECT } from "@/lib/auth/constants";
 import { Squircle } from "@/components/ui/squircle";
 import { WaitingStep } from "./waiting-step";
-import { ArrowLeftIcon, BaseSquareIcon, SolanaMarkIcon } from "@/components/icons";
+import { ArrowLeftIcon, BaseSquareIcon, EthDiamondIcon, SolanaMarkIcon } from "@/components/icons";
 
-// Full-page wallet login. One list: detected Solana wallets (Phantom, Solflare,
-// Backpack…), a WalletConnect QR option, and Sign in with Base.
+// Full-page wallet login. One flat list of every wallet we can actually see —
+// Solana adapters (Phantom, Solflare, Backpack…) and EIP-6963 EVM extensions
+// (MetaMask, Rainbow, Coinbase…) — each carrying the chain badge it would sign
+// on, then the QR option and Sign in with Base.
 //
-// Base is the one non-Solana method, and it earns the slot by needing no
-// extension at all — Base Account is a passkey smart wallet in a popup, so it
-// works for someone who has never installed a wallet. The other EVM chains
-// deliberately stay out of login: they'd only surface the same injected
-// extensions the Solana rows already list. Lazy-loaded with its scoped Solana
-// provider, which also keeps the Base SDK out of the login bundle.
+// A wallet that does both chains (Phantom, Coinbase) legitimately appears
+// twice: the row is a "sign in with THIS wallet on THIS chain" choice, and the
+// badge is what distinguishes them. Only ONE EVM chain is offered — the same
+// 0x address is the same account on all of them, and better-auth resolves a
+// known address to its existing user regardless of chainId, so a row per chain
+// would be four buttons that land in the same place.
+//
+// Lazy-loaded with its scoped Solana provider, which also keeps the Base SDK
+// and the WalletConnect stack out of the login bundle.
 export default function WalletStep({
   onRegisterBack,
   onExit,
@@ -38,7 +45,7 @@ export default function WalletStep({
   );
 }
 
-type View = "list" | "waiting";
+type View = "list" | "qr" | "waiting";
 
 function WalletFlow({
   onRegisterBack,
@@ -50,6 +57,7 @@ function WalletFlow({
   redirectTo?: string;
 }) {
   const sol = useWallet();
+  const evmWallets = useEvmWallets();
 
   const [view, setView] = useState<View>("list");
   const [waiting, setWaiting] = useState<{ name: string; icon: React.ReactNode; retry: () => void } | null>(null);
@@ -64,6 +72,9 @@ function WalletFlow({
   // WalletConnect is excluded from the provider's autoConnect (so its modal never
   // self-opens on mount); this arms an explicit connect() when the user taps it.
   const pendingWcConnect = useRef(false);
+  // Where the waiting view was entered from, so "Back" returns there — a QR
+  // attempt starts on the chain chooser, not the wallet list.
+  const returnViewRef = useRef<View>("list");
 
   // Hierarchical back: waiting -> list -> exit the wallet state. Used by both the
   // inline header arrow and the login screen's top-left arrow.
@@ -84,10 +95,11 @@ function WalletFlow({
   }
   function returnFromWaiting() {
     abortActiveFlow();
-    setView("list");
+    setView(returnViewRef.current);
   }
   function back() {
     if (viewRef.current === "waiting") returnFromWaiting();
+    else if (viewRef.current === "qr") setView("list");
     else onExit?.();
   }
   useEffect(() => {
@@ -157,6 +169,7 @@ function WalletFlow({
     returnFromWaiting();
   }
   function startWaiting(name: string, icon: React.ReactNode, retry: () => void) {
+    returnViewRef.current = viewRef.current; // remember the origin for "Back"
     setWaiting({ name, icon, retry });
     setView("waiting");
   }
@@ -176,22 +189,29 @@ function WalletFlow({
     sol.select(name as WalletName);
   }
 
-  // Base Account isn't an adapter — it's one popup that connects and signs, so
-  // there's no pending-ref/effect dance: await it directly under the same flowId
-  // guard the Solana paths use, so backing out mid-popup can't complete a
-  // sign-in behind the user. Genuinely 2 steps (connect, then sign), so it gets
-  // the same progress meter as QR.
-  async function chooseBase() {
+  // Every EVM path — Base Account, an injected extension, WalletConnect — is one
+  // promise that connects and then signs, so none of them need the Solana
+  // paths' pending-ref/effect dance. Await it under the same flowId guard, so
+  // backing out mid-popup can't complete a sign-in behind the user, and drive
+  // the 1-of-2 meter off the real connect event rather than a guessed duration.
+  async function runEvmSignIn(
+    label: string,
+    icon: string | React.ReactNode,
+    run: (opts: { onConnected: () => void; registerAbort: (fn: () => void) => void }) => Promise<unknown>,
+  ) {
     abortActiveFlow();
     const id = flowId.current;
     setWcStep({ current: 1, total: 2 });
-    startWaiting("Base", <BaseSquareIcon className="size-9 rounded-lg" />, () => {
-      void chooseBase();
+    startWaiting(label, waitingIcon(icon), () => {
+      void runEvmSignIn(label, icon, run);
     });
     try {
-      await signInWithBase({
+      await run({
         onConnected: () => {
           if (flowId.current === id) setWcStep({ current: 2, total: 2 });
+        },
+        registerAbort: (fn) => {
+          wcAbort.current = fn;
         },
       });
       if (flowId.current === id) done();
@@ -199,6 +219,28 @@ function WalletFlow({
       if (flowId.current === id) failed(e);
     }
   }
+
+  const chooseBase = () =>
+    runEvmSignIn("Base", <BaseSquareIcon className="size-9 rounded-lg" />, ({ onConnected }) =>
+      signInWithBase({ onConnected }),
+    );
+
+  // An injected EVM extension signs on Ethereum mainnet. The chain is close to
+  // cosmetic here — it lands in the SIWE message and in better-auth's
+  // walletAddress row — but it has to be A chain, and mainnet is the one every
+  // EVM wallet has.
+  const chooseInjectedEvm = (name: string, icon: string, provider: unknown) =>
+    runEvmSignIn(name, icon, ({ onConnected }) =>
+      signInWithInjectedEvm(ETHEREUM.chainId!, provider, { onConnected }),
+    );
+
+  // EVM WalletConnect (QR) — WalletConnect's OWN modal, the EVM twin of the
+  // Solana wallet-adapter's. registerAbort hands us its disconnect so "Back"
+  // tears down a pending connect instead of leaving it hanging on the relay.
+  const startEvmQr = () =>
+    runEvmSignIn("WalletConnect", <QrGlyph />, ({ onConnected, registerAbort }) =>
+      signInWithEvmWalletConnect(ETHEREUM.chainId!, { onConnected, registerAbort }),
+    );
 
   let content: React.ReactNode;
 
@@ -217,6 +259,37 @@ function WalletFlow({
         onBack={returnFromWaiting}
       />
     );
+  } else if (view === "qr") {
+    // Pick the chain first. Each QR requests a SINGLE ecosystem's namespace,
+    // because a single-ecosystem wallet (Phantom, MetaMask) rejects a proposal
+    // asking for a namespace it doesn't implement — so one "universal" code
+    // would be scannable by neither.
+    content = (
+      <div className="flex flex-col">
+        <HeaderWithBack title="Sign in with QR code" onBack={back} />
+        <p className="mt-2 text-[15px] leading-relaxed text-white/45">
+          Choose your wallet&apos;s network to generate a code.
+        </p>
+        <div className="mt-6 flex flex-col gap-2.5">
+          {walletConnect && (
+            <Row
+              name="Solana"
+              subtitle="Phantom, Solflare, Backpack & more"
+              icon={<SolanaMarkIcon className="size-5" />}
+              onClick={() => chooseSolanaWallet(walletConnect.adapter.name, "WalletConnect", <QrGlyph />)}
+            />
+          )}
+          <Row
+            name="Ethereum"
+            subtitle="MetaMask, Rainbow, Coinbase & more"
+            icon={<EthDiamondIcon className="size-6" />}
+            onClick={() => {
+              void startEvmQr();
+            }}
+          />
+        </div>
+      </div>
+    );
   } else {
     content = (
       <div className="flex flex-col">
@@ -225,21 +298,30 @@ function WalletFlow({
         <div className="mt-6 flex flex-col gap-2.5">
           {detectedSolana.map((w) => (
             <Row
-              key={w.adapter.name}
+              key={`sol:${w.adapter.name}`}
               name={w.adapter.name}
               icon={w.adapter.icon}
               badge={<SolanaMarkIcon className="h-full w-full" />}
               onClick={() => chooseSolanaWallet(w.adapter.name, w.adapter.name, w.adapter.icon)}
             />
           ))}
-          {walletConnect && (
+          {evmWallets.map((w) => (
             <Row
-              name="Sign in with QR code"
-              subtitle="Phantom, Solflare, Backpack & more"
-              icon={<QrGlyph />}
-              onClick={() => chooseSolanaWallet(walletConnect.adapter.name, "WalletConnect", <QrGlyph />)}
+              key={`evm:${w.rdns}`}
+              name={w.name}
+              icon={w.icon}
+              badge={<EthDiamondIcon className="h-full w-full" />}
+              onClick={() => {
+                void chooseInjectedEvm(w.name, w.icon, w.provider);
+              }}
             />
-          )}
+          ))}
+          <Row
+            name="Sign in with QR code"
+            subtitle="Scan with a Solana or Ethereum wallet"
+            icon={<QrGlyph />}
+            onClick={() => setView("qr")}
+          />
           <Row
             name="Sign in with Base"
             subtitle="No extension needed"
@@ -291,8 +373,15 @@ function Row({
         <span className="relative grid size-9 shrink-0 place-items-center">
           <span className="grid size-9 place-items-center overflow-hidden rounded-lg">
             {typeof icon === "string" ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={icon} alt="" className="size-7" />
+              // An EIP-6963 wallet may announce with no icon, and the
+              // window.ethereum fallback in useEvmWallets never has one — an
+              // empty src renders as a broken image, so fall through to the glyph.
+              icon ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={icon} alt="" className="size-7" />
+              ) : (
+                <WalletGlyph />
+              )
             ) : (
               icon ?? <WalletGlyph />
             )}
