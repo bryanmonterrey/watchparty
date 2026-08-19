@@ -44,7 +44,7 @@ export function RailFooter({ className }: { className?: string }) {
         <nav
             aria-label="Footer"
             className={cn(
-                "flex flex-wrap items-center gap-x-2 gap-y-1.5 px-1 text-12 font-medium text-muted-foreground",
+                "flex flex-wrap items-center gap-x-2 gap-y-1.5 px-1 text-12 font-medium text-zinc-600",
                 className,
             )}
         >
@@ -57,7 +57,7 @@ export function RailFooter({ className }: { className?: string }) {
                     <Link href={item.href} className={LINK_CLASS}>
                         {item.label}
                     </Link>
-                    <span aria-hidden className="select-none text-muted-foreground/50">
+                    <span aria-hidden className="select-none text-zinc-600/50">
                         ·
                     </span>
                 </span>
@@ -77,7 +77,7 @@ export function RailFooter({ className }: { className?: string }) {
 
             {/* w-full forces the copyright onto its own row, so it reads as the
                 close of the column rather than as another link. */}
-            <span className="w-full pt-0.5 text-muted-foreground/80">© 2026 watchparty</span>
+            <span className="w-full pt-0.5 text-zinc-600/80">© 2026 watchparty</span>
         </nav>
     );
 }
