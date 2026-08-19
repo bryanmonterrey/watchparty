@@ -136,6 +136,19 @@ the d2 store, `getEncryptedShare` and `signTransaction` each gated on the mirror
 and then did a `user_id`-scoped `encrypted_wallets` lookup that already returns
 the right error. The gate was redundant AND wrong.
 
+**Reviewer findings deferred, not dismissed** (an independent review angle ran
+2026-08-19; two of its findings were applied — a duplicate wallet resolution in
+getTransactions and a dead import — two are banked here):
+
+- `SolBalanceChip` / `EvmBalanceChip` are near-verbatim twins differing only in
+  icon/symbol/badge; the next tweak to the Deposit hover or the em-dash unknown
+  state will land in one and not the other. One parameterized chip fixes it.
+- The "all wallets = linked_wallets ∪ legacy mirror" union is hand-rolled three
+  ways (user-trades webhook, its receiver, perps reportFill). A single
+  `allSolanaAddressesFor(userId)` in server/lib/user-wallet.ts would keep the
+  register and receive sides moving together — the exact property the receiver's
+  own comment says must hold.
+
 ⚠️ **NOT audited: `components/` (71 refs), `lib/` (36), `app/` (11),
 `hooks/` (3).** The server is the half that can reject a request or send money
 to the wrong place; the client half mostly DISPLAYS the primary, which is wrong
