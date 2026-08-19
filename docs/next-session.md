@@ -113,6 +113,22 @@ account, ask: does matching the primary need to be NECESSARY here, or only
 SUFFICIENT? It is almost always only sufficient. Concentrated in
 `server/routers` (42 refs), `components/wallet` (38), `lib/auth` (10).
 
+**Audited 2026-08-19 (`3994ba37`).** Three more found and fixed, all in the
+Helius webhooks: trade-sharing registration, trade attribution, and the assets
+webhook each watched or matched ONLY the primary. Their common signature is
+worth knowing — an unwatched address produces no deliveries, so there is no
+error and no dropped-event log, only data that quietly is not there. The two
+trade halves shared the bug and therefore AGREED with each other, which is what
+hid it; they had to be fixed together.
+
+Cleared in the same pass: the sign-in lookup (`lib/auth/server.ts:535`) already
+checks `linked_wallets` first. NOT bugs but future work: the two payout call
+sites, which belong to §7.
+
+Measured on prod: 22 linked wallets across 20 accounts. Multi-wallet is barely
+exercised — these are unexercised paths rather than rare ones, and ~160 further
+reads of the mirror remain.
+
 ---
 
 ## 4. Environment traps that cost real time this session
@@ -157,6 +173,49 @@ Tags tabs actually exist (the tab state previously only recoloured a label), and
 the swap card gained the dialog's protections.
 
 ---
+
+## 7. Private receives + receiving wallet (NEXT CHAT — scoped by the owner, not built)
+
+Raised 2026-08-19 and deliberately deferred: it is a feature conversation, not
+an increment. The owner's framing, kept as given:
+
+> a user has an account with linked wallets, only 1 wallet gets picked as main
+> wallet. in settings later users can choose their **receiving wallet** and
+> whether they want to **receive funds privately** or not. **evm private sends
+> and svm** needs to be implemented. privacy is chosen **at user level** when
+> they choose to receive funds privately. private funds needs to be **claimed
+> in ui (unshielded in private balance)**.
+
+Four distinct pieces, in dependency order:
+
+1. **Receiving wallet** — a per-user choice of WHICH linked wallet receives
+   money, independent of the primary/main wallet. Today there is no such
+   concept: everything pays `user.wallet_address`, the primary mirror.
+2. **User-level privacy flag** — "receive funds privately", set once on the
+   account rather than per payment.
+3. **Private sends on BOTH chains** — EVM and SVM. Neither exists.
+4. **Claim/unshield UI** — private funds land in a shielded balance and are
+   claimed explicitly; the balance and the claim action both need surfaces.
+
+**Where it plugs in, found while auditing (this is the load-bearing part).**
+Exactly two places pay a user today, and both read the destination inline:
+
+    server/routers/content.ts:246   paywall unlock -> author's wallet_address
+    server/routers/subscription.ts:687  creator claim -> own wallet_address
+
+Two files, two inline reads, two different error strings. Before a setting
+exists, that is two places to change and two places to forget. They should
+collapse into ONE resolver that owns both questions — which wallet, and
+shielded or not — the same shape and for the same reason as
+`server/lib/premium-entitlement.ts`, which exists because one predicate got
+hand-copied twice and drifted.
+
+⚠️ Both call sites already carry a LATENT failure that this work should fix
+rather than inherit: `user.wallet_address` is NULL when an account's only
+wallet is external EVM, and both paths then hard-fail with "no wallet on file".
+Zero EVM linked wallets exist today (measured: 22 linked wallets, 20 accounts,
+0 EVM), so nobody has hit it — but the login screen now leads with Sign in with
+Base, so the first Base-only creator who earns anything will.
 
 ## 6. Genuinely open
 
