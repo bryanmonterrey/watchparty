@@ -21,6 +21,7 @@ import { resolveTraders } from "@/lib/coins/resolve-traders";
 import { gtBase, gtHeaders } from "@/lib/coins/gecko-endpoint";
 import { withCache, withSwrCache, invalidateCache, redis, TTL } from "@/lib/cache";
 import { db } from "@/db";
+import { listWalletsForUser, resolveActiveWallet } from "@/server/lib/active-wallet";
 import { trades } from "@/db/schema/content";
 import { nanoid } from "nanoid";
 import { and, eq, isNull } from "drizzle-orm";
@@ -240,31 +241,12 @@ export const walletRouter = router({
         };
     }),
 
-    /** Every Solana wallet linked to this account, primary first. */
-    listLinkedWallets: protectedProcedure.query(async ({ ctx }) => {
-        const rows = await db
-            .select({
-                id: linkedWallets.id,
-                address: linkedWallets.address,
-                source: linkedWallets.source,
-                label: linkedWallets.label,
-                isPrimary: linkedWallets.is_primary,
-                createdAt: linkedWallets.created_at,
-            })
-            .from(linkedWallets)
-            .where(eq(linkedWallets.user_id, ctx.user.id));
+    /** Every wallet on the account, primary first. See server/lib/active-wallet.ts. */
+    listLinkedWallets: protectedProcedure.query(({ ctx }) => listWalletsForUser(ctx.user.id)),
 
-        return {
-            wallets: rows.sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary)),
-            max: MAX_LINKED_WALLETS,
-        };
-    }),
+    /** The wallet in use, and the chain it is on. See server/lib/active-wallet.ts. */
+    getActiveWallet: protectedProcedure.query(({ ctx }) => resolveActiveWallet(ctx.user.id)),
 
-    /**
-     * Nonce to sign when linking a wallet. Proving control matters — addresses
-     * are globally unique, so without proof anyone could claim someone else's
-     * address and lock the real owner out of ever linking it.
-     */
     getLinkNonce: protectedProcedure
         .input(z.object({ address: z.string().min(32) }))
         .mutation(async ({ ctx, input }) => {

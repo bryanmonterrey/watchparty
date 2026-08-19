@@ -10,6 +10,7 @@ import { betterAuth } from "better-auth";
 import { clearSlugMiss } from "@/lib/security/slug-miss-cache";
 import { dash } from "@better-auth/infra";
 import { siwsPlugin } from "better-auth-siws";
+import { linkSignInWallet } from "@/lib/wallet/link-signin-wallet";
 import { siwe } from "better-auth/plugins/siwe";
 import { withCache, TTL, redis } from "@/lib/cache";
 import { verifyEvmMessage } from "@/lib/chains/evm/verify";
@@ -687,6 +688,12 @@ export const auth = betterAuth({
                 throw new APIError("UNAUTHORIZED", { message: "Wallet mismatch" });
               }
             }
+
+            // The wallet they just signed in with is one of their wallets, and
+            // if it is their only one it is the wallet in use. Runs after the
+            // ownership checks above so a mismatched wallet is never recorded,
+            // and is best-effort inside — bookkeeping must not fail a sign-in.
+            await linkSignInWallet(sessionData.userId, String(address));
           }
 
           return { data: sessionData };
