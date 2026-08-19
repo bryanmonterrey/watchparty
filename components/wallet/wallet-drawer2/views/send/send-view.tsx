@@ -178,6 +178,27 @@ export function SendView({
     const contract = selectedToken ? contractOf(selectedToken) : undefined;
     const isNativeSend = !contract;
 
+    /**
+     * USD price of the chain's own coin, for quoting gas in dollars.
+     *
+     * Solana already receives it as a prop. Every other chain reads it off its
+     * native row in the holdings list, which the assets query prices for each
+     * chain — `currentPrice` above cannot be reused, since that is the price of
+     * the token being SENT and gas is paid in the chain's coin.
+     *
+     * Null when the native balance is zero, because the price is derived from
+     * usdValue/balance. That case cannot send at all — no gas — so the line
+     * falls back to the raw amount rather than showing a wrong dollar figure.
+     */
+    const nativeUsdPrice = React.useMemo(() => {
+        if (isSolanaSend) return solPrice ?? null;
+        const native = tokens.find(
+            (t) => t.chain === sendChain && t.mint.startsWith("native:"),
+        );
+        if (!native || native.balance <= 0 || !native.usdValue) return null;
+        return native.usdValue / native.balance;
+    }, [isSolanaSend, solPrice, tokens, sendChain]);
+
     // Native SOL is pinned to 9 rather than trusting the row's decimals —
     // lamports are not negotiable, and this used to be a hardcoded
     // LAMPORTS_PER_SOL. Everything else moves at its own precision.
@@ -492,9 +513,12 @@ export function SendView({
                     Charged on every path: an instruction on Solana, an output on
                     Bitcoin, and accrued for a batched sweep on EVM, where a
                     transfer can only pay one address. The sender covers it and
-                    the recipient receives the full amount. Network gas stays in
-                    the chain's own currency, because that is what it is actually
-                    paid in and it is not our fee. */}
+                    the recipient receives the full amount.
+
+                    Network gas is shown BOTH ways — dollars to answer "what does
+                    this cost", and the native amount because that is literally
+                    what leaves the wallet, and on a chain whose coin they hold
+                    that number is the one they can check against their balance. */}
                 {hasAmount && (
                     <p className="text-center text-11 text-zinc-500">
                         {PLATFORM_FEE_BPS / 100}% platform fee ·{" "}
@@ -502,7 +526,12 @@ export function SendView({
                             ? formatUsd(((parsedTokenAmount * PLATFORM_FEE_BPS) / 10000) * currentPrice)
                             : `${((parsedTokenAmount * PLATFORM_FEE_BPS) / 10000).toFixed(Math.min(6, sendDecimals))} ${selectedToken?.symbol ?? "SOL"}`}
                         {!isSolanaSend && feeQuote && (
-                            <> · network fee ~{feeQuote.feeFormatted.toFixed(6)} {feeQuote.symbol}</>
+                            <>
+                                {" "}· network fee ~
+                                {nativeUsdPrice
+                                    ? `${formatUsd(feeQuote.feeFormatted * nativeUsdPrice)} (${feeQuote.feeFormatted.toFixed(6)} ${feeQuote.symbol})`
+                                    : `${feeQuote.feeFormatted.toFixed(6)} ${feeQuote.symbol}`}
+                            </>
                         )}
                     </p>
                 )}
