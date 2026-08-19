@@ -522,11 +522,21 @@ bun scripts/ai/smoke-assistant.mjs        # real model: visible text? tools fire
 bun scripts/ai/browser-smoke-chat.mjs     # real browser: text in the DOM, readable?
 bun scripts/swig/verify-session-authority.mjs   # real devnet transactions
 bun scripts/dev/mint-test-session.mjs     # a signed session, so the above can log in
+bun scripts/dev/smoke-siws-contract.mjs   # Solana login: real betterAuth(), account created AND re-matched
+bun scripts/dev/smoke-siwe-contract.mjs   # EVM login: the /siwe/* body shapes better-auth actually accepts
 ```
 
 What each caught that nothing else could:
 
 - **smoke-assistant** — empty replies (the reasoning-budget bug above).
+- **smoke-siws/siwe-contract** — the wallet-login wire contracts, which live
+  entirely at runtime: the bodies are zod-validated inside better-auth, and
+  better-auth-siws calls better-auth's *internal* adapter, so both break as a
+  400 or a TypeError at sign-in with tsc, `bun test` and a green deploy all
+  reporting success. That is precisely how better-auth 1.7 broke Solana login.
+  The SIWS one signs in TWICE on purpose: a wrong account issuer does not
+  error, it silently mints a duplicate user, so "same user both times" is the
+  assertion that catches it.
 - **verify-session-authority** — a *fix* that compiled clean and was wrong:
   `findRolesByEd25519SignerPk` matches `authority.signer`, and a SESSION
   authority's signer is its sessionKey (zeros until a session exists), so the
