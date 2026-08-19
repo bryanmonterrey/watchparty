@@ -313,6 +313,12 @@ export const walletRouter = router({
                     user_id: ctx.user.id,
                     address: input.address,
                     source: "extension",
+                    // NULL chain_kind means "the generated multichain wallet";
+                    // an extension link is never that. The ed25519 verify above
+                    // guarantees this is a Solana key, so stamp it — an
+                    // unstamped row is what once put a Solana badge on a 0x
+                    // address in the account picker.
+                    chain_kind: "solana",
                     label: input.label,
                     is_primary: false,
                 });

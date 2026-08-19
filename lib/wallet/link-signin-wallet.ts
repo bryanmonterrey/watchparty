@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "@/db";
 import { linkedWallets, type LinkedWalletChainKind } from "@/db/schema/auth/linked-wallets";
@@ -35,7 +35,7 @@ export function chainKindOfAddress(address: string): LinkedWalletChainKind {
  */
 export async function linkSignInWallet(
   userId: string,
-  address: string,
+  rawAddress: string,
   /**
    * The EVM chain the SIWE message was signed on (8453 = Base). Recorded
    * because nothing about the address can recover it later — one secp256k1
@@ -46,10 +46,21 @@ export async function linkSignInWallet(
   chainId?: number | null,
 ): Promise<void> {
   try {
+    // EVM addresses are case-insensitive hex, stored LOWERCASE as the one
+    // canonical form. Without this, a checksummed sign-in and a lowercase
+    // sign-in are two different strings to the unique constraint — which is
+    // exactly how one account ended up with the same 0x address linked twice
+    // (2026-08-19, found via a duplicate row in the account picker). Solana
+    // addresses are case-SENSITIVE base58 and pass through untouched.
+    const isEvm = chainKindOfAddress(rawAddress) === "evm";
+    const address = isEvm ? rawAddress.toLowerCase() : rawAddress;
+
     const [existing] = await db
       .select({ id: linkedWallets.id, userId: linkedWallets.user_id })
       .from(linkedWallets)
-      .where(eq(linkedWallets.address, address))
+      // lower() on the stored side too: rows written before normalization may
+      // still be checksummed, and missing one is what creates the twin.
+      .where(isEvm ? sql`lower(${linkedWallets.address}) = ${address}` : eq(linkedWallets.address, address))
       .limit(1);
 
     if (existing) {
