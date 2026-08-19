@@ -24,6 +24,8 @@ export const publicRoutes: string[] = [
   "/accessibility",
   "/ads-info",
   "/guidelines",
+  // "Get app" from the rail footer (app/(legal)/download).
+  "/download",
 ];
 
 // Public PREFIXES (dynamic public pages, e.g. the embeddable server widget

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { MotionConfigProvider } from "@/components/motion-config-provider";
 import { getServerSession } from "@/lib/auth/get-session";
 import { SiteHeader } from "@/components/marketing/site-header";
@@ -13,7 +14,14 @@ export default async function MarketingLayout({
     children: React.ReactNode;
 }) {
     const session = await getServerSession();
-    if (session) redirect("/home");
+    if (session) {
+        // /about is linked from the app's rail footer, so a signed-in reader
+        // has to be able to open it — every other marketing page keeps the
+        // bounce (signed-in users skip the pitch). The pathname travels on the
+        // x-pathname header middleware sets, same as (app)/layout reads it.
+        const pathname = (await headers()).get("x-pathname") ?? "";
+        if (pathname !== "/about") redirect("/home");
+    }
 
     // Neutral base: each page paints its own scroll-reactive background
     // (ColorScrollPage), which covers main top-to-bottom, so the header floats

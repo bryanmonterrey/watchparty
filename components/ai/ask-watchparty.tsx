@@ -10,10 +10,13 @@ import { useAskOverlay } from "@/hooks/use-ask-overlay";
 // The dock's AI button and the surface it opens (docs/TODO.md's "docked panel
 // anchored above the button rather than a route").
 //
-// Rendered inside HomeActionDock's SLOT, which is the `relative` box the docked
-// panel positions against — this component deliberately adds no positioning
-// context of its own, so the panel hangs off the button's own corner. The
-// overlay doesn't use that anchor at all; it portals to the body.
+// BOTH modes of the surface portal to <body> now — the docked panel included.
+// It used to hang off the SLOT's `relative` via `absolute bottom-full`, but the
+// app scroller (AppContainer) carries a view-transition-name, which makes it a
+// stacking context: nothing inside it, at any z-index, can paint over the
+// fixed z-50 header, so on short screens the panel's top slid under the header
+// band. The button ref is passed down as the anchor instead, and the panel
+// positions itself `fixed` against the button's rect from outside the trap.
 //
 // Chrome (className/radius/glow) is passed in rather than restated here: the
 // dock owns how its buttons look, and the AI one must not be able to drift from
@@ -125,6 +128,7 @@ export function AskWatchparty({
                 {open && (
                     <AskSurface
                         key="ask-surface"
+                        anchorRef={buttonRef}
                         expanded={expanded}
                         onExpandedChange={setExpanded}
                         onClose={close}

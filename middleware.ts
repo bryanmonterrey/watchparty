@@ -40,7 +40,7 @@ const RESERVED_SLUGS = new Set([
   "premium", "quests", "trade", "shorts", "video", "communities", "coin",
   "category", "status", "notifications", "wallet", "explore", "about",
   "developer", "studio", "apps", "oauth", "admin",
-  "terms", "privacy", "cookies", "accessibility", "ads-info", "guidelines",
+  "terms", "privacy", "cookies", "accessibility", "ads-info", "guidelines", "download",
 ]);
 import { getSessionCookie } from "better-auth/cookies";
 import { apiAuthPrefix, authRoutes, publicRoutes, publicPrefixes } from "./routes";

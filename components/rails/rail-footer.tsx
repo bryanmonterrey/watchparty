@@ -18,6 +18,10 @@ import { cn } from "@/lib/utils";
 // The "More" row is a GooDropdown per the house rule (every dropdown in the app
 // is one) with side="top" — the footer sits at the bottom of a tall scrolling
 // column, so the panel opens upward.
+//
+// /about survives being signed in because the marketing layout carves it out
+// of its signed-in redirect (see app/(marketing)/layout.tsx) — without that,
+// this link would bounce every reader straight back to /home.
 
 const LINKS = [
     { label: "Terms", href: "/terms" },
@@ -28,9 +32,9 @@ const LINKS = [
 ];
 
 const MORE = [
-    { label: "Community guidelines", href: "/guidelines" },
+    { label: "About", href: "/about" },
+    { label: "Get app", href: "/download" },
     { label: "Developers", href: "/developer" },
-    { label: "App directory", href: "/apps" },
 ];
 
 const LINK_CLASS = "transition-colors hover:text-foreground hover:underline";
@@ -40,7 +44,7 @@ export function RailFooter({ className }: { className?: string }) {
         <nav
             aria-label="Footer"
             className={cn(
-                "flex flex-wrap items-center gap-x-2 gap-y-1.5 px-1 text-13 font-medium text-muted-foreground",
+                "flex flex-wrap items-center gap-x-2 gap-y-1.5 px-1 text-12 font-medium text-muted-foreground",
                 className,
             )}
         >
