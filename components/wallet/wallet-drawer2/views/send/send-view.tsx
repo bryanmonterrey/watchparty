@@ -31,8 +31,9 @@ const RECENTS_KEY = "send_recents_v1";
 const MAX_RECENTS = 10;
 import { toPublicKey } from "@/lib/solana/pubkey";
 
+import { PLATFORM_FEE_BPS } from "@/lib/chains/fee-bps";
+
 const TREASURY = new PublicKey(process.env.NEXT_PUBLIC_TREASURY_PUBKEY!);
-const PLATFORM_FEE_BPS = 50; // 0.5%
 const SOL_MINT = "So11111111111111111111111111111111111111111";
 
 /**
@@ -291,7 +292,7 @@ export function SendView({
             spl.createTransferInstruction(fromAta, toAta, publicKey!, amount, [], tokenProgram),
         );
 
-        // The 0.5% fee rides in the token being sent. Skipped when it floors to
+        // The fee rides in the token being sent. Skipped when it floors to
         // nothing — creating a treasury account for zero units would charge the
         // sender rent to move dust.
         const feeUnits = (amount * BigInt(PLATFORM_FEE_BPS)) / BigInt(10_000);
@@ -480,14 +481,14 @@ export function SendView({
                     chain={sendChain}
                 />
 
-                {/* What this send costs. The 0.5% is charged on every path — as
+                {/* What this send costs. The fee is charged on every path — as
                     an instruction on Solana, an output on Bitcoin, and accrued
                     for a batched sweep on EVM, where a transfer can only pay one
                     address. Either way the sender covers it and the recipient
                     receives the full amount. Gas is quoted where we can. */}
                 {hasAmount && (
                     <p className="text-center text-11 text-zinc-500">
-                        0.5% platform fee ·{" "}
+                        {PLATFORM_FEE_BPS / 100}% platform fee ·{" "}
                         {((parsedTokenAmount * PLATFORM_FEE_BPS) / 10000).toFixed(Math.min(6, sendDecimals))}{" "}
                         {selectedToken?.symbol ?? "SOL"}
                         {!isSolanaSend && feeQuote && (

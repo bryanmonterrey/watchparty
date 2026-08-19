@@ -1,4 +1,4 @@
-// Collect the 0.5% send fees accrued on EVM transfers.
+// Collect the 1% send fees accrued on EVM transfers.
 //
 // EVM sends can't carry the fee in the user's own transaction (a transfer pays
 // exactly one address), so lib/chains/send/fees.ts records what's owed and this
@@ -21,6 +21,7 @@ import {
 import { getSeedForUser } from "@/lib/wallet/seed";
 import { getChain } from "@/lib/chains/registry";
 import { worthSweeping } from "@/lib/chains/send/sweep-threshold";
+import { treasuryEvmAddress } from "@/lib/chains/treasury";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -30,10 +31,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const treasury = process.env.TREASURY_EVM_ADDRESS;
-    if (!treasury) {
-        return NextResponse.json({ skipped: "TREASURY_EVM_ADDRESS not configured" });
-    }
+    const treasury = treasuryEvmAddress();
 
     const groups = await pendingFeeGroups();
     let swept = 0;

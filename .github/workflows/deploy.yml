@@ -195,9 +195,22 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Restore .env
-        run: printf '%s' "$DOTENV_PRODUCTION" > .env
+        # Identical to the assembly in deploy.yml, and it has to stay identical.
+        # This step used to apply DOTENV_PRODUCTION only, so anything added via
+        # DOTENV_OVERRIDES was live on one deploy path and silently absent on
+        # the others — and deploy-container.yml is the one serving the domains.
+        # The failure mode is a missing value, not an error: a fee that quietly
+        # is not charged, a key that is quietly not set.
+        #
+        # `%s\n` matters too. Without the trailing newline the first override
+        # line concatenates onto the last line of DOTENV_PRODUCTION, corrupting
+        # both.
+        run: |
+          printf '%s\n' "$DOTENV_PRODUCTION" > .env
+          if [ -n "$DOTENV_OVERRIDES" ]; then printf '%s\n' "$DOTENV_OVERRIDES" >> .env; fi
         env:
           DOTENV_PRODUCTION: ${{ secrets.DOTENV_PRODUCTION }}
+          DOTENV_OVERRIDES: ${{ secrets.DOTENV_OVERRIDES }}
 
       - name: Deploy realtime worker
         run: bunx wrangler deploy --config realtime/wrangler.jsonc
@@ -244,9 +257,22 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Restore .env
-        run: printf '%s' "$DOTENV_PRODUCTION" > .env
+        # Identical to the assembly in deploy.yml, and it has to stay identical.
+        # This step used to apply DOTENV_PRODUCTION only, so anything added via
+        # DOTENV_OVERRIDES was live on one deploy path and silently absent on
+        # the others — and deploy-container.yml is the one serving the domains.
+        # The failure mode is a missing value, not an error: a fee that quietly
+        # is not charged, a key that is quietly not set.
+        #
+        # `%s\n` matters too. Without the trailing newline the first override
+        # line concatenates onto the last line of DOTENV_PRODUCTION, corrupting
+        # both.
+        run: |
+          printf '%s\n' "$DOTENV_PRODUCTION" > .env
+          if [ -n "$DOTENV_OVERRIDES" ]; then printf '%s\n' "$DOTENV_OVERRIDES" >> .env; fi
         env:
           DOTENV_PRODUCTION: ${{ secrets.DOTENV_PRODUCTION }}
+          DOTENV_OVERRIDES: ${{ secrets.DOTENV_OVERRIDES }}
 
       - name: Deploy cron worker
         run: bunx wrangler deploy --config cron/wrangler.jsonc

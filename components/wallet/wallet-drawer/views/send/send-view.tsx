@@ -26,8 +26,9 @@ const RECENTS_KEY = "send_recents_v1";
 const MAX_RECENTS = 10;
 import { toPublicKey } from "@/lib/solana/pubkey";
 
+import { PLATFORM_FEE_BPS } from "@/lib/chains/fee-bps";
+
 const TREASURY = new PublicKey(process.env.NEXT_PUBLIC_TREASURY_PUBKEY!);
-const PLATFORM_FEE_BPS = 50; // 0.5%
 
 function loadRecents(): RecentRecipient[] {
     try {
@@ -321,7 +322,7 @@ export function SendView({
                 {/* Fee line */}
                 {hasAmount && (
                     <p className="text-center text-[12px] text-zinc-500">
-                        0.5% platform fee · {((parsedTokenAmount * PLATFORM_FEE_BPS) / 10000).toFixed(6)} {selectedToken?.symbol ?? "SOL"}
+                        {PLATFORM_FEE_BPS / 100}% platform fee · {((parsedTokenAmount * PLATFORM_FEE_BPS) / 10000).toFixed(6)} {selectedToken?.symbol ?? "SOL"}
                     </p>
                 )}
 

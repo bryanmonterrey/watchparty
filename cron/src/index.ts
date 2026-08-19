@@ -165,7 +165,7 @@ export default {
             // A group worth less than 5x the gas to move it is left pending
             // rather than collected at the user's expense — see
             // lib/chains/send/sweep-threshold.ts. Without that floor a $10
-            // mainnet send would burn dollars of their ETH to deliver $0.05.
+            // mainnet send would burn dollars of their ETH to deliver $0.10.
             ctx.waitUntil(call(env, "/api/cron/send-fee-sweep"));
         }
     },

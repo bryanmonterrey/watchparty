@@ -49,6 +49,7 @@ import { getAssetsForChain, hasAssetProvider, type ChainAsset } from "@/lib/chai
 import { getNativePrice, getTokenPrices } from "@/lib/chains/assets/prices";
 import { heliusQuotaOut, markHeliusQuotaOut } from "@/lib/helius/quota";
 import { resolveFeeAccount, feeAccountForSwap } from "@/lib/jupiter/referral-fee";
+import { PLATFORM_FEE_BPS } from "@/lib/chains/fee-bps";
 import { getEvmAssetsBatch } from "@/lib/chains/assets/evm";
 import {
     getActivityForChain,
@@ -1986,7 +1987,7 @@ export const walletRouter = router({
             slippageBps: z.number().default(50)
         }))
         .mutation(async ({ input }) => {
-            const feeBps = process.env.JUPITER_PLATFORM_FEE_BPS ?? '50';
+            const feeBps = process.env.JUPITER_PLATFORM_FEE_BPS ?? String(PLATFORM_FEE_BPS);
             // Input side first, so a buy pays its fee in SOL/USDC rather than in
             // the coin; skipped when neither side has an account, because
             // Jupiter would build a transaction that reverts on-chain. Both

@@ -1,4 +1,4 @@
-// The 0.5% send fee on EVM chains: accrue now, sweep later.
+// The 1% send fee on EVM chains: accrue now, sweep later.
 //
 // Every other chain takes the fee inside the user's own transaction — Solana
 // adds an instruction, Bitcoin adds an output. An EVM transfer pays exactly one
@@ -17,9 +17,10 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { sendFeeAccruals } from "@/db/schema";
 import { getChain } from "../registry";
+import { PLATFORM_FEE_BPS_BIG } from "../fee-bps";
 
-/** Matches the Solana and Bitcoin send paths. */
-export const SEND_FEE_BPS = BigInt(50);
+/** Matches the Solana and Bitcoin send paths — see lib/chains/fee-bps.ts. */
+export const SEND_FEE_BPS = PLATFORM_FEE_BPS_BIG;
 
 /** Fees are charged on top of the amount, so the recipient always stays whole. */
 export function sendFeeFor(amountBaseUnits: string): bigint {

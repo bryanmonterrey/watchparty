@@ -12,12 +12,14 @@ import { BITCOIN } from "../registry";
 import { isAddressFormat } from "../address";
 import { deriveBitcoin } from "../derive";
 import type { FeeEstimate, SendRequest, SendResult } from "./types";
+import { PLATFORM_FEE_BPS_BIG } from "../fee-bps";
+import { treasuryBtcAddress } from "../treasury";
 
 /** Below this, an output costs more to spend than it holds. */
 const DUST_LIMIT = BigInt(294);
 
 /** Matches the Solana send path. */
-const PLATFORM_FEE_BPS = BigInt(50);
+const PLATFORM_FEE_BPS = PLATFORM_FEE_BPS_BIG;
 
 /**
  * The platform fee, taken as one more output in the same transaction rather
@@ -25,14 +27,12 @@ const PLATFORM_FEE_BPS = BigInt(50);
  * and an extra output costs 31 vBytes (see estimateVsize) instead of a whole
  * second transaction's overhead.
  *
- * Returns 0 when there is no treasury configured, when the address is
- * malformed, or when the fee would be a dust output — an unspendable output is
- * worse than an uncollected fee, and neither is worth failing the user's send
- * over.
+ * Returns 0 when the address is malformed or the fee would be a dust output —
+ * an unspendable output is worse than an uncollected fee, and neither is worth
+ * failing the user's send over.
  */
 export function platformFeeFor(amount: bigint): { fee: bigint; treasury?: string } {
-  const treasury = process.env.TREASURY_BTC_ADDRESS;
-  if (!treasury) return { fee: BigInt(0) };
+  const treasury = treasuryBtcAddress();
   if (!isAddressFormat("bitcoin", treasury)) {
     console.warn("TREASURY_BTC_ADDRESS is not a valid Bitcoin address — fee skipped");
     return { fee: BigInt(0) };

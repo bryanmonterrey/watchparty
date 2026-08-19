@@ -5,8 +5,8 @@
  * transaction to collect, and that transaction is signed from the USER's
  * wallet — so the gas comes out of their balance, not ours. Without a floor
  * the sweep will happily spend more of a user's ETH than the fee is worth: a
- * $10 mainnet send accrues $0.05, and a plain transfer at 20 gwei costs well
- * over a dollar. That is not a rounding error against the fee, it is 20x the
+ * $10 mainnet send accrues $0.10, and a plain transfer at 20 gwei costs well
+ * over a dollar. That is not a rounding error against the fee, it is 10x the
  * fee, and to the user it looks like their wallet leaking gas for no reason.
  *
  * So a group is swept only once it clears GAS_MULTIPLE times the estimated
