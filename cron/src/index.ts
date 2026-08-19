@@ -152,24 +152,21 @@ export default {
             ctx.waitUntil(runMonitor(env));
         } else {
             ctx.waitUntil(call(env, "/api/cron/premium-collect"));
-            // NOT scheduled here, and the reason is stronger than caution.
+
+            // Turned on deliberately 2026-08-19, which is exactly the condition
+            // the previous note here demanded. It refused to schedule the sweep
+            // while TREASURY_EVM_ADDRESS was unset, on the grounds that an
+            // inert schedule would start moving real money the day somebody set
+            // that variable for an unrelated reason. The address is set now
+            // (payingheavy.eth) and this is that decision, made on purpose.
             //
             // /api/cron/send-fee-sweep SIGNS TRANSACTIONS from each user's
-            // seed-derived key to collect accrued 0.5% EVM send fees, with the
-            // gas coming out of that user's wallet. Its own header says
-            // "schedule alongside premium-collect".
-            //
-            // Verified 2026-08-11, and both halves matter:
-            //   TREASURY_EVM_ADDRESS   NOT SET  -> the route returns
-            //                                     {skipped} before doing anything
-            //   send_fee_accruals      0 rows   -> nothing to sweep regardless
-            //
-            // So scheduling it today would be inert — which is exactly the
-            // problem. An inert schedule means the sweep starts moving real
-            // money on the day somebody sets TREASURY_EVM_ADDRESS for an
-            // unrelated reason, with nobody having decided to turn it on.
-            // Wiring it here turns a deliberate future choice into a side
-            // effect of an env var. Schedule it WITH that decision, not before.
+            // seed-derived key, so the gas comes out of THAT USER's wallet.
+            // A group worth less than 5x the gas to move it is left pending
+            // rather than collected at the user's expense — see
+            // lib/chains/send/sweep-threshold.ts. Without that floor a $10
+            // mainnet send would burn dollars of their ETH to deliver $0.05.
+            ctx.waitUntil(call(env, "/api/cron/send-fee-sweep"));
         }
     },
 } satisfies ExportedHandler<Env>;

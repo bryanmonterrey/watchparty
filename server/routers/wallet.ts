@@ -48,7 +48,7 @@ import { getChain, CHAINS, CHAIN_KINDS } from "@/lib/chains/registry";
 import { getAssetsForChain, hasAssetProvider, type ChainAsset } from "@/lib/chains/assets";
 import { getNativePrice, getTokenPrices } from "@/lib/chains/assets/prices";
 import { heliusQuotaOut, markHeliusQuotaOut } from "@/lib/helius/quota";
-import { resolveFeeAccount, deriveReferralAta } from "@/lib/jupiter/referral-fee";
+import { resolveFeeAccount, feeAccountForSwap } from "@/lib/jupiter/referral-fee";
 import { getEvmAssetsBatch } from "@/lib/chains/assets/evm";
 import {
     getActivityForChain,
@@ -1987,10 +1987,11 @@ export const walletRouter = router({
         }))
         .mutation(async ({ input }) => {
             const feeBps = process.env.JUPITER_PLATFORM_FEE_BPS ?? '50';
-            // Only bill the platform fee when the referral ATA for this output
-            // mint actually exists — otherwise Jupiter builds a transaction
-            // that reverts on-chain (lib/jupiter/referral-fee.ts).
-            const feeAccount = await resolveFeeAccount(input.outputMint);
+            // Input side first, so a buy pays its fee in SOL/USDC rather than in
+            // the coin; skipped when neither side has an account, because
+            // Jupiter would build a transaction that reverts on-chain. Both
+            // rules and their measurements: lib/jupiter/referral-fee.ts.
+            const feeAccount = await resolveFeeAccount(input.inputMint, input.outputMint);
             const feeParam = feeAccount ? `&platformFeeBps=${feeBps}` : '';
             const qs = `inputMint=${input.inputMint}&outputMint=${input.outputMint}&amount=${input.amount}&slippageBps=${input.slippageBps}${feeParam}`;
             // Try primary then lite fallback — both are official Jupiter endpoints
@@ -2011,7 +2012,8 @@ export const walletRouter = router({
                         const text = await response.text();
                         throw new Error(`Jupiter quote HTTP ${response.status}: ${text}`);
                     }
-                    return await response.json();
+                    // Carry the account forward: the swap must not re-resolve it.
+                    return { ...(await response.json()), platformFeeAccount: feeAccount ?? undefined };
                 } catch (err) {
                     console.warn(`Jupiter quote attempt failed for ${url}:`, err);
                     lastError = err;
@@ -2029,15 +2031,7 @@ export const walletRouter = router({
             wrapAndUnwrapSol: z.boolean().default(true)
         }))
         .mutation(async ({ ctx, input }) => {
-            // The QUOTE decides whether this swap carries a fee — Jupiter 400s on
-            // a mismatch in either direction, so derive from the quote and never
-            // re-check the ATA here (see lib/jupiter/referral-fee.ts).
-            const referralAccount = process.env.JUPITER_REFERRAL_ACCOUNT;
-            let feeAccount: string | undefined;
-
-            if (referralAccount && input.quoteResponse?.platformFee && input.quoteResponse?.outputMint) {
-                feeAccount = deriveReferralAta(referralAccount, input.quoteResponse.outputMint);
-            }
+            const feeAccount = await feeAccountForSwap(input.quoteResponse);
 
             const body = JSON.stringify({
                 quoteResponse: input.quoteResponse,

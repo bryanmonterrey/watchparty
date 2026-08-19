@@ -20,6 +20,7 @@ import {
 } from "@/lib/chains/send/fees";
 import { getSeedForUser } from "@/lib/wallet/seed";
 import { getChain } from "@/lib/chains/registry";
+import { worthSweeping } from "@/lib/chains/send/sweep-threshold";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -37,7 +38,8 @@ export async function GET(req: NextRequest) {
     const groups = await pendingFeeGroups();
     let swept = 0;
     let failed = 0;
-    const results: { chain: string; contract: string | null; txId?: string; error?: string }[] = [];
+    let skipped = 0;
+    const results: { chain: string; contract: string | null; txId?: string; error?: string; skipped?: string }[] = [];
 
     for (const group of groups) {
         const chain = getChain(group.chain);
@@ -46,6 +48,17 @@ export async function GET(req: NextRequest) {
             // the run for everyone behind it.
             await markSweepFailed(group.ids, `not an EVM chain: ${group.chain}`);
             failed++;
+            continue;
+        }
+
+        // The gas for this comes out of the USER's wallet, so a group that is
+        // worth less than the gas to move it is left pending rather than
+        // collected at their expense. It accrues and clears the bar later.
+        const verdict = await worthSweeping(group);
+        if (!verdict.worth) {
+            await markSweepFailed(group.ids, `skipped: ${verdict.reason}`);
+            skipped++;
+            results.push({ chain: chain.id, contract: group.contract, skipped: verdict.reason });
             continue;
         }
 
@@ -70,5 +83,5 @@ export async function GET(req: NextRequest) {
         }
     }
 
-    return NextResponse.json({ groups: groups.length, swept, failed, results });
+    return NextResponse.json({ groups: groups.length, swept, skipped, failed, results });
 }

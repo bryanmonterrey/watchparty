@@ -1,5 +1,5 @@
-import { describe, expect, test } from "bun:test";
-import { deriveReferralAta, normalizeFeeMint } from "@/lib/jupiter/referral-fee";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { deriveReferralAta, feeAccountFor, normalizeFeeMint } from "@/lib/jupiter/referral-fee";
 
 // This file exists because Jupiter accepts a fee account that cannot work.
 //
@@ -47,5 +47,51 @@ describe("referral ATA derivation", () => {
 
     test("is stable for the same inputs", () => {
         expect(deriveReferralAta(REFERRAL, USDC)).toBe(deriveReferralAta(REFERRAL, USDC));
+    });
+});
+
+// The fee is billed to whichever side has an account, input preferred. Measured
+// against mainnet by simulating and reading the fee account's balance delta —
+// "the simulation passed" proves nothing here, since a silent skip also passes:
+//
+//   buy  BONK with 0.01 SOL  -> wSOL account +100000 lamports  (= 1% of INPUT)
+//   sell BONK to SOL         -> wSOL account +300057 lamports  (= 1% of OUTPUT)
+//
+// That is why no per-mint ATA has to be created: every swap has SOL or USDC on
+// one side, and those two accounts already exist.
+describe("fee account for a quote", () => {
+    const REF = "Cp8HX7qN1u2mLBAPAY13SviRLuoJfWCFxTFLJJGoutAo";
+    const wsolAta = "AswMa3nfcrhRCAajfdXYxP8ivnx9s4xYNAkww12d21rc";
+    const bonkAta = "7rh7j5bv9nDbXUhdamxqwhLJ1X2jKwoTKAP5NXYvst5H";
+
+    const prev = process.env.JUPITER_REFERRAL_ACCOUNT;
+    beforeAll(() => { process.env.JUPITER_REFERRAL_ACCOUNT = REF; });
+    afterAll(() => { process.env.JUPITER_REFERRAL_ACCOUNT = prev; });
+
+    test("honours the account the quote was priced with", () => {
+        expect(feeAccountFor({ inputMint: WSOL, outputMint: BONK, platformFeeAccount: wsolAta })).toBe(wsolAta);
+        expect(feeAccountFor({ inputMint: WSOL, outputMint: BONK, platformFeeAccount: bonkAta })).toBe(bonkAta);
+    });
+
+    test("rejects a fee account that is not ours", () => {
+        // A doctored quoteResponse must not redirect the fee. Only the two
+        // accounts derivable from OUR referral account are acceptable.
+        const otherOfOurs = "3o9aisxvQhQijrhrEZS4VmuKozKnMgyphizJDGwyFCqp"; // ours, but USDC — wrong mints for this quote
+        expect(feeAccountFor({ inputMint: WSOL, outputMint: BONK, platformFeeAccount: otherOfOurs })).toBeUndefined();
+        expect(feeAccountFor({ inputMint: WSOL, outputMint: BONK, platformFeeAccount: "11111111111111111111111111111112" })).toBeUndefined();
+    });
+
+    test("does NOT guess a side when the quote carries no account", () => {
+        // Guessing would pick the input mint, which on a sell is exactly the
+        // account that does not exist — the 6025 all over again. The caller
+        // re-resolves instead.
+        expect(feeAccountFor({ inputMint: WSOL, outputMint: BONK })).toBeUndefined();
+        expect(feeAccountFor({ inputMint: BONK, outputMint: WSOL })).toBeUndefined();
+    });
+
+    test("is undefined with no referral configured", () => {
+        process.env.JUPITER_REFERRAL_ACCOUNT = "";
+        expect(feeAccountFor({ inputMint: WSOL, outputMint: BONK })).toBeUndefined();
+        process.env.JUPITER_REFERRAL_ACCOUNT = REF;
     });
 });

@@ -61,11 +61,24 @@ USDC still charges, BONK went from `6025` to clean.
 Note for §0: this would have hit the first funded test, and the obvious suspect
 would have been the `Keypair.fromSeed` line flagged there. It wasn't.
 
-**STILL OPEN — collecting the fee at all.** Buys now succeed but earn nothing
-on any mint without an ATA. Creating one is an on-chain init per mint,
-~0.00204 SOL rent, needing a funded signer (the collector could do it on a cron
-over the top N board coins). That is a recurring spend, so it is a decision,
-not an edit.
+**COLLECTING IT: SOLVED, and the ATA plan is dead.** Jupiter bills the fee to
+whichever side you hand it an account for — measured by simulating and reading
+the fee account's balance delta, buying BONK with 0.01 SOL credits exactly
+100,000 lamports to the **wSOL** account (1% of the INPUT), even though the
+quote still denominates `platformFee` in the output mint. Every swap here has
+SOL or USDC on one side and those two referral ATAs already exist, so the 1%
+now collects on **every coin** with no per-mint setup and no ~0.00204 SOL of
+rent per coin, forever. The fee also arrives in SOL instead of in memecoins.
+
+`resolveFeeAccount` prefers the input side and falls back to the output side
+(which is what makes sells work). Do NOT re-derive the account at swap time
+from a guessed side — on a sell the input account is exactly the one that does
+not exist. `feeAccountForSwap` takes it from the quote and only re-resolves
+when it is missing.
+
+⚠️ **Never read a clean simulation as proof of collection.** A silently skipped
+fee simulates exactly as well as a charged one. The proof is the fee account's
+balance delta, which is what `tests/jupiter-referral-fee.test.ts` records.
 
 ---
 
@@ -148,8 +161,17 @@ the swap card gained the dialog's protections.
 ## 6. Genuinely open
 
 - The funded test above. Everything else is downstream of it.
-- Jupiter fee ATAs (buys WORK now, they just earn $0) + LI.FI integrator
-  registration (§1).
+- **LI.FI integrator registration — the largest uncollected line, and only you
+  can do it.** Every EVM and cross-chain swap earns $0 because LI.FI is called
+  with no `integrator` and no `fee`, and it refuses both until `watchparty` is
+  registered with a fee wallet at https://portal.li.fi/. That covers all six EVM
+  chains and every bridge route. Nothing in the code can proceed without it.
+- **`TREASURY_BTC_ADDRESS` is set locally but NOT in production.** `.env*` is
+  gitignored, and prod env comes from the `DOTENV_PRODUCTION` secret with
+  `DOTENV_OVERRIDES` appended after it (later wins). Add
+  `TREASURY_BTC_ADDRESS=bc1qx644xg0llew9ct40s2h70mu6lj86vl83862uuh` to
+  `DOTENV_OVERRIDES` — do not rewrite it blind, it is write-only and already
+  holds other keys.
 - **Tags have zero usage**: `post_tags` has 0 rows and not one of 81 posts
   contains a cashtag. The feature is complete end to end — the lever is
   discoverability of the composer's `$` picker, not code. Note that typing
