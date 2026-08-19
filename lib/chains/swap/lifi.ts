@@ -1,6 +1,9 @@
-// Swaps via LI.FI — keyless, covering all six of our EVM chains (Ethereum,
-// Base, Polygon, BNB, HyperEVM 999, Robinhood Chain 4663) and, CROSS-CHAIN,
-// any destination LI.FI reaches including Solana and Bitcoin.
+// Swaps via LI.FI — covering all six of our EVM chains (Ethereum, Base,
+// Polygon, BNB, HyperEVM 999, Robinhood Chain 4663) and, CROSS-CHAIN, any
+// destination LI.FI reaches including Solana and Bitcoin.
+//
+// Works keyless; LIFI_API_KEY only raises the rate limits. The platform fee is
+// a separate thing from the key — see LIFI_INTEGRATOR below.
 //
 // Cross-chain is the same endpoint with a different `toChain`: LI.FI is a
 // bridge aggregator, and a bridged route still comes back as ONE transaction to
@@ -24,8 +27,29 @@ import { bytesToHex, deriveEvm } from "../derive";
 import { getChain } from "../registry";
 import type { ChainId } from "../types";
 import { NATIVE_TOKEN, type SwapQuote, type SwapQuoteRequest, type SwapResult } from "./types";
+import { PLATFORM_FEE_BPS } from "../fee-bps";
 
 const LIFI_API = "https://li.quest/v1";
+
+/**
+ * The key our fee registration is filed under at portal.li.fi. Changing this
+ * string does not change a label — it silently stops the fee being collected,
+ * because LI.FI only bills integrators it recognises.
+ */
+const LIFI_INTEGRATOR = "watchparty";
+
+/**
+ * The API key is for rate limits, NOT for fees — measured 2026-08-19, the 1%
+ * is collected identically with and without it. So a missing key degrades
+ * throughput and nothing else, and the header is simply omitted.
+ */
+function lifiHeaders(): Record<string, string> {
+  const key = process.env.LIFI_API_KEY;
+  return {
+    accept: "application/json",
+    ...(key ? { "x-lifi-api-key": key } : {}),
+  };
+}
 
 /**
  * LI.FI's own chain ids for the non-EVM chains.
@@ -95,7 +119,7 @@ export async function getLifiTokenInfo(
 ): Promise<{ address: string; symbol: string; name: string; decimals: number; priceUSD?: string }> {
   const chain = routableChainOrThrow(chainId);
   const params = new URLSearchParams({ chain: String(lifiChainId(chain)), token });
-  const res = await fetch(`${LIFI_API}/token?${params}`, { headers: { accept: "application/json" } });
+  const res = await fetch(`${LIFI_API}/token?${params}`, { headers: lifiHeaders() });
   if (!res.ok) throw new Error(`Token not found on ${chain.name} (${res.status})`);
   const t = (await res.json()) as any;
   if (typeof t?.decimals !== "number") throw new Error(`Token metadata incomplete on ${chain.name}`);
@@ -127,13 +151,25 @@ export async function getLifiQuote(
     fromAddress,
     fromAmount: request.fromAmount,
     slippage: String(request.slippage ?? 0.005),
+    // The platform's cut on every EVM and cross-chain swap. Both params are
+    // required together: `fee` alone is ignored, and `integrator` alone just
+    // labels the request. LI.FI 400s the pair outright until the integrator is
+    // registered with a fee wallet at portal.li.fi ("Integrator 'watchparty' is
+    // not configured for collecting fees"), which is why this shipped without
+    // them and earned nothing until 2026-08-19.
+    //
+    // `integrator` must stay exactly "watchparty" — it is the key the portal
+    // registration is filed under, and a typo silently reverts to no fee.
+    // The rate is a FRACTION here, not bps, hence the /10000.
+    integrator: LIFI_INTEGRATOR,
+    fee: String(PLATFORM_FEE_BPS / 10_000),
   });
   // Only meaningful when bridging; on a same-chain swap the source address is
   // already the recipient and sending it changes nothing.
   if (toAddress && destId !== request.chain) params.set("toAddress", toAddress);
 
   const res = await fetch(`${LIFI_API}/quote?${params}`, {
-    headers: { accept: "application/json" },
+    headers: lifiHeaders(),
   });
 
   if (!res.ok) {

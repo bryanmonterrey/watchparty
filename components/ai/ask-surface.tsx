@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, useReducedMotion } from "motion/react";
 import { useChat } from "@ai-sdk/react";
@@ -70,15 +70,52 @@ const SUGGESTIONS = [
 ];
 
 export function AskSurface({
+    anchorRef,
     expanded,
     onExpandedChange,
     onClose,
 }: {
+    /** The dock button the docked panel hangs off — see the portal note below. */
+    anchorRef: React.RefObject<HTMLButtonElement | null>;
     expanded: boolean;
     onExpandedChange: (next: boolean) => void;
     onClose: () => void;
 }) {
     const [input, setInput] = useState("");
+
+    // Where the docked panel sits, measured off the anchor button rather than
+    // positioned with `absolute` inside the dock. It HAS to leave the dock's
+    // subtree: the app scroller (AppContainer) sets a view-transition-name,
+    // which makes it a stacking context, so no z-index inside it — the dock's
+    // z-101 included — can ever paint over the fixed z-50 header. On short
+    // screens the panel's top reached the header band and slid under it. From
+    // <body>, z-60 wins outright.
+    //
+    // Re-measured on scroll (capture, so the app scroller's own events count)
+    // and resize, the same way the GooDropdown portal tracks its trigger.
+    // Height is the panel's usual 520px unless the viewport is too short to
+    // fit it above the button, in which case it shrinks to keep its top edge
+    // 8px inside the screen — over the header, per the owner, not under it.
+    const [dockedPos, setDockedPos] = useState<{ right: number; bottom: number; height: number } | null>(null);
+    useLayoutEffect(() => {
+        if (expanded) return;
+        const measure = () => {
+            const r = anchorRef.current?.getBoundingClientRect();
+            if (!r) return;
+            setDockedPos({
+                right: window.innerWidth - r.right,
+                bottom: window.innerHeight - r.top + 12,
+                height: Math.max(240, Math.min(520, r.top - 20)),
+            });
+        };
+        measure();
+        window.addEventListener("resize", measure);
+        document.addEventListener("scroll", measure, { capture: true, passive: true });
+        return () => {
+            window.removeEventListener("resize", measure);
+            document.removeEventListener("scroll", measure, { capture: true });
+        };
+    }, [expanded, anchorRef]);
 
     // Live dictation. Settled phrases append to `input` so they're editable
     // like anything typed; the in-flight phrase stays in `voice.interim` until
@@ -693,29 +730,41 @@ export function AskSurface({
         );
     }
 
-    return (
+    // First render has no measurement yet — the layout effect fills it in
+    // before paint, so this skips exactly one commit and never flashes.
+    if (!dockedPos) return null;
+
+    return createPortal(
         <motion.div
             initial={reduced ? false : { opacity: 0, y: 12, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={reduced ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.97 }}
             transition={reduced ? { duration: 0 } : { type: "spring", stiffness: 320, damping: 28, mass: 0.7 }}
             // Grows out of the button it's anchored to, not its own middle.
-            style={{ transformOrigin: "bottom right" }}
-            className="absolute bottom-full right-0 z-50 mb-3 w-[380px]"
+            // Position comes from the anchor measurement (see dockedPos): fixed
+            // and portalled to <body> so the app scroller's stacking context —
+            // the thing that pinned this under the header — never applies.
+            style={{ transformOrigin: "bottom right", right: dockedPos.right, bottom: dockedPos.bottom }}
+            className="fixed z-60 w-[380px]"
             role="dialog"
             aria-label="ask chat"
             // Read by the trigger's click-away handler to tell "pressed inside
-            // the panel" from "pressed the page".
+            // the panel" from "pressed the page". Works across the portal —
+            // closest() walks the panel's own DOM, not the trigger's.
             data-ask-panel=""
         >
             <Squircle asChild radius={24}>
                 {/* Flat fill + one hairline, per docs/design-principles.md — a
                     floating panel here does NOT get a drop shadow. */}
-                <div className="flex h-[520px] w-full flex-col overflow-hidden border border-flexborder bg-[#111]">
+                <div
+                    style={{ height: dockedPos.height }}
+                    className="flex w-full flex-col overflow-hidden border border-flexborder bg-[#111]"
+                >
                     {body}
                 </div>
             </Squircle>
-        </motion.div>
+        </motion.div>,
+        document.body,
     );
 }
 

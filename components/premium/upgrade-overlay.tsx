@@ -515,7 +515,7 @@ function ContactSalesDialog({ open, onOpenChange }: { open: boolean; onOpenChang
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-md border-white/10">
+            <DialogContent className="max-w-md">
                 <DialogTitle className="text-white">Contact sales — Enterprise</DialogTitle>
                 <DialogDescription className="text-zinc-400">
                     Tell us about your organization and we&apos;ll get in touch.

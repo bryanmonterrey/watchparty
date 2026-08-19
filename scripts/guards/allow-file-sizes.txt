@@ -13,4 +13,4 @@ components/perps/perps-view.tsx:1477
 components/ui/slider.tsx:1549
 components/video/player/settings-menu.tsx:1129
 server/routers/community.ts:2727
-server/routers/wallet.ts:3668
+server/routers/wallet.ts:3642

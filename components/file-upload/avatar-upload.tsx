@@ -160,7 +160,7 @@ export default function AvatarUpload({
           cancel — otherwise the preview shows a photo the parent never received. */}
       {selectedFile && (
         <Dialog open={showCropDialog} onOpenChange={(open) => { if (!open) handleCancelCrop(); }}>
-          <DialogContent className="rounded-4xl border-none p-6 sm:max-w-md" showCloseButton={false}>
+          <DialogContent className="rounded-4xl p-6 sm:max-w-md" showCloseButton={false}>
             <DialogHeader>
               <DialogTitle className="text-center text-[18px] font-bold tracking-tight text-white">Adjust your photo</DialogTitle>
             </DialogHeader>

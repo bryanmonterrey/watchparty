@@ -27,6 +27,7 @@ const MAX_RECENTS = 10;
 import { toPublicKey } from "@/lib/solana/pubkey";
 
 import { PLATFORM_FEE_BPS } from "@/lib/chains/fee-bps";
+import { formatUsd } from "@/lib/utils";
 
 const TREASURY = new PublicKey(process.env.NEXT_PUBLIC_TREASURY_PUBKEY!);
 
@@ -319,10 +320,14 @@ export function SendView({
                     recents={recents}
                 />
 
-                {/* Fee line */}
+                {/* Fee line — in dollars, with token units only as a fallback.
+                    A percentage of value means nothing quoted in sats. */}
                 {hasAmount && (
                     <p className="text-center text-[12px] text-zinc-500">
-                        {PLATFORM_FEE_BPS / 100}% platform fee · {((parsedTokenAmount * PLATFORM_FEE_BPS) / 10000).toFixed(6)} {selectedToken?.symbol ?? "SOL"}
+                        {PLATFORM_FEE_BPS / 100}% platform fee ·{" "}
+                        {currentPrice
+                            ? formatUsd(((parsedTokenAmount * PLATFORM_FEE_BPS) / 10000) * currentPrice)
+                            : `${((parsedTokenAmount * PLATFORM_FEE_BPS) / 10000).toFixed(6)} ${selectedToken?.symbol ?? "SOL"}`}
                     </p>
                 )}
 

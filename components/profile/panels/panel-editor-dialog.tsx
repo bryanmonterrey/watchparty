@@ -89,7 +89,7 @@ export function PanelEditorDialog({ panel, open, onOpenChange }: {
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="w-full max-w-md border-none ring-1 ring-white/10">
+            <DialogContent className="w-full max-w-md">
                 <DialogTitle className="text-white">{panel ? "Edit panel" : "Add panel"}</DialogTitle>
                 <DialogDescription className="text-zinc-500">
                     An image with an optional link and text — shown on your About tab.

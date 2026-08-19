@@ -1,4 +1,4 @@
-import { posts, user } from "@/db/schema";
+import { communityServers, posts, user } from "@/db/schema";
 import { sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { effectiveVerifiedTier } from "@/lib/verified-tier";
@@ -17,17 +17,59 @@ import { effectiveVerifiedTier } from "@/lib/verified-tier";
 // Derive the alias types from the function itself.
 type PostsAlias = ReturnType<typeof alias<typeof posts, string>>;
 type UserAlias = ReturnType<typeof alias<typeof user, string>>;
+type ServerAlias = ReturnType<typeof alias<typeof communityServers, string>>;
 
 type PostAliases = {
     origPosts: PostsAlias;
     origUser: UserAlias;
     parentPosts: PostsAlias;
     parentUser: UserAlias;
+    /**
+     * The community server the AUTHOR represents, joined through
+     * `user.serverTagId`. An alias rather than the table itself because a query
+     * may join community_servers again for its own reasons, and two unaliased
+     * joins of one table collide.
+     *
+     * The caller owes the matching leftJoin — selecting these columns without
+     * it is a SQL error, which is the loud failure we want rather than a badge
+     * that silently never appears.
+     */
+    authorServer: ServerAlias;
     /** Viewer id for the isLiked/isBookmarked/isReposted subqueries ("" when logged out). */
     viewerId: string;
 };
 
-export function postSelectFields({ origPosts, origUser, parentPosts, parentUser, viewerId }: PostAliases) {
+/**
+ * The author fields every post-shaped query selects, INCLUDING the community
+ * badge. Exported because six other procedures (replies, bookmarks, likes,
+ * media, quotes) hand-rolled this same object and could not use
+ * `postSelectFields` — their row shapes differ. The FIELD LIST is what drifted
+ * before; sharing just that costs them nothing and keeps a new author feature
+ * from having to be added in seven places.
+ *
+ * The caller owes the matching `leftJoin(authorServer, eq(user.serverTagId,
+ * authorServer.id))`, and LEFT specifically — almost nobody represents a
+ * server, and an inner join would drop every post by everyone else.
+ */
+export function authorSelectFields(authorServer: ServerAlias) {
+    return {
+        id: user.id,
+        name: user.name,
+        username: user.username,
+        avatar_url: user.avatar_url,
+        wallet_address: user.wallet_address,
+        verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
+        affiliateUsername: user.affiliateUsername,
+        affiliateIconUrl: user.affiliateIconUrl,
+        // Opt-in community badge. All three travel together: the post card shows
+        // the name, the icon when there is one, and links by id.
+        serverTag: authorServer.tag,
+        serverTagIconUrl: authorServer.imageUrl,
+        serverTagId: authorServer.id,
+    };
+}
+
+export function postSelectFields({ origPosts, origUser, parentPosts, parentUser, authorServer, viewerId }: PostAliases) {
     return {
         id: posts.id,
         userId: posts.userId,
@@ -62,16 +104,7 @@ export function postSelectFields({ origPosts, origUser, parentPosts, parentUser,
         isLiked: sql<boolean>`EXISTS (SELECT 1 FROM likes WHERE likes."contentId" = COALESCE(${posts.repostOfId}, ${posts.id}) AND likes."userId" = ${viewerId} AND likes."contentType" = 'post')`,
         isBookmarked: sql<boolean>`EXISTS (SELECT 1 FROM bookmarks WHERE bookmarks."contentId" = COALESCE(${posts.repostOfId}, ${posts.id}) AND bookmarks."userId" = ${viewerId} AND bookmarks."contentType" = 'post')`,
         isReposted: sql<boolean>`EXISTS (SELECT 1 FROM posts rp WHERE rp."repostOfId" = COALESCE(${posts.repostOfId}, ${posts.id}) AND rp."userId" = ${viewerId} AND rp."status" = 'published')`,
-        user: {
-            id: user.id,
-            name: user.name,
-            username: user.username,
-            avatar_url: user.avatar_url,
-            wallet_address: user.wallet_address,
-            verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
-            affiliateUsername: user.affiliateUsername,
-            affiliateIconUrl: user.affiliateIconUrl,
-        },
+        user: authorSelectFields(authorServer),
         videoUrl: posts.videoUrl,
         videoTitle: posts.title,
         videoThumbnailUrl: posts.thumbnailUrl,

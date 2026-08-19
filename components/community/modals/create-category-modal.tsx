@@ -55,7 +55,7 @@ export function CreateCategoryModal() {
 
     return (
         <Dialog open={isModalOpen} onOpenChange={handleClose}>
-            <DialogContent className="gap-5 rounded-4xl border-none p-6 sm:max-w-[440px]" showCloseButton={false}>
+            <DialogContent className="gap-5 rounded-4xl p-6 sm:max-w-[440px]" showCloseButton={false}>
                 <DialogTitle className="text-center text-[18px] font-bold tracking-tight text-white">
                     {renaming ? "Rename category" : "Create a category"}
                 </DialogTitle>

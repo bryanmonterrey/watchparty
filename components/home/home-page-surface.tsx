@@ -6,6 +6,7 @@ import { motion } from "motion/react";
 import { HomeCenterColumn } from "./home-center-column";
 import { HomeRailVideos } from "./home-rail-videos";
 import { NewsCard } from "@/components/browse/discover-right-rail";
+import { RailFooter } from "@/components/rails/rail-footer";
 import { HomeActionDock } from "./home-action-dock";
 import { ClipsOverlay } from "./clips-overlay";
 import { useHomeFeedOverlay } from "@/hooks/use-home-feed-overlay";
@@ -182,6 +183,12 @@ export function HomePageSurface() {
                     card's old mb-20, which was 80px. */}
                 <div className="mt-[18px] flex flex-col pb-8">
                     <NewsCard />
+                    {/* The legal footer closes the column, directly under the
+                        last card — the only place in the app these pages are
+                        reachable from. mt-4 rather than the rail's 18px card
+                        gap: it is not a card, so it hangs off the one above it
+                        instead of standing as another block. */}
+                    <RailFooter className="mt-4" />
                     {/* The SAME h-[50svh] tail the feed's rail ends with
                         (discover-right-rail). It's what carries that column past
                         the bottom of the viewport and gives `sticky bottom-0`

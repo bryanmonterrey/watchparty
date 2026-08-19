@@ -2,9 +2,10 @@ import { z } from 'zod';
 import { publicProcedure, protectedProcedure, router } from '../trpc';
 import { db } from '@/db';
 import { user } from '@/db/schema';
+import { communityMembers, communityServers } from '@/db/schema/community';
 import { follows } from '@/db/schema/content/follow';
 import { posts } from '@/db/schema/content/post';
-import { like, or, eq, count, and, asc, desc, lt, gt, sql, inArray } from 'drizzle-orm';
+import { like, or, eq, count, and, asc, desc, lt, gt, sql, inArray, isNotNull } from 'drizzle-orm';
 import { encodeKeysetCursor, parseKeysetCursor, keysetAfter } from '@/server/lib/keyset';
 import { withCache, invalidateCache, TTL } from '@/lib/cache';
 import { createNotification } from '@/server/lib/notify';
@@ -431,6 +432,28 @@ export const userRouter = router({
     /**
      * Update the current user's profile information
      */
+    /**
+     * Communities this user could represent — the ones they belong to that have
+     * a tag set. A server with no tag has nothing to display, so it is filtered
+     * out here rather than shown as a blank option.
+     */
+    representableServers: protectedProcedure.query(async ({ ctx }) => {
+        return db
+            .select({
+                id: communityServers.id,
+                name: communityServers.name,
+                tag: communityServers.tag,
+                imageUrl: communityServers.imageUrl,
+            })
+            .from(communityMembers)
+            .innerJoin(communityServers, eq(communityMembers.serverId, communityServers.id))
+            .where(and(
+                eq(communityMembers.userId, ctx.user.id),
+                isNotNull(communityServers.tag),
+            ))
+            .orderBy(asc(communityServers.name));
+    }),
+
     updateProfile: protectedProcedure
         .input(
             z.object({
@@ -442,9 +465,28 @@ export const userRouter = router({
                 avatar_url: z.string().url().nullable().optional(),
                 socials: socialLinksSchema.nullable().optional(),
                 accentColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
+                /** Community server to represent on posts. null clears it. */
+                serverTagId: z.string().uuid().nullable().optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
+            // A server tag is a claim of membership, so it is verified rather
+            // than trusted: the id arrives from the client, and without this a
+            // user could wear any community's badge by editing the request.
+            if (input.serverTagId) {
+                const [membership] = await db
+                    .select({ id: communityMembers.id })
+                    .from(communityMembers)
+                    .where(and(
+                        eq(communityMembers.userId, ctx.user.id),
+                        eq(communityMembers.serverId, input.serverTagId),
+                    ))
+                    .limit(1);
+                if (!membership) {
+                    throw new TRPCError({ code: "FORBIDDEN", message: "You are not a member of that community" });
+                }
+            }
+
             await db
                 .update(user)
                 .set({
@@ -456,6 +498,7 @@ export const userRouter = router({
                     avatar_url: input.avatar_url,
                     ...(input.socials !== undefined ? { socials: input.socials } : {}),
                     ...(input.accentColor !== undefined ? { accentColor: input.accentColor } : {}),
+                    ...(input.serverTagId !== undefined ? { serverTagId: input.serverTagId } : {}),
                 })
                 .where(eq(user.id, ctx.user.id));
             

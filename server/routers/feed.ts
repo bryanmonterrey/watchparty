@@ -2,6 +2,7 @@ import { z } from "zod";
 import { router, publicProcedure, protectedProcedure } from "../trpc";
 import { db } from "@/db";
 import { posts, user, mutes, blocks, follows } from "@/db/schema";
+import { communityServers } from "@/db/schema/community";
 import { tokens } from "@/db/schema/content/token";
 import { eq, desc, and, lt, sql, inArray, or, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
@@ -11,9 +12,16 @@ import { rankFeedRows } from "@/lib/feed-ranker/rank-feed";
 import { retrieveOutOfNetwork } from "@/lib/feed-ranker/retrieval";
 import { FEED_RANKER_ENABLED } from "@/lib/feed-ranker/config";
 import { effectiveVerifiedTier } from "@/lib/verified-tier";
-import { postSelectFields, mapPostRow } from "@/server/lib/post-shape";
+import { postSelectFields, authorSelectFields, mapPostRow } from "@/server/lib/post-shape";
 import { takePage } from "@/server/lib/paginate";
 import { withCache, TTL } from "@/lib/cache";
+
+// The author's community server, joined through `user.serverTagId` on every
+// post-shaped query in this file. Declared once at module scope because
+// `alias()` is pure — it names a table, it does not bind to a query — and a
+// per-procedure copy is just another place for the name to drift.
+const authorServer = alias(communityServers, "author_server");
+
 
 // Candidate pool size sourced for ranking (then re-ranked + paginated client-side).
 const FEED_POOL_SIZE = 200;
@@ -41,11 +49,14 @@ export const feedRouter = router({
             const parentPosts = alias(posts, "parent_posts");
             const parentUser = alias(user, "parent_user");
 
-            const selectFields = postSelectFields({ origPosts, origUser, parentPosts, parentUser, viewerId: ctx.user?.id ?? "" });
+            const selectFields = postSelectFields({ origPosts, origUser, parentPosts, parentUser, authorServer, viewerId: ctx.user?.id ?? "" });
 
             const baseJoins = (qb: any) =>
                 qb
                     .innerJoin(user, eq(posts.userId, user.id))
+                    // LEFT, not inner: almost nobody represents a server, and an
+                    // inner join here would drop every post by everyone else.
+                    .leftJoin(authorServer, eq(user.serverTagId, authorServer.id))
                     .leftJoin(origPosts, eq(posts.repostOfId, origPosts.id))
                     .leftJoin(origUser, eq(origPosts.userId, origUser.id))
                     .leftJoin(parentPosts, eq(posts.replyToId, parentPosts.id))
@@ -276,16 +287,7 @@ export const feedRouter = router({
                     // same reason isLiked uses it: on a repost row the engagement
                     // belongs to the ORIGINAL post, not the repost.
                     isReposted: sql<boolean>`EXISTS (SELECT 1 FROM posts r WHERE r."repostOfId" = COALESCE(${posts.repostOfId}, ${posts.id}) AND r."userId" = ${ctx.user?.id ?? ""} AND r.status = 'published')`,
-                    user: {
-                        id: user.id,
-                        name: user.name,
-                        username: user.username,
-                        avatar_url: user.avatar_url,
-                        wallet_address: user.wallet_address,
-                        verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
-                        affiliateUsername: user.affiliateUsername,
-                        affiliateIconUrl: user.affiliateIconUrl,
-                    },
+                    user: authorSelectFields(authorServer),
                     origId: origPosts.id,
                     origVideoUrl: origPosts.videoUrl,
                     origThumbnailUrl: origPosts.thumbnailUrl,
@@ -304,6 +306,7 @@ export const feedRouter = router({
                 })
                 .from(posts)
                 .innerJoin(user, eq(posts.userId, user.id))
+                .leftJoin(authorServer, eq(user.serverTagId, authorServer.id))
                 .leftJoin(origPosts, eq(posts.repostOfId, origPosts.id))
                 .leftJoin(origUser, eq(origPosts.userId, origUser.id))
                 .leftJoin(postTokens, eq(posts.tokenId, postTokens.id))
@@ -458,16 +461,7 @@ export const feedRouter = router({
                     token_image: posts.token_image,
                     repostOfId: posts.repostOfId,
                     isLiked: sql<boolean>`EXISTS (SELECT 1 FROM likes WHERE likes."contentId" = COALESCE(${posts.repostOfId}, ${posts.id}) AND likes."userId" = ${ctx.user?.id ?? ""} AND likes."contentType" = 'post')`,
-                    user: {
-                        id: user.id,
-                        name: user.name,
-                        username: user.username,
-                        avatar_url: user.avatar_url,
-                        wallet_address: user.wallet_address,
-                        verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
-                        affiliateUsername: user.affiliateUsername,
-                        affiliateIconUrl: user.affiliateIconUrl,
-                    },
+                    user: authorSelectFields(authorServer),
                     origId: origPosts.id,
                     origVideoUrl: origPosts.videoUrl,
                     origThumbnailUrl: origPosts.thumbnailUrl,
@@ -485,6 +479,7 @@ export const feedRouter = router({
                 })
                 .from(posts)
                 .innerJoin(user, eq(posts.userId, user.id))
+                .leftJoin(authorServer, eq(user.serverTagId, authorServer.id))
                 .leftJoin(origPosts, eq(posts.repostOfId, origPosts.id))
                 .leftJoin(origUser, eq(origPosts.userId, origUser.id))
                 .leftJoin(parentPosts, eq(posts.replyToId, parentPosts.id))

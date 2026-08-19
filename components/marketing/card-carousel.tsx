@@ -26,7 +26,7 @@ function CardFrame({ tone, children }: { tone: string; children: React.ReactNode
     return (
         <div
             className={cn(
-                "flex aspect-[3/4] w-[300px] shrink-0 flex-col overflow-hidden rounded-[24px] p-7 ring-1 ring-black/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] xl:w-[340px]",
+                "flex aspect-[3/4] w-[300px] shrink-0 flex-col overflow-hidden rounded-[24px] p-7 ring-1 ring-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] xl:w-[340px]",
                 tone,
             )}
         >
@@ -39,10 +39,10 @@ function Header({ eyebrow, title, sub, dark }: { eyebrow?: string; title: string
     return (
         <Reveal className="mx-auto mb-16 max-w-2xl text-center">
             {eyebrow && (
-                <p className={cn("mb-4 font-pixel text-sm uppercase tracking-[0.2em]", dark ? "text-white/45" : "text-black/45")}>{eyebrow}</p>
+                <p className={cn("mb-4 font-pixel text-sm uppercase tracking-[0.2em]", "text-white/45")}>{eyebrow}</p>
             )}
-            <h2 className={cn("font-extrabold text-3xl leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl", dark ? "text-white" : "text-black")}>{title}</h2>
-            {sub && <p className={cn("mx-auto mt-4 max-w-lg text-lg font-semibold leading-snug", dark ? "text-white/60" : "text-black/60")}>{sub}</p>}
+            <h2 className={cn("font-extrabold text-3xl leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl", "text-white")}>{title}</h2>
+            {sub && <p className={cn("mx-auto mt-4 max-w-lg text-lg font-semibold leading-snug", "text-white/60")}>{sub}</p>}
         </Reveal>
     );
 }

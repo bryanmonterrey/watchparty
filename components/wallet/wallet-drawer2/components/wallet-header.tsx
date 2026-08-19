@@ -19,7 +19,10 @@ import {
 import { useDeviceSessions, MAX_DEVICE_ACCOUNTS } from "@/hooks/use-device-sessions";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { useActiveWallet } from "@/hooks/use-active-wallet";
+import { useActiveWallet, type LinkedWallet } from "@/hooks/use-active-wallet";
+import { ChainIcon } from "@/components/wallet/chain-icon";
+import { getChain, getChainByEvmId } from "@/lib/chains/registry";
+import type { ChainId } from "@/lib/chains/types";
 import { shortenWalletAddress } from "@/lib/utils";
 import { WalletReadyState } from "@solana/wallet-adapter-base";
 
@@ -44,6 +47,33 @@ interface WalletHeaderProps {
     onChangeWallet?: () => void;
     onSignOut: () => void;
     loading?: boolean;
+}
+
+/**
+ * Which chain's mark a wallet row wears.
+ *
+ * The row answers "what wallet is this", so it uses the chain the wallet SIGNED
+ * IN on — not where its money currently sits, which is the balance chip's
+ * question and has its own resolution. A Base sign-in therefore shows Base.
+ *
+ * Degrades deliberately rather than guessing:
+ *  - a recorded chain id wins (8453 -> Base, 1 -> Ethereum)
+ *  - otherwise the kind's generic mark, because rows created before chain_id
+ *    existed cannot be backfilled — one secp256k1 address is the same account
+ *    on every EVM chain, so nothing about the row reveals its origin. They fill
+ *    in as people sign in again, and a generic EVM mark beats a wrong one.
+ *  - the generated wallet gets NO mark: it holds an address on every chain, so
+ *    naming one would be a lie.
+ */
+function walletChainId(w: LinkedWallet): ChainId | null {
+    if (w.source === "swig" || w.chainKind === null) return null;
+    if (w.chainId) {
+        const chain = getChainByEvmId(w.chainId);
+        if (chain) return chain.id;
+    }
+    if (w.chainKind === "evm") return "ethereum";
+    if (w.chainKind === "solana") return "solana";
+    return null;
 }
 
 export function WalletHeader({
@@ -203,19 +233,32 @@ export function WalletHeader({
                         <ul>
                             {linked.map((w) => {
                                 const isEmbedded = w.source === "swig";
-                                // "In use" is about what SIGNS: the embedded
-                                // wallet is "no adapter connected", any other is
-                                // the adapter whose pubkey matches this row.
-                                const inUse = isEmbedded
-                                    ? usingEmbedded
-                                    : adapterAddress === w.address;
+                                const isEvm = w.chainKind === "evm";
                                 const isActive = active?.address === w.address;
+                                // "In use" is about what SIGNS: the embedded
+                                // wallet is "no adapter connected", any other
+                                // SOLANA wallet is the adapter whose pubkey
+                                // matches this row.
+                                //
+                                // An EVM wallet cannot be an adapter question at
+                                // all — a Solana adapter will never match a 0x
+                                // address, so this row could never read as in use
+                                // no matter what the data said, including for the
+                                // wallet the user literally signed in with. It
+                                // signs through the EVM provider, so selection IS
+                                // the answer for it.
+                                const inUse = isEvm
+                                    ? isActive
+                                    : isEmbedded
+                                      ? usingEmbedded
+                                      : adapterAddress === w.address;
                                 // Its extension's own icon when we can identify
                                 // it (only possible while connected), else a
                                 // generic badge — the DB records that a wallet
                                 // is external, never which product it is.
                                 const icon =
                                     !isEmbedded && inUse ? activeAdapter?.adapter.icon : undefined;
+                                const rowChain = walletChainId(w);
                                 return (
                                     <li
                                         key={w.id}
@@ -224,10 +267,16 @@ export function WalletHeader({
                                         <button
                                             onClick={() => {
                                                 setActiveWallet(w.address);
-                                                // Switching TO the embedded
-                                                // wallet is a disconnect; there
-                                                // is no adapter to select.
-                                                if (isEmbedded && !usingEmbedded) {
+                                                // An EVM wallet has nothing to
+                                                // connect here: the Solana
+                                                // adapter does not hold it, and
+                                                // falling through would prompt
+                                                // "install the extension that
+                                                // holds this wallet" for a wallet
+                                                // that is already signed in.
+                                                if (isEvm) {
+                                                    // selection is the action
+                                                } else if (isEmbedded && !usingEmbedded) {
                                                     disconnect().catch(() =>
                                                         appToast.error("Couldn't switch wallet"),
                                                     );
@@ -250,6 +299,7 @@ export function WalletHeader({
                                             disabled={connecting}
                                             className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-2xl px-3 py-2.5 text-left"
                                         >
+                                            <span className="relative shrink-0">
                                             {icon ? (
                                                 /* eslint-disable-next-line @next/next/no-img-element */
                                                 <img
@@ -262,6 +312,29 @@ export function WalletHeader({
                                                     <WalletIcon className="size-4 text-zinc-400" />
                                                 </span>
                                             )}
+                                            {/* The chain the wallet signed in
+                                                on, as a badge rather than a
+                                                replacement: the round icon above
+                                                is the WALLET, this says which
+                                                network it is. Geometry matches
+                                                the login card's wallet badges. */}
+                                            {rowChain && (
+                                                <span
+                                                    role="img"
+                                                    /* "Base ACCOUNT", not "Base". The chip beside this
+                                                       answers a different question — which chain the
+                                                       money is on, resolved live — so the two can
+                                                       legitimately disagree for one wallet (signed in
+                                                       on Base, holds ETH on Ethereum). Naming this one
+                                                       as the account stops the pair reading as a bug. */
+                                                    aria-label={`${getChain(rowChain)?.name ?? rowChain} account`}
+                                                    title={`${getChain(rowChain)?.name ?? rowChain} account`}
+                                                    className="absolute -right-1 -bottom-0.5 rounded-full bg-canvas p-[1.5px] leading-none"
+                                                >
+                                                    <ChainIcon chain={rowChain} size={16} />
+                                                </span>
+                                            )}
+                                            </span>
                                             <span className="min-w-0 flex-1">
                                                 {/* The ADDRESS identifies the
                                                     wallet — a label cannot, when

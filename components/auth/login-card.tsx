@@ -245,9 +245,9 @@ export function LoginCard({ callbackUrl }: { callbackUrl?: string }) {
               <div className="mt-7 space-y-4 text-center text-[11px] leading-relaxed text-zinc-500">
                 <p>
                   By entering and clicking Continue, you agree to the{" "}
-                  <a href="#" className="text-zinc-400 underline underline-offset-2">Terms</a>,{" "}
+                  <a href="/terms" target="_blank" rel="noreferrer" className="text-zinc-400 underline underline-offset-2">Terms</a>,{" "}
                   <a href="#" className="text-zinc-400 underline underline-offset-2">E-Sign Consent</a>, &{" "}
-                  <a href="#" className="text-zinc-400 underline underline-offset-2">Privacy Policy</a>.
+                  <a href="/privacy" target="_blank" rel="noreferrer" className="text-zinc-400 underline underline-offset-2">Privacy Policy</a>.
                 </p>
                 <p>
                   By entering and clicking Continue, you also agree to receive a one time

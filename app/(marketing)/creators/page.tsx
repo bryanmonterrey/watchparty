@@ -20,8 +20,8 @@ const FAQ = [
 
 export default function CreatorsPage() {
     return (
-        <ColorScrollPage className="pt-28 sm:pt-32" initial="var(--color-pastel-yellow)">
-            <BgZone bg="var(--color-pastel-yellow)">
+        <ColorScrollPage className="pt-28 sm:pt-32" initial="#12100b">
+            <BgZone bg="#12100b">
                 <MarketingHero
                     eyebrow="Creators"
                     title={<>Built for creators</>}
@@ -35,13 +35,13 @@ export default function CreatorsPage() {
 
                 <TwoUpBold
                     items={[
-                        { title: "Go live in seconds", body: "Stream from your phone, chat in real time, and keep every broadcast as a replay.", bg: "bg-soft-pink", visual: <PhoneMock className="w-[180px]"><LiveScreen /></PhoneMock> },
+                        { title: "Go live in seconds", body: "Stream from your phone, chat in real time, and keep every broadcast as a replay.", bg: "bg-pastelred/10", visual: <PhoneMock className="w-[180px]"><LiveScreen /></PhoneMock> },
                         { title: "Launch a coin for your people", body: "Give your community a coin to rally around, trade it in-app, and earn a fee on every swap.", bg: "bg-black", dark: true, visual: <HeroTrade className="max-w-[300px]" /> },
                     ]}
                 />
             </BgZone>
 
-            <BgZone bg="var(--color-soft-pink)">
+            <BgZone bg="#0d0b12">
                 <FeatureLedger
                     title="A creator business in one app"
                     rows={[
@@ -52,7 +52,7 @@ export default function CreatorsPage() {
                 />
             </BgZone>
 
-            <BgZone bg="var(--color-soft-gray)">
+            <BgZone bg="#0a0a0a">
                 <PosterPanel
                     title="Get paid to create"
                     body="Subscriptions, tips, and creator fees, all settled in USDC and claimed straight to your wallet. The platform takes a flat 5%, nothing more."

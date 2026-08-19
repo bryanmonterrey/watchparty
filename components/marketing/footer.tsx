@@ -43,7 +43,10 @@ const COLUMNS: { heading: string; links: { label: string; href: string; external
     },
 ];
 
-export function MarketingFooter() {
+// `dark` — on the blacked-out sub-pages the legal line outside the panel sits
+// on a near-black base, not the landing's light one. The panel itself was
+// always black and needs nothing.
+export function MarketingFooter({ dark = false }: { dark?: boolean }) {
     return (
         <footer className="flex min-h-svh flex-col p-4 sm:p-7">
             <div className="mx-auto flex w-full max-w-8xl flex-1 flex-col">
@@ -115,11 +118,13 @@ export function MarketingFooter() {
                 </div>
 
                 {/* Legal — outside the panel on the light page base, like Phantom. */}
-                <div className="mt-5 flex flex-col gap-3 px-2 text-xs font-semibold text-black/40 sm:flex-row sm:items-center sm:justify-between">
+                <div className={`mt-5 flex flex-col gap-3 px-2 text-xs font-semibold sm:flex-row sm:items-center sm:justify-between ${dark ? "text-white/40" : "text-black/40"}`}>
                     <span>© 2026 watchparty</span>
                     <div className="flex items-center gap-5">
-                        <Link href="/safety" className="transition-colors hover:text-black/70">Terms</Link>
-                        <Link href="/safety" className="transition-colors hover:text-black/70">Privacy</Link>
+                        <Link href="/terms" className={`transition-colors ${dark ? "hover:text-white/80" : "hover:text-black/70"}`}>Terms</Link>
+                        <Link href="/privacy" className={`transition-colors ${dark ? "hover:text-white/80" : "hover:text-black/70"}`}>Privacy</Link>
+                        <Link href="/cookies" className={`transition-colors ${dark ? "hover:text-white/80" : "hover:text-black/70"}`}>Cookies</Link>
+                        <Link href="/guidelines" className={`transition-colors ${dark ? "hover:text-white/80" : "hover:text-black/70"}`}>Guidelines</Link>
                     </div>
                 </div>
             </div>

@@ -234,6 +234,20 @@ export function useHeaderWalletLoading() {
 
     const known = !!data;
 
+    // An account whose only wallet is an external EVM one has NO Solana address,
+    // so the query above stays disabled and every tile would render "0.000 SOL"
+    // for a wallet that is not Solana and has no SOL. getActiveWallet answers
+    // what the wallet actually IS. Only asked when there is no Solana address to
+    // show, so a Solana user never pays for it.
+    const activeQuery = trpc.wallet.getActiveWallet.useQuery(undefined, {
+        enabled: !sessionLoading && !sessionUnknown && !waitingOnAdapter && !walletAddress && !!sessionData?.user,
+        staleTime: 60_000,
+    });
+    // `isPending` is true for a DISABLED query too, so fetchStatus is what
+    // distinguishes "in flight" from "never asked" — without it the chip would
+    // hold its skeleton forever for a signed-out visitor.
+    const activeLoading = activeQuery.isPending && activeQuery.fetchStatus !== "idle";
+
     return {
         // No wallet linked → the query stays disabled and the tiles render
         // their signed-out states as soon as the session resolves.
@@ -242,7 +256,8 @@ export function useHeaderWalletLoading() {
             sessionLoading ||
             sessionUnknown ||
             waitingOnAdapter ||
-            (!known && !!walletAddress && query.isPending),
+            (!known && !!walletAddress && query.isPending) ||
+            activeLoading,
         data,
         /** Whose balance this is — the drawer must open on the same wallet. */
         address: walletAddress,
@@ -250,6 +265,12 @@ export function useHeaderWalletLoading() {
         hasWallet: !!walletAddress,
         /** Something has answered for this wallet — otherwise, don't show a number. */
         known,
+        /**
+         * The wallet in use when it is NOT a Solana one — an external EVM wallet
+         * someone signed in with. Null for the common case, so callers branch on
+         * it only after `hasWallet` is false.
+         */
+        activeWallet: activeQuery.data ?? null,
         session,
     };
 }

@@ -148,7 +148,7 @@ export function GiftSubscriptionDialog({ creatorId, creatorName, initialQuantity
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="w-full max-w-sm border-none ring-1 ring-white/10">
+            <DialogContent className="w-full max-w-sm">
                 <DialogHeader className="items-center text-center">
                     <div className="mb-1 flex size-12 items-center justify-center rounded-full bg-lantern/10">
                         <Gift className="size-6 text-lantern" />

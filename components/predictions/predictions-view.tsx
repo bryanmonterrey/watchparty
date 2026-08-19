@@ -270,7 +270,7 @@ function CreateMarketDialog({ onClose }: { onClose: () => void }) {
 
     return (
         <Dialog open onOpenChange={onClose}>
-            <DialogContent className="gap-4 rounded-4xl border-none p-6 sm:max-w-[460px]" showCloseButton={false}>
+            <DialogContent className="gap-4 rounded-4xl p-6 sm:max-w-[460px]" showCloseButton={false}>
                 <DialogTitle className="text-center text-[18px] font-bold tracking-tight text-white">New market</DialogTitle>
 
                 <Input radius={14} value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Will $TICKER graduate this week?" maxLength={200} autoFocus className="h-12 text-[14px] font-medium" />

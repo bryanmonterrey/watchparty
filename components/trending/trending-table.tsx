@@ -346,7 +346,9 @@ export function TrendingTable({ className }: { className?: string }) {
     useSnapshot(trendingSnapshotStore, snapshotKey, data, isPlaceholderData);
 
     const rows = useMemo(() => data?.pages.flatMap((p) => p.items) ?? [], [data]);
-    const { sentinelRef: labelsSentinel, stuck: labelsStuck } = useStuck();
+    // "th" — the sticky things are the header CELLS inside the DataTable,
+    // not the sentinel's sibling; see the stickySelector note in useStuck.
+    const { sentinelRef: labelsSentinel, stuck: labelsStuck } = useStuck("th");
     const [boardRef, boardWidth] = useElementWidth<HTMLDivElement>();
     const showVolume = boardWidth >= XL;
     const showWide = boardWidth >= THREE_XL;
@@ -547,10 +549,15 @@ export function TrendingTable({ className }: { className?: string }) {
                     onRowClick={(r) => router.push(`/coin/${r.network}/${r.tokenAddress}`)}
                     stickyHeader
                     stickyTop="var(--board-stick,0px)"
+                    // Fill is INSTANT on stick (duration-0) — a fade-in is
+                    // 200ms of rows showing through at the exact moment they
+                    // start passing under. Unsticking keeps the fade: that
+                    // hand-off happens up by the hero, where the fill melting
+                    // back into the ambient glow should be soft, not a pop.
                     headerClassName={cn(
-                        "z-15 text-zinc-500 transition-colors duration-200",
+                        "z-15 text-zinc-500 transition-colors duration-300",
                         CELL_TEXT,
-                        labelsStuck && "bg-canvas",
+                        labelsStuck && "bg-canvas duration-0",
                     )}
                     cellClassName="px-1.5"
                     className="px-1.5"

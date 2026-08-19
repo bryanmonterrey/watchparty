@@ -17,7 +17,7 @@ export const metadata: Metadata = { title: "Explore" };
 const FEATURES: Feature[] = [
     { icon: LiveStreaming01Icon, title: "Live now", body: "Tune into streams the moment they start.", accent: "text-pastelred" },
     { icon: CameraVideoIcon, title: "Shorts", body: "Quick clips, endless scroll.", accent: "text-twitter" },
-    { icon: Compass01Icon, title: "For You", body: "A timeline ranked by the same open algorithm.", accent: "text-jewel" },
+    { icon: Compass01Icon, title: "For You", body: "A timeline ranked by the same open algorithm.", accent: "text-lantern" },
     { icon: GridIcon, title: "Categories", body: "Jump to the games and topics you love.", accent: "text-sunset" },
     { icon: AiSearchIcon, title: "Search", body: "Find people, videos, and communities fast.", accent: "text-twitter" },
     { icon: PlayListIcon, title: "Watch later", body: "Queue it up and never lose a video.", accent: "text-pastelred" },
@@ -27,12 +27,12 @@ const CATEGORIES = ["Just Chatting", "GTA VI", "Music", "Esports", "IRL", "Crypt
 
 // Varied fills so the grid reads as color-as-identity, not white-on-white tiles.
 const BENTO_STYLE = [
-    { bg: "bg-soft-pink", accent: "text-pastelred", span: "big" },
-    { bg: "bg-white", accent: "text-twitter" },
-    { bg: "bg-pastel-yellow", accent: "text-jewel" },
-    { bg: "bg-white", accent: "text-sunset", span: "wide" },
-    { bg: "bg-soft-blue", accent: "text-twitter", span: "wide" },
-    { bg: "bg-white", accent: "text-pastelred", span: "wide" },
+    { bg: "bg-pastelred/10", accent: "text-pastelred", span: "big" },
+    { bg: "bg-[#111]", accent: "text-twitter" },
+    { bg: "bg-sunset/10", accent: "text-lantern" },
+    { bg: "bg-[#111]", accent: "text-sunset", span: "wide" },
+    { bg: "bg-twitter/10", accent: "text-twitter", span: "wide" },
+    { bg: "bg-[#111]", accent: "text-pastelred", span: "wide" },
 ] as const;
 
 const FAQ = [
@@ -43,8 +43,8 @@ const FAQ = [
 
 export default function ExplorePage() {
     return (
-        <ColorScrollPage className="pt-28 sm:pt-32" initial="var(--color-soft-blue)">
-            <BgZone bg="var(--color-soft-blue)">
+        <ColorScrollPage className="pt-28 sm:pt-32" initial="#0e0f13">
+            <BgZone bg="#0e0f13">
                 <MarketingHero
                     eyebrow="Explore"
                     title={<>Watch what&apos;s happening</>}
@@ -61,26 +61,25 @@ export default function ExplorePage() {
                     title="Everything worth watching"
                     sub="Streams, shorts, and posts share the same timeline. No apps to switch between."
                     cards={[
-                        { tone: "bg-soft-pink", node: (<><p className="text-lg font-extrabold tracking-tight text-black">Live now</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniLive /></div></>) },
-                        { tone: "bg-white", node: (<><p className="text-lg font-extrabold tracking-tight text-black">Shorts</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniShort /></div></>) },
-                        { tone: "bg-soft-blue", node: (<><p className="text-lg font-extrabold tracking-tight text-black">For You</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniFeed /></div></>) },
+                        { tone: "bg-pastelred/10", node: (<><p className="text-lg font-extrabold tracking-tight text-white">Live now</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniLive /></div></>) },
+                        { tone: "bg-[#111]", node: (<><p className="text-lg font-extrabold tracking-tight text-white">Shorts</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniShort /></div></>) },
+                        { tone: "bg-twitter/10", node: (<><p className="text-lg font-extrabold tracking-tight text-white">For You</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniFeed /></div></>) },
                     ]}
                 />
             </BgZone>
 
-            <BgZone bg="var(--color-soft-pink)">
+            <BgZone bg="#0d0b12">
                 <SplitShowcase
                     title="Ranked for you, not for ads"
                     body="One open algorithm powers the whole feed, tuned to what you actually watch, so the good stuff finds you."
                     ctaLabel="See your feed"
                     ctaHref="/login"
-                    tone="bg-white"
                     visual={
                         <div className="flex max-w-md flex-wrap justify-center gap-2.5">
                             {CATEGORIES.map((c, i) => (
                                 <span
                                     key={c}
-                                    className={`rounded-full px-4 py-2.5 text-sm font-bold text-black ${["bg-soft-pink", "bg-soft-blue", "bg-pastel-yellow", "bg-lantern"][i % 4]}`}
+                                    className={`rounded-full px-4 py-2.5 text-sm font-bold text-white ring-1 ring-white/10 ${["bg-pastelred/15", "bg-twitter/15", "bg-sunset/15", "bg-lantern/20"][i % 4]}`}
                                 >
                                     {c}
                                 </span>
@@ -100,7 +99,7 @@ export default function ExplorePage() {
                 />
             </BgZone>
 
-            <BgZone bg="#ffffff">
+            <BgZone bg="#050505">
                 <PosterPanel
                     title="Spot it, buy it, in one tap"
                     body="See a coin in the feed and buy it without leaving the timeline. A secure wallet ships with every account."

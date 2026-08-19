@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { trades } from "@/db/schema/content";
 import { user } from "@/db/schema/auth";
+import { linkedWallets } from "@/db/schema/auth/linked-wallets";
 import { and, eq, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { fanOutTrade } from "@/server/lib/trade-fanout";
@@ -111,11 +112,32 @@ export async function POST(req: NextRequest) {
 
     // feePayer is the swapping wallet for aggregator swaps — map to sharing users.
     const wallets = [...new Set(swaps.map((e) => e.feePayer!))].slice(0, 500);
-    const owners = await db
-        .select({ id: user.id, wallet: user.wallet_address })
-        .from(user)
-        .where(and(inArray(user.wallet_address, wallets), eq(user.shareTrades, true)));
-    const ownerByWallet = new Map(owners.map((o) => [o.wallet!, o.id]));
+    // Match against EVERY linked wallet, not just the account's primary.
+    //
+    // `user.wallet_address` mirrors only the primary of up to 15, so a trade
+    // made from any other wallet found no owner and was silently dropped. The
+    // registration side (lib/wallet/user-trades-webhook.ts) had the same bug,
+    // which is why it never surfaced: we did not watch those wallets either, so
+    // the deliveries this could not attribute never arrived in the first place.
+    // Both sides have to move together or one starts discarding the other's
+    // work.
+    const [linkedOwners, legacyOwners] = await Promise.all([
+        db
+            .select({ id: user.id, wallet: linkedWallets.address })
+            .from(linkedWallets)
+            .innerJoin(user, eq(linkedWallets.user_id, user.id))
+            .where(and(inArray(linkedWallets.address, wallets), eq(user.shareTrades, true))),
+        // Accounts that predate linked_wallets still have only the mirror.
+        db
+            .select({ id: user.id, wallet: user.wallet_address })
+            .from(user)
+            .where(and(inArray(user.wallet_address, wallets), eq(user.shareTrades, true))),
+    ]);
+    // Linked rows win on collision: both resolve to the same account anyway,
+    // since an address belongs to exactly one user.
+    const ownerByWallet = new Map(
+        [...legacyOwners, ...linkedOwners].map((o) => [o.wallet!, o.id]),
+    );
     if (ownerByWallet.size === 0) return NextResponse.json({ ok: true, recorded: 0 });
 
     const solPrice = (await getMintPriceMap([WSOL_MINT])).get(WSOL_MINT)?.priceUsd ?? null;

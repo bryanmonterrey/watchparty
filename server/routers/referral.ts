@@ -6,6 +6,7 @@ import { user } from "@/db/schema/auth";
 import { eq, count, desc, and, isNull, inArray, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
+import { payoutDestinationFor } from "@/server/lib/user-wallet";
 
 // Simple alphanumeric referral code generator
 function generateReferralCode(): string {
@@ -150,7 +151,7 @@ export const referralRouter = router({
 
     /** Pay all unclaimed earnings to the caller's wallet from the treasury. */
     claimEarnings: protectedProcedure.mutation(async ({ ctx }) => {
-        const wallet = ctx.user.wallet_address;
+        const wallet = await payoutDestinationFor(ctx.user.id, ctx.user.wallet_address);
         if (!wallet) throw new TRPCError({ code: "BAD_REQUEST", message: "Link a wallet to receive your payout" });
 
         // Claim-once gate BEFORE moving money: stamp the unclaimed rows; a

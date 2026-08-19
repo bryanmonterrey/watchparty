@@ -1,4 +1,4 @@
-import { boolean, index, pgPolicy, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgPolicy, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { user } from "./user";
 
@@ -7,12 +7,25 @@ export const MAX_LINKED_WALLETS = 15;
 
 export type LinkedWalletSource = "swig" | "extension";
 
-// Up to 15 linked Solana wallets per account, exactly one of them primary.
+/** Chain kind of a single-chain linked wallet; null on the multichain swig row. */
+export type LinkedWalletChainKind = "solana" | "evm" | "bitcoin" | "sui";
+
+// Up to 15 linked wallets per account, exactly one of them primary.
 //
 // The Swig (embedded) wallet is the default primary; wallets the user signs in
 // with via an extension are linked alongside it, and the primary can be
-// switched freely. `user.wallet_address` mirrors whichever row is primary, so
-// the ~135 existing readers of that column keep working untouched.
+// switched freely.
+//
+// A WALLET IS NOT AN ADDRESS. The generated wallet is ONE wallet holding an
+// address on every chain kind (see `wallet_addresses`); an external wallet is
+// one wallet on one chain. So signing in with Base, then generating, then
+// linking MetaMask is three wallets — and any of them can be the one in use.
+//
+// `user.wallet_address` mirrors the primary row's SOLANA address, which is why
+// it is null for an account whose only wallet is external EVM: that wallet
+// genuinely has no Solana address. Its ~135 readers are Solana-specific
+// surfaces and correctly render their create-wallet CTA in that case, rather
+// than being handed a 0x string they would feed to PublicKey.
 //
 // Distinct from `wallet_addresses` (the user's own derived per-chain addresses)
 // and from `walletAddress` (better-auth's SIWE table for external EVM wallets).
@@ -24,6 +37,34 @@ export const linkedWallets = pgTable("linked_wallets", {
   address: text("address").notNull(),
   /** "swig" = the embedded wallet we derive; "extension" = a wallet they hold. */
   source: text("source").$type<LinkedWalletSource>().notNull(),
+  /**
+   * Which chain kind this wallet's `address` is on — "solana", "evm", …
+   *
+   * NULL means MULTICHAIN, which is only ever the generated ("swig") wallet:
+   * one wallet whose per-kind addresses live in `wallet_addresses`, all derived
+   * from the one phrase. An external wallet is a single chain, so it names it.
+   *
+   * Nullable rather than defaulted to "solana" because the distinction is real:
+   * "this wallet has a Solana address" and "this wallet is a Solana wallet" are
+   * different claims, and only the second one should stop an EVM wallet from
+   * becoming the wallet in use.
+   */
+  chain_kind: text("chain_kind").$type<LinkedWalletChainKind>(),
+  /**
+   * The EVM chain this wallet SIGNED IN on (8453 = Base), or null.
+   *
+   * `chain_kind` cannot answer this: one secp256k1 address is the same account
+   * on Ethereum, Base, Polygon and BNB, so the address carries no chain and
+   * "evm" is the most the format can tell you. Sign-in does know — SIWE sends a
+   * chainId — and that knowledge was previously thrown away.
+   *
+   * It is a HINT, not the answer. What the balance chip shows is the chain the
+   * user actually holds value on, resolved live; this is the fallback for a
+   * wallet holding nothing anywhere, so a fresh Base account still reads as
+   * Base instead of defaulting to Ethereum. Treat it as possibly stale: the
+   * same address can sign in again on a different chain.
+   */
+  chain_id: integer("chain_id"),
   label: text("label"),
   is_primary: boolean("is_primary").default(false).notNull(),
   created_at: timestamp("created_at").defaultNow().notNull(),

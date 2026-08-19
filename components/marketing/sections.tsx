@@ -23,7 +23,7 @@ const BEAT_LIGHT = "flex min-h-[75svh] flex-col justify-center";
 // Rounded placeholder panel where a real product mockup (phone screen / render)
 // will go. Solid-fill, aggressive radius, with a phone-shaped inner frame.
 export function ShowcasePanel({
-    tone = "bg-soft-blue",
+    tone = "bg-[#111]",
     label = "App preview",
     icon,
     className,
@@ -42,9 +42,9 @@ export function ShowcasePanel({
             )}
         >
             {/* phone silhouette — swap this block for a real <img> mockup */}
-            <div className="flex aspect-[9/19] h-[82%] flex-col items-center justify-center gap-3 rounded-[2rem] bg-black/[0.04] ring-1 ring-black/10">
-                {icon && <HugeiconsIcon icon={icon} size={48} strokeWidth={1.6} className="text-black/25" />}
-                <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-black/30">{label}</span>
+            <div className="flex aspect-[9/19] h-[82%] flex-col items-center justify-center gap-3 rounded-[2rem] bg-white/[0.04] ring-1 ring-white/10">
+                {icon && <HugeiconsIcon icon={icon} size={48} strokeWidth={1.6} className="text-white/30" />}
+                <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/35">{label}</span>
             </div>
         </div>
     );
@@ -58,7 +58,7 @@ export function MarketingHero({
     ctaHref = "/login",
     secondaryLabel,
     secondaryHref,
-    panelTone = "bg-soft-blue",
+    panelTone = "bg-[#111]",
     panelLabel,
     panelIcon,
     visual,
@@ -86,13 +86,13 @@ export function MarketingHero({
         <div className={cn(centered && "mx-auto max-w-3xl text-center")}>
             {eyebrow && (
                 <Reveal y={14}>
-                    <p className="mb-4 font-pixel text-sm uppercase tracking-[0.2em] text-black/50">{eyebrow}</p>
+                    <p className="mb-4 font-pixel text-sm uppercase tracking-[0.2em] text-white/50">{eyebrow}</p>
                 </Reveal>
             )}
             <Reveal y={18} delay={0.06}>
                 <h1
                     className={cn(
-                        "font-extrabold leading-[1.02] tracking-tight text-black",
+                        "font-extrabold leading-[1.02] tracking-tight text-white",
                         centered ? "text-5xl sm:text-7xl lg:text-8xl" : "text-4xl sm:text-6xl lg:text-7xl",
                     )}
                 >
@@ -102,7 +102,7 @@ export function MarketingHero({
             <Reveal y={18} delay={0.12}>
                 <p
                     className={cn(
-                        "mt-6 text-lg font-semibold leading-snug text-black/70 sm:text-xl",
+                        "mt-6 text-lg font-semibold leading-snug text-white/70 sm:text-xl",
                         centered ? "mx-auto max-w-xl" : "max-w-md",
                     )}
                 >
@@ -112,14 +112,14 @@ export function MarketingHero({
             <Reveal y={14} delay={0.18} className={cn("mt-10 flex flex-wrap items-center gap-3", centered && "justify-center")}>
                 <Link
                     href={ctaHref}
-                    className="rounded-full bg-black px-8 py-4 text-base font-bold text-white transition-transform duration-[160ms] ease-out hover:scale-[1.02] active:scale-[0.97]"
+                    className="rounded-full bg-white px-8 py-4 text-base font-bold text-white transition-transform duration-[160ms] ease-out hover:scale-[1.02] active:scale-[0.97]"
                 >
                     {ctaLabel}
                 </Link>
                 {secondaryLabel && secondaryHref && (
                     <Link
                         href={secondaryHref}
-                        className="rounded-full bg-white px-8 py-4 text-base font-bold text-black ring-1 ring-black/[0.08] transition-transform duration-[160ms] ease-out hover:scale-[1.02] active:scale-[0.97]"
+                        className="rounded-full bg-white/10 px-8 py-4 text-base font-bold text-white ring-1 ring-white/15 transition-transform duration-[160ms] ease-out hover:scale-[1.02] active:scale-[0.97]"
                     >
                         {secondaryLabel}
                     </Link>
@@ -172,7 +172,7 @@ export function ShowcaseRow({
     body,
     ctaLabel,
     ctaHref,
-    panelTone = "bg-soft-pink",
+    panelTone = "bg-[#111]",
     panelLabel,
     panelIcon,
     reverse = false,
@@ -192,14 +192,14 @@ export function ShowcaseRow({
         <section className={cn(BEAT, "px-6 py-12", className)}>
             <div className="mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-2 lg:gap-20">
                 <div className={cn(reverse && "lg:order-2")}>
-                    <h2 className="font-extrabold text-3xl leading-[1.08] tracking-tight text-black sm:text-5xl lg:text-6xl">
+                    <h2 className="font-extrabold text-3xl leading-[1.08] tracking-tight text-white sm:text-5xl lg:text-6xl">
                         {title}
                     </h2>
-                    <p className="mt-4 max-w-md text-lg font-semibold leading-snug text-black/65">{body}</p>
+                    <p className="mt-4 max-w-md text-lg font-semibold leading-snug text-white/65">{body}</p>
                     {ctaLabel && ctaHref && (
                         <Link
                             href={ctaHref}
-                            className="mt-7 inline-block rounded-full bg-black px-7 py-3.5 text-base font-bold text-white transition-transform duration-[160ms] ease-out hover:scale-[1.02] active:scale-[0.97]"
+                            className="mt-7 inline-block rounded-full bg-white px-7 py-3.5 text-base font-bold text-white transition-transform duration-[160ms] ease-out hover:scale-[1.02] active:scale-[0.97]"
                         >
                             {ctaLabel}
                         </Link>
@@ -237,16 +237,16 @@ export function BoldBlock({
         <section className={cn(BEAT, "px-6 py-12", tone)}>
             <div className="mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-2 lg:gap-20">
                 <Reveal className={cn(reverse && "lg:order-2")}>
-                    <h2 className={cn("font-extrabold text-3xl leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl", dark ? "text-white" : "text-black")}>
+                    <h2 className={cn("font-extrabold text-3xl leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl", "text-white")}>
                         {title}
                     </h2>
-                    <p className={cn("mt-4 max-w-md text-lg font-semibold leading-snug", dark ? "text-white/70" : "text-black/70")}>{body}</p>
+                    <p className={cn("mt-4 max-w-md text-lg font-semibold leading-snug", "text-white/70")}>{body}</p>
                     {ctaLabel && ctaHref && (
                         <Link
                             href={ctaHref}
                             className={cn(
                                 "mt-7 inline-block rounded-full px-7 py-3.5 text-base font-bold transition-transform duration-[160ms] ease-out hover:scale-[1.02] active:scale-[0.97]",
-                                dark ? "bg-white text-black" : "bg-black text-white",
+                                "bg-white text-black",
                             )}
                         >
                             {ctaLabel}
@@ -292,25 +292,23 @@ export function InsetBlock({
                     className={cn(
                         "mx-auto grid w-full max-w-6xl items-center gap-10 overflow-hidden rounded-[40px] p-8 sm:p-12 lg:grid-cols-2 lg:gap-20 lg:p-20",
                         tone,
-                        dark
-                            ? "ring-1 ring-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
-                            : "ring-1 ring-black/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]",
+                        "ring-1 ring-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]",
                     )}
                 >
                     <div className={cn(reverse && "lg:order-2")}>
                         {eyebrow && (
-                            <p className={cn("mb-4 font-pixel text-sm uppercase tracking-[0.2em]", dark ? "text-white/45" : "text-black/45")}>{eyebrow}</p>
+                            <p className={cn("mb-4 font-pixel text-sm uppercase tracking-[0.2em]", "text-white/45")}>{eyebrow}</p>
                         )}
-                        <h2 className={cn("font-extrabold text-3xl leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl", dark ? "text-white" : "text-black")}>
+                        <h2 className={cn("font-extrabold text-3xl leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl", "text-white")}>
                             {title}
                         </h2>
-                        <p className={cn("mt-4 max-w-md text-lg font-semibold leading-snug", dark ? "text-white/65" : "text-black/65")}>{body}</p>
+                        <p className={cn("mt-4 max-w-md text-lg font-semibold leading-snug", "text-white/65")}>{body}</p>
                         {ctaLabel && ctaHref && (
                             <Link
                                 href={ctaHref}
                                 className={cn(
                                     "mt-8 inline-block rounded-full px-8 py-4 text-base font-bold transition-transform duration-[160ms] ease-out hover:scale-[1.02] active:scale-[0.97]",
-                                    dark ? "bg-white text-black" : "bg-black text-white",
+                                    "bg-white text-black",
                                 )}
                             >
                                 {ctaLabel}
@@ -351,20 +349,20 @@ export function CenterFeature({
             <div className="mx-auto w-full max-w-3xl text-center">
                 <Reveal>
                     {eyebrow && (
-                        <p className={cn("mb-4 font-pixel text-sm uppercase tracking-[0.2em]", dark ? "text-white/50" : "text-black/45")}>{eyebrow}</p>
+                        <p className={cn("mb-4 font-pixel text-sm uppercase tracking-[0.2em]", "text-white/50")}>{eyebrow}</p>
                     )}
-                    <h2 className={cn("font-extrabold text-4xl leading-[1.05] tracking-tight sm:text-6xl", dark ? "text-white" : "text-black")}>
+                    <h2 className={cn("font-extrabold text-4xl leading-[1.05] tracking-tight sm:text-6xl", "text-white")}>
                         {title}
                     </h2>
                     {sub && (
-                        <p className={cn("mx-auto mt-5 max-w-md text-lg font-semibold leading-snug sm:text-xl", dark ? "text-white/65" : "text-black/65")}>{sub}</p>
+                        <p className={cn("mx-auto mt-5 max-w-md text-lg font-semibold leading-snug sm:text-xl", "text-white/65")}>{sub}</p>
                     )}
                     {ctaLabel && ctaHref && (
                         <Link
                             href={ctaHref}
                             className={cn(
                                 "mt-8 inline-block rounded-full px-8 py-4 text-base font-bold transition-transform duration-[160ms] ease-out hover:scale-[1.02] active:scale-[0.97]",
-                                dark ? "bg-white text-black" : "bg-black text-white",
+                                "bg-white text-black",
                             )}
                         >
                             {ctaLabel}
@@ -401,20 +399,20 @@ export function StepFlow({
             <div className="mx-auto w-full max-w-6xl">
                 <Reveal>
                     {eyebrow && (
-                        <p className="mb-3 font-pixel text-sm uppercase tracking-[0.2em] text-black/45">{eyebrow}</p>
+                        <p className="mb-3 font-pixel text-sm uppercase tracking-[0.2em] text-white/45">{eyebrow}</p>
                     )}
-                    <h2 className="font-extrabold text-3xl tracking-tight text-black sm:text-5xl lg:text-6xl">{title}</h2>
-                    {sub && <p className="mt-3 max-w-xl text-lg font-semibold leading-snug text-black/65">{sub}</p>}
+                    <h2 className="font-extrabold text-3xl tracking-tight text-white sm:text-5xl lg:text-6xl">{title}</h2>
+                    {sub && <p className="mt-3 max-w-xl text-lg font-semibold leading-snug text-white/65">{sub}</p>}
                 </Reveal>
                 <div className="mt-16 grid gap-x-10 gap-y-12 sm:grid-cols-3">
                     {steps.map((s, i) => (
                         <Reveal key={s.title} delay={i * 0.08}>
-                            <div className="border-t-2 border-black/10 pt-5">
-                                <span className="font-pixel text-5xl leading-none tracking-tighter text-black/20 sm:text-6xl">
+                            <div className="border-t-2 border-white/10 pt-5">
+                                <span className="font-pixel text-5xl leading-none tracking-tighter text-white/20 sm:text-6xl">
                                     {String(i + 1).padStart(2, "0")}
                                 </span>
-                                <p className="mt-4 text-xl font-extrabold tracking-tight text-black">{s.title}</p>
-                                <p className="mt-1.5 text-[15px] font-semibold leading-snug text-black/60">{s.body}</p>
+                                <p className="mt-4 text-xl font-extrabold tracking-tight text-white">{s.title}</p>
+                                <p className="mt-1.5 text-[15px] font-semibold leading-snug text-white/60">{s.body}</p>
                             </div>
                         </Reveal>
                     ))}
@@ -445,10 +443,10 @@ export function BentoGrid({
                 {(eyebrow || title || sub) && (
                     <Reveal>
                         {eyebrow && (
-                            <p className="mb-3 font-pixel text-sm uppercase tracking-[0.2em] text-black/45">{eyebrow}</p>
+                            <p className="mb-3 font-pixel text-sm uppercase tracking-[0.2em] text-white/45">{eyebrow}</p>
                         )}
-                        {title && <h2 className="font-extrabold text-3xl tracking-tight text-black sm:text-5xl lg:text-6xl">{title}</h2>}
-                        {sub && <p className="mt-3 max-w-xl text-lg font-semibold leading-snug text-black/65">{sub}</p>}
+                        {title && <h2 className="font-extrabold text-3xl tracking-tight text-white sm:text-5xl lg:text-6xl">{title}</h2>}
+                        {sub && <p className="mt-3 max-w-xl text-lg font-semibold leading-snug text-white/65">{sub}</p>}
                     </Reveal>
                 )}
                 <div className="mt-14 grid auto-rows-[176px] grid-cols-2 gap-4 sm:grid-cols-4">
@@ -462,12 +460,12 @@ export function BentoGrid({
                                 it.span === "tall" && "row-span-2",
                             )}
                         >
-                            <div className={cn("flex h-full flex-col overflow-hidden rounded-[24px] p-6 ring-1 ring-black/[0.04]", it.bg)}>
-                                <span className="grid size-11 place-items-center rounded-2xl bg-white/70">
+                            <div className={cn("flex h-full flex-col overflow-hidden rounded-[24px] p-6 ring-1 ring-white/[0.08]", it.bg)}>
+                                <span className="grid size-11 place-items-center rounded-2xl bg-white/10">
                                     <HugeiconsIcon icon={it.icon} size={24} strokeWidth={1.8} className={it.accent} />
                                 </span>
-                                <p className="mt-auto pt-5 text-lg font-extrabold tracking-tight text-black">{it.title}</p>
-                                <p className="mt-1 text-[15px] font-semibold leading-snug text-black/60">{it.body}</p>
+                                <p className="mt-auto pt-5 text-lg font-extrabold tracking-tight text-white">{it.title}</p>
+                                <p className="mt-1 text-[15px] font-semibold leading-snug text-white/60">{it.body}</p>
                             </div>
                         </Reveal>
                     ))}
@@ -503,10 +501,10 @@ export function CaptionCards({
                 {(eyebrow || title || sub) && (
                     <Reveal className="max-w-3xl">
                         {eyebrow && (
-                            <p className="mb-4 font-pixel text-sm uppercase tracking-[0.2em] text-black/45">{eyebrow}</p>
+                            <p className="mb-4 font-pixel text-sm uppercase tracking-[0.2em] text-white/45">{eyebrow}</p>
                         )}
-                        {title && <h2 className="font-extrabold text-3xl leading-[1.06] tracking-tight text-black sm:text-5xl lg:text-6xl">{title}</h2>}
-                        {sub && <p className="mt-4 max-w-xl text-lg font-semibold leading-snug text-black/60">{sub}</p>}
+                        {title && <h2 className="font-extrabold text-3xl leading-[1.06] tracking-tight text-white sm:text-5xl lg:text-6xl">{title}</h2>}
+                        {sub && <p className="mt-4 max-w-xl text-lg font-semibold leading-snug text-white/60">{sub}</p>}
                     </Reveal>
                 )}
                 <div className={cn("mt-16 grid gap-8 sm:mt-20", columns === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3")}>
@@ -515,14 +513,14 @@ export function CaptionCards({
                             <div className="flex h-full flex-col">
                                 <div
                                     className={cn(
-                                        "grid min-h-[220px] place-items-center overflow-hidden rounded-[28px] p-6 ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]",
-                                        c.bg ?? "bg-soft-gray",
+                                        "grid min-h-[220px] place-items-center overflow-hidden rounded-[28px] p-6 ring-1 ring-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]",
+                                        c.bg ?? "bg-[#111]",
                                     )}
                                 >
                                     {c.visual}
                                 </div>
-                                <p className="mt-6 text-xl font-extrabold tracking-tight text-black">{c.title}</p>
-                                <p className="mt-1.5 text-[15px] font-semibold leading-snug text-black/60">{c.body}</p>
+                                <p className="mt-6 text-xl font-extrabold tracking-tight text-white">{c.title}</p>
+                                <p className="mt-1.5 text-[15px] font-semibold leading-snug text-white/60">{c.body}</p>
                             </div>
                         </Reveal>
                     ))}
@@ -547,7 +545,7 @@ export function TwoUpBold({
             <div className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-2">
                 {items.map((it, i) => (
                     <Reveal key={it.title} delay={i * 0.08}>
-                        <div className={cn("flex h-full flex-col justify-between overflow-hidden rounded-[32px] p-8 ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] sm:p-10", it.bg)}>
+                        <div className={cn("flex h-full flex-col justify-between overflow-hidden rounded-[32px] p-8 ring-1 ring-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:p-10", it.bg)}>
                             <div>
                                 <p className={cn("text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl", it.dark ? "text-white" : "text-black")}>{it.title}</p>
                                 <p className={cn("mt-3 max-w-sm text-[15px] font-semibold leading-snug", it.dark ? "text-white/65" : "text-black/60")}>{it.body}</p>
@@ -576,7 +574,7 @@ export function BigStatement({
     return (
         <section className={cn("flex min-h-[80svh] flex-col justify-center px-6 py-12", tone, className)}>
             <div className="mx-auto max-w-5xl">
-                <WordReveal className="font-extrabold text-3xl leading-[1.15] tracking-tight text-black sm:text-5xl lg:text-6xl">
+                <WordReveal className="font-extrabold text-3xl leading-[1.15] tracking-tight text-white sm:text-5xl lg:text-6xl">
                     {children}
                 </WordReveal>
             </div>
@@ -603,18 +601,18 @@ export function FeatureLedger({
             <div className="mx-auto w-full max-w-7xl">
                 {(title || sub) && (
                     <Reveal>
-                        {title && <h2 className="font-extrabold text-3xl tracking-tight text-black sm:text-5xl lg:text-6xl">{title}</h2>}
-                        {sub && <p className="mt-4 max-w-xl text-lg font-semibold leading-snug text-black/60">{sub}</p>}
+                        {title && <h2 className="font-extrabold text-3xl tracking-tight text-white sm:text-5xl lg:text-6xl">{title}</h2>}
+                        {sub && <p className="mt-4 max-w-xl text-lg font-semibold leading-snug text-white/60">{sub}</p>}
                     </Reveal>
                 )}
                 <div className={cn(title || sub ? "mt-16" : "")}>
                     {rows.map((r, i) => (
                         <Reveal key={r.title} delay={i * 0.05}>
-                            <div className="grid items-center gap-4 border-t border-black/10 py-10 sm:py-14 lg:grid-cols-12 lg:gap-8">
-                                <h3 className="font-extrabold text-3xl leading-[1.02] tracking-tight text-black sm:text-5xl lg:col-span-6 lg:text-6xl">
+                            <div className="grid items-center gap-4 border-t border-white/10 py-10 sm:py-14 lg:grid-cols-12 lg:gap-8">
+                                <h3 className="font-extrabold text-3xl leading-[1.02] tracking-tight text-white sm:text-5xl lg:col-span-6 lg:text-6xl">
                                     {r.title}
                                 </h3>
-                                <p className={cn("max-w-md text-lg font-semibold leading-snug text-black/60", r.visual ? "lg:col-span-4" : "lg:col-span-5 lg:col-start-8")}>
+                                <p className={cn("max-w-md text-lg font-semibold leading-snug text-white/60", r.visual ? "lg:col-span-4" : "lg:col-span-5 lg:col-start-8")}>
                                     {r.body}
                                 </p>
                                 {r.visual && <div className="lg:col-span-2 lg:justify-self-end">{r.visual}</div>}
@@ -654,28 +652,26 @@ export function PosterPanel({
                     className={cn(
                         "flex min-h-[78svh] flex-col justify-between gap-12 overflow-hidden rounded-[40px] p-8 sm:p-14 lg:p-20",
                         tone,
-                        dark
-                            ? "ring-1 ring-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
-                            : "ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]",
+                        "ring-1 ring-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]",
                     )}
                 >
                     <h2
                         className={cn(
                             "max-w-[13ch] font-extrabold text-5xl leading-[0.98] tracking-tight sm:text-7xl lg:text-8xl",
-                            dark ? "text-white" : "text-black",
+                            "text-white",
                         )}
                     >
                         {title}
                     </h2>
                     <div className="flex flex-col items-start justify-between gap-10 lg:flex-row lg:items-end">
                         <div className="max-w-sm">
-                            <p className={cn("text-lg font-semibold leading-snug", dark ? "text-white/65" : "text-black/65")}>{body}</p>
+                            <p className={cn("text-lg font-semibold leading-snug", "text-white/65")}>{body}</p>
                             {ctaLabel && ctaHref && (
                                 <Link
                                     href={ctaHref}
                                     className={cn(
                                         "mt-8 inline-block rounded-full px-8 py-4 text-base font-bold transition-transform duration-[160ms] ease-out hover:scale-[1.02] active:scale-[0.97]",
-                                        dark ? "bg-white text-black" : "bg-black text-white",
+                                        "bg-white text-black",
                                     )}
                                 >
                                     {ctaLabel}
@@ -699,7 +695,7 @@ export function SplitShowcase({
     ctaLabel,
     ctaHref,
     visual,
-    tone = "bg-white",
+    tone = "bg-[#111]",
     reverse = false,
 }: {
     title: string;
@@ -714,17 +710,17 @@ export function SplitShowcase({
         <section className={cn(BEAT, "px-6 py-12")}>
             <div className="mx-auto grid w-full max-w-7xl items-stretch gap-8 lg:grid-cols-12">
                 <Reveal className={cn("lg:col-span-7", reverse && "lg:order-2")}>
-                    <div className={cn("grid h-full min-h-[56svh] place-items-center overflow-hidden rounded-[40px] p-8 ring-1 ring-black/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]", tone)}>
+                    <div className={cn("grid h-full min-h-[56svh] place-items-center overflow-hidden rounded-[40px] p-8 ring-1 ring-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]", tone)}>
                         {visual}
                     </div>
                 </Reveal>
                 <Reveal delay={0.08} className={cn("flex flex-col justify-center py-6 lg:col-span-5 lg:px-8", reverse && "lg:order-1")}>
-                    <h2 className="font-extrabold text-3xl leading-[1.08] tracking-tight text-black sm:text-5xl">{title}</h2>
-                    <p className="mt-4 max-w-md text-lg font-semibold leading-snug text-black/65">{body}</p>
+                    <h2 className="font-extrabold text-3xl leading-[1.08] tracking-tight text-white sm:text-5xl">{title}</h2>
+                    <p className="mt-4 max-w-md text-lg font-semibold leading-snug text-white/65">{body}</p>
                     {ctaLabel && ctaHref && (
                         <Link
                             href={ctaHref}
-                            className="mt-8 inline-block self-start rounded-full bg-black px-8 py-4 text-base font-bold text-white transition-transform duration-[160ms] ease-out hover:scale-[1.02] active:scale-[0.97]"
+                            className="mt-8 inline-block self-start rounded-full bg-white px-8 py-4 text-base font-bold text-white transition-transform duration-[160ms] ease-out hover:scale-[1.02] active:scale-[0.97]"
                         >
                             {ctaLabel}
                         </Link>
@@ -754,11 +750,11 @@ export function MarqueeBand({
                         key={w}
                         className={cn(
                             "flex items-center gap-10 whitespace-nowrap font-pixel text-5xl tracking-tight sm:text-7xl",
-                            dark ? "text-white" : "text-black",
+                            "text-white",
                         )}
                     >
                         {w}
-                        <span aria-hidden className={cn("text-2xl sm:text-3xl", dark ? "text-white/40" : "text-black/30")}>✦</span>
+                        <span aria-hidden className={cn("text-2xl sm:text-3xl", "text-white/40")}>✦</span>
                     </span>
                 ))}
             </Marquee>
@@ -784,9 +780,9 @@ export function BandSection({
                 {(title || sub) && (
                     <Reveal>
                         {title && (
-                            <h2 className="font-extrabold text-3xl tracking-tight text-black sm:text-5xl lg:text-6xl">{title}</h2>
+                            <h2 className="font-extrabold text-3xl tracking-tight text-white sm:text-5xl lg:text-6xl">{title}</h2>
                         )}
-                        {sub && <p className="mt-3 max-w-xl text-lg font-semibold leading-snug text-black/65">{sub}</p>}
+                        {sub && <p className="mt-3 max-w-xl text-lg font-semibold leading-snug text-white/65">{sub}</p>}
                     </Reveal>
                 )}
                 {children && <Reveal delay={0.05} className={cn(title || sub ? "mt-10" : "")}>{children}</Reveal>}
@@ -804,21 +800,21 @@ export function ExploreMore({ currentHref, className }: { currentHref: string; c
         <section className={cn(BEAT_LIGHT, "px-6 py-12", className)}>
             <div className="mx-auto w-full max-w-6xl">
                 <Reveal>
-                    <h2 className="font-extrabold text-3xl tracking-tight text-black sm:text-5xl">Explore more</h2>
+                    <h2 className="font-extrabold text-3xl tracking-tight text-white sm:text-5xl">Explore more</h2>
                 </Reveal>
                 <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-3">
                     {links.map((f, i) => (
                         <Reveal key={f.href} delay={i * 0.06}>
                             <Link
                                 href={f.href}
-                                className="group flex h-full flex-col rounded-2xl bg-white p-6 ring-1 ring-black/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition-transform duration-200 ease-out hover:-translate-y-1 active:scale-[0.98]"
+                                className="group flex h-full flex-col rounded-2xl bg-[#111] p-6 ring-1 ring-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-transform duration-200 ease-out hover:-translate-y-1 active:scale-[0.98]"
                             >
                                 <span className={cn("mb-4 grid size-10 place-items-center rounded-xl bg-current/10", f.tone)}>
                                     <HugeiconsIcon icon={f.icon} size={22} strokeWidth={1.8} className={f.tone} />
                                 </span>
-                                <p className="text-lg font-bold tracking-tight text-black">{f.title}</p>
-                                <p className="mt-1 flex-1 text-sm font-semibold leading-snug text-black/65">{f.blurb}</p>
-                                <span className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-black">
+                                <p className="text-lg font-bold tracking-tight text-white">{f.title}</p>
+                                <p className="mt-1 flex-1 text-sm font-semibold leading-snug text-white/65">{f.blurb}</p>
+                                <span className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-white">
                                     Learn more
                                     <HugeiconsIcon icon={ArrowRight01Icon} size={16} strokeWidth={2.2} className="transition-transform duration-200 group-hover:translate-x-0.5" />
                                 </span>
@@ -835,19 +831,19 @@ export function Faq({ items, className }: { items: { q: string; a: string }[]; c
     return (
         <section className={cn(BEAT_LIGHT, "px-6 py-12", className)}>
             <div className="mx-auto w-full max-w-3xl">
-                <h2 className="font-extrabold text-3xl tracking-tight text-black sm:text-5xl">
+                <h2 className="font-extrabold text-3xl tracking-tight text-white sm:text-5xl">
                     Questions, answered
                 </h2>
-                <div className="mt-8 divide-y divide-black/[0.08] border-y border-black/[0.08]">
+                <div className="mt-8 divide-y divide-white/10 border-y border-white/10">
                     {items.map((item) => (
                         <details key={item.q} className="group py-5">
-                            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-left text-lg font-bold text-black">
+                            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-left text-lg font-bold text-white">
                                 {item.q}
-                                <span className="shrink-0 text-2xl font-light text-black/40 transition-transform duration-200 group-open:rotate-45">
+                                <span className="shrink-0 text-2xl font-light text-white/40 transition-transform duration-200 group-open:rotate-45">
                                     +
                                 </span>
                             </summary>
-                            <p className="mt-3 text-base font-semibold leading-snug text-black/65">{item.a}</p>
+                            <p className="mt-3 text-base font-semibold leading-snug text-white/65">{item.a}</p>
                         </details>
                     ))}
                 </div>
@@ -905,7 +901,7 @@ export function ClosingCta({
                 ) : (
                     <Link
                         href={ctaHref}
-                        className="mt-8 inline-block rounded-full bg-white px-8 py-4 text-base font-bold text-black transition-transform duration-[160ms] ease-out hover:scale-[1.02] active:scale-[0.97]"
+                        className="mt-8 inline-block rounded-full bg-white px-8 py-4 text-base font-bold text-white transition-transform duration-[160ms] ease-out hover:scale-[1.02] active:scale-[0.97]"
                     >
                         {ctaLabel}
                     </Link>

@@ -135,7 +135,7 @@ export function CreateServerModal() {
     return (
         <>
             <Dialog open={isModalOpen} onOpenChange={handleClose}>
-                <DialogContent className="overflow-hidden rounded-4xl border-none p-0 sm:max-w-[480px]" showCloseButton={false}>
+                <DialogContent className="overflow-hidden rounded-4xl p-0 sm:max-w-[480px]" showCloseButton={false}>
                     <div className="flex h-[560px] max-h-[85svh] flex-col px-8 pb-8 pt-9">
                         <AnimatePresence mode="wait" initial={false}>
                             {step === "identity" && (
@@ -285,7 +285,7 @@ export function CreateServerModal() {
             {/* Icon crop (round, 512px) */}
             {cropFile && (
                 <Dialog open onOpenChange={(o) => { if (!o) { setCropFile(null); cropStateRef.current = null; } }}>
-                    <DialogContent className="rounded-4xl border-none p-6 sm:max-w-md" showCloseButton={false}>
+                    <DialogContent className="rounded-4xl p-6 sm:max-w-md" showCloseButton={false}>
                         <DialogTitle className="text-center text-[18px] font-bold tracking-tight text-white">Adjust your icon</DialogTitle>
                         <AvatarCropper
                             file={cropFile}

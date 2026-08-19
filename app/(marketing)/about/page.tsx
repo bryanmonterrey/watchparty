@@ -18,8 +18,8 @@ const FAQ = [
 
 export default function AboutPage() {
     return (
-        <ColorScrollPage className="pt-28 sm:pt-32" initial="var(--color-soft-pink)">
-            <BgZone bg="var(--color-soft-pink)">
+        <ColorScrollPage className="pt-28 sm:pt-32" initial="#0d0b12">
+            <BgZone bg="#0d0b12">
                 <MarketingHero
                     variant="centered"
                     eyebrow="About"
@@ -32,7 +32,7 @@ export default function AboutPage() {
 
                 <BigStatement>
                     The timeline lives in one app, streaming in another, and your wallet somewhere else
-                    entirely. <span className="text-black/40">watchparty puts them in the same place.</span> Watch a
+                    entirely. <span className="text-white/40">watchparty puts them in the same place.</span> Watch a
                     stream, post a take, back a creator, and trade a coin without ever switching tabs.
                 </BigStatement>
             </BgZone>
@@ -43,14 +43,14 @@ export default function AboutPage() {
                     title="Watch, post, and trade together"
                     sub="The three things you'd juggle across apps, sharing a single feed."
                     cards={[
-                        { tone: "bg-soft-pink", node: (<><p className="text-lg font-extrabold tracking-tight text-black">A stage</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniLive /></div></>) },
-                        { tone: "bg-white", node: (<><p className="text-lg font-extrabold tracking-tight text-black">A timeline</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniFeed /></div></>) },
-                        { tone: "bg-soft-blue", node: (<><p className="text-lg font-extrabold tracking-tight text-black">A wallet</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniChart /></div></>) },
+                        { tone: "bg-pastelred/10", node: (<><p className="text-lg font-extrabold tracking-tight text-white">A stage</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniLive /></div></>) },
+                        { tone: "bg-[#111]", node: (<><p className="text-lg font-extrabold tracking-tight text-white">A timeline</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniFeed /></div></>) },
+                        { tone: "bg-twitter/10", node: (<><p className="text-lg font-extrabold tracking-tight text-white">A wallet</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniChart /></div></>) },
                     ]}
                 />
             </BgZone>
 
-            <BgZone bg="var(--color-pastel-yellow)">
+            <BgZone bg="#12100b">
                 <FeatureLedger
                     rows={[
                         { title: "A stage", body: "Go live and stream to an audience that's already here, no second app required." },
@@ -60,7 +60,7 @@ export default function AboutPage() {
                 />
             </BgZone>
 
-            <BgZone bg="var(--color-soft-gray)">
+            <BgZone bg="#0a0a0a">
                 <InsetBlock
                     reverse
                     title="Get paid for what you make"

@@ -48,7 +48,7 @@ export function FollowersFollowingDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="flex h-[70vh] w-full max-w-md flex-col gap-0 overflow-hidden border-none p-0 ring-1 ring-white/10">
+            <DialogContent className="flex h-[70vh] w-full max-w-md flex-col gap-0 overflow-hidden p-0">
                 <DialogHeader className="shrink-0 px-5 pt-5 pb-3">
                     <DialogTitle className="text-center text-base font-bold text-white">@{username || "user"}</DialogTitle>
                 </DialogHeader>

@@ -10,7 +10,8 @@ import { betterAuth } from "better-auth";
 import { clearSlugMiss } from "@/lib/security/slug-miss-cache";
 import { dash } from "@better-auth/infra";
 import { siwsPlugin } from "better-auth-siws";
-import { walletAddressFromBody } from "./siwe-address";
+import { walletAddressFromBody, signInChainIdFromBody } from "./siwe-address";
+import { linkSignInWallet } from "@/lib/wallet/link-signin-wallet";
 import { siwe } from "better-auth/plugins/siwe";
 import { withCache, TTL, redis } from "@/lib/cache";
 import { verifyEvmMessage } from "@/lib/chains/evm/verify";
@@ -689,6 +690,20 @@ export const auth = betterAuth({
                 throw new APIError("UNAUTHORIZED", { message: "Wallet mismatch" });
               }
             }
+
+            // The wallet they just signed in with is one of their wallets, and
+            // if it is their only one it is the wallet in use. Runs after the
+            // ownership checks above so a mismatched wallet is never recorded,
+            // and is best-effort inside — bookkeeping must not fail a sign-in.
+            // The chainId the SIWE message was signed on (8453 = Base) comes
+            // out of the signed message itself on better-auth 1.7 — the body
+            // no longer carries it. Nothing about the address can recover it
+            // later, so it is captured here or not at all.
+            await linkSignInWallet(
+              sessionData.userId,
+              String(address),
+              signInChainIdFromBody(ctx?.body),
+            );
           }
 
           return { data: sessionData };

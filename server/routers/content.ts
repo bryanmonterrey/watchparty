@@ -4,6 +4,8 @@ import { router, protectedProcedure, publicProcedure } from "../trpc";
 import { db } from "@/db";
 import { posts, tokens, likes, bookmarks, polls, postUnlocks, seenPosts, videoProgress, videoHeatmap } from "@/db/schema/content";
 import { user } from "@/db/schema/auth";
+import { communityServers } from "@/db/schema/community";
+import { payoutDestinationFor } from "@/server/lib/user-wallet";
 import { eq, desc, and, count, like, or, ilike, sql, gt, inArray, asc, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { nanoid } from "nanoid";
@@ -17,7 +19,7 @@ import { recordQuestEvent } from "@/server/lib/quests";
 import { recordSignal, ACTION } from "@/lib/feed-ranker/signals";
 import { upsertPost, deletePost } from "@/lib/typesense/sync";
 import { effectiveVerifiedTier } from "@/lib/verified-tier";
-import { postSelectFields, mapPostRow } from "@/server/lib/post-shape";
+import { postSelectFields, authorSelectFields, mapPostRow } from "@/server/lib/post-shape";
 import { verifySolPayment } from "@/lib/chains/solana/verify-sol-payment";
 import { createVideoProcedures } from "./content/create-video";
 import { createPostProcedures } from "./content/create-post";
@@ -26,6 +28,13 @@ import { playlistProcedures } from "./content/playlists";
 import { captionProcedures } from "./content/captions";
 import { draftProcedures } from "./content/drafts";
 import { pollProcedures } from "./content/polls";
+
+// The author's community server, joined through `user.serverTagId` on every
+// post-shaped query in this file. Declared once at module scope because
+// `alias()` is pure — it names a table, it does not bind to a query — and a
+// per-procedure copy is just another place for the name to drift.
+const authorServer = alias(communityServers, "author_server");
+
 
 // ── Split modules ───────────────────────────────────────────────────────────
 //
@@ -235,10 +244,10 @@ export const contentRouter = router({
             const already = await db.query.postUnlocks.findFirst({ where: eq(postUnlocks.txSignature, input.txSignature) });
             if (already) throw new TRPCError({ code: "CONFLICT", message: "This payment was already redeemed" });
 
-            const [author] = await db.select({ wallet: user.wallet_address }).from(user).where(eq(user.id, post.userId)).limit(1);
-            if (!author?.wallet) throw new TRPCError({ code: "BAD_REQUEST", message: "This creator has no wallet on file to receive payment" });
+            const authorWallet = await payoutDestinationFor(post.userId);
+            if (!authorWallet) throw new TRPCError({ code: "BAD_REQUEST", message: "This creator has no wallet on file to receive payment" });
 
-            await verifySolPayment(input.txSignature, post.paywallPrice, author.wallet);
+            await verifySolPayment(input.txSignature, post.paywallPrice, authorWallet);
 
             await db.insert(postUnlocks).values({
                 id: nanoid(),
@@ -505,9 +514,12 @@ export const contentRouter = router({
             const parentUser = alias(user, "parent_user");
 
             const results = await db
-                .select(postSelectFields({ origPosts, origUser, parentPosts, parentUser, viewerId: ctx.user?.id ?? "" }))
+                .select(postSelectFields({ origPosts, origUser, parentPosts, parentUser, authorServer, viewerId: ctx.user?.id ?? "" }))
                 .from(posts)
                 .innerJoin(user, eq(posts.userId, user.id))
+                // LEFT, not inner: almost nobody represents a server, and an
+                // inner join here would drop every post by everyone else.
+                .leftJoin(authorServer, eq(user.serverTagId, authorServer.id))
                 .leftJoin(origPosts, eq(posts.repostOfId, origPosts.id))
                 .leftJoin(origUser, eq(origPosts.userId, origUser.id))
                 .leftJoin(parentPosts, eq(posts.replyToId, parentPosts.id))
@@ -604,14 +616,7 @@ export const contentRouter = router({
                     // (see the repost mutation's own idempotency check).
                     isReposted: sql<boolean>`EXISTS (SELECT 1 FROM posts r WHERE r."repostOfId" = ${posts.id} AND r."userId" = ${ctx.user?.id ?? ""} AND r.status = 'published')`,
                     author: {
-                        id: user.id,
-                        name: user.name,
-                        username: user.username,
-                        avatar_url: user.avatar_url,
-                        wallet_address: user.wallet_address,
-                        verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
-                        affiliateUsername: user.affiliateUsername,
-                        affiliateIconUrl: user.affiliateIconUrl,
+                        ...authorSelectFields(authorServer),
                         followerCount: sql<number>`(SELECT COUNT(*) FROM follows WHERE follows."followingId" = ${user.id})`,
                     },
                     // Attached token for the under-player chip (design brief §2) —
@@ -631,6 +636,7 @@ export const contentRouter = router({
                 })
                 .from(posts)
                 .innerJoin(user, eq(posts.userId, user.id))
+                .leftJoin(authorServer, eq(user.serverTagId, authorServer.id))
                 .leftJoin(tokens, eq(posts.tokenId, tokens.id))
                 .where(and(eq(posts.id, input.postId), isNotNull(posts.videoUrl)))
                 .limit(1);
@@ -665,18 +671,12 @@ export const contentRouter = router({
                     views: posts.views,
                     createdAt: posts.createdAt,
                     author: {
-                        id: user.id,
-                        name: user.name,
-                        username: user.username,
-                        avatar_url: user.avatar_url,
-                        wallet_address: user.wallet_address,
-                        verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
-                        affiliateUsername: user.affiliateUsername,
-                        affiliateIconUrl: user.affiliateIconUrl,
+                        ...authorSelectFields(authorServer),
                     },
                 })
                 .from(posts)
                 .innerJoin(user, eq(posts.userId, user.id))
+                .leftJoin(authorServer, eq(user.serverTagId, authorServer.id))
                 .where(
                     and(
                         eq(posts.status, "published"),
@@ -716,18 +716,12 @@ export const contentRouter = router({
                     views: posts.views,
                     createdAt: posts.createdAt,
                     author: {
-                        id: user.id,
-                        name: user.name,
-                        username: user.username,
-                        avatar_url: user.avatar_url,
-                        wallet_address: user.wallet_address,
-                        verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
-                        affiliateUsername: user.affiliateUsername,
-                        affiliateIconUrl: user.affiliateIconUrl,
+                        ...authorSelectFields(authorServer),
                     },
                 })
                 .from(posts)
                 .innerJoin(user, eq(posts.userId, user.id))
+                .leftJoin(authorServer, eq(user.serverTagId, authorServer.id))
                 .where(
                     and(
                         eq(posts.userId, input.userId),
@@ -801,18 +795,12 @@ export const contentRouter = router({
                     views: posts.views,
                     createdAt: posts.createdAt,
                     author: {
-                        id: user.id,
-                        name: user.name,
-                        username: user.username,
-                        avatar_url: user.avatar_url,
-                        wallet_address: user.wallet_address,
-                        verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
-                        affiliateUsername: user.affiliateUsername,
-                        affiliateIconUrl: user.affiliateIconUrl,
+                        ...authorSelectFields(authorServer),
                     },
                 })
                 .from(posts)
                 .innerJoin(user, eq(posts.userId, user.id))
+                .leftJoin(authorServer, eq(user.serverTagId, authorServer.id))
                 .where(
                     and(
                         eq(posts.status, "published"),

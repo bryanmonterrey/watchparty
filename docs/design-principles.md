@@ -24,10 +24,15 @@ References (in `docs/references/`, named by what they exemplify):
 
 ## 1. The brand (do not drift from this)
 
-- **Palette is watchparty's own** — pastel canvases + a small set of brand accents.
+- **Palette is watchparty's own** — near-black canvases + a small set of brand accents.
   Reference palettes inform *contrast/rhythm*, never the actual hex.
-  - Canvas pastels (marketing/full-bleed bands): `bg-soft-pink`, `bg-soft-blue`,
-    `bg-pastel-yellow`, `bg-soft-gray`.
+  - Canvas blacks (marketing/full-bleed bands — owner call 2026-08-19, "no more
+    pastels, blacked out"): `#050505` base, `#0e0f13` blue-black, `#0d0b12`
+    violet-black, `#12100b` warm black, `#0a0a0a` raised. ColorScrollPage still
+    crossfades between them; the shifts are subtle on purpose. The old pastel
+    tokens (`bg-soft-pink` etc.) survive ONLY as tiny in-app washes and on the
+    landing page (`app/page.tsx`), which the owner kept light — never as a
+    marketing canvas again.
   - App surfaces (theme-aware): `bg-background`, `bg-card`, `bg-muted`,
     `text-foreground`, `text-muted-foreground`, `border`, `ring` — these flip
     for light/dark via next-themes. Use these in-app, not raw hex.
@@ -120,8 +125,9 @@ nav into a rounded capsule.
   white card with a colored icon. Vary fills across a set; keep one radius.
 
 ### Section rhythm (marketing / full-bleed pages)
-- Alternate full-bleed **pastel bands** down the page (the reference's
-  light→dark→light cadence, in our pastels). Center content at a max width
+- Alternate full-bleed **near-black bands** down the page (the cadence
+  survives the blackout as subtle tint shifts between the canvas blacks).
+  Center content at a max width
   (`max-w-5xl`/`max-w-7xl`), generous vertical gaps (`py-28 sm:py-36`; reference
   section gap ≈64px+). One theme per page — bands are tints within it, not a
   light/dark flip mid-scroll.
@@ -153,8 +159,12 @@ nav into a rounded capsule.
 
 ## 3. In-app vs marketing
 
-- **Marketing (`app/page.tsx`)**: full expression — pastel bands, `font-pixel`
-  display, scroll choreography, big imagery.
+- **Marketing sub-pages (`app/(marketing)/`)**: blacked out (2026-08-19) —
+  near-black scroll bands, `#111` cards with white/10 hairlines and the 0.06
+  inset highlight, accents unchanged. `font-pixel` display + scroll
+  choreography stay. The landing (`app/page.tsx`) is the one surface still on
+  the original light/pastel look — SiteHeader/MarketingFooter take a `dark`
+  prop to serve both.
 - **Authenticated app (`(app)/`)**: same *principles* (cards, squircle,
   brand-tinted elevation, restrained motion, one accent per surface) but through
   the theme tokens (`card`/`muted`/`border`) so light+dark both hold. Model new

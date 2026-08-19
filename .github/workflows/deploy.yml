@@ -54,6 +54,30 @@ jobs:
           node scripts/guards/check-file-sizes.mjs
           node scripts/guards/check-text-scale.mjs
           node scripts/guards/check-hover-lighter.mjs
+          node scripts/guards/check-dialog-surface.mjs
+
+      # The one gate that can see PRODUCTION's schema.
+      #
+      # Schema ships as hand-applied SQL under db/, so code and schema deploy
+      # independently: a committed-but-unapplied migration is indistinguishable
+      # from an applied one to every other check here. On 2026-08-19 a deploy
+      # shipped code selecting `user.server_tag_id` while the column existed
+      # only locally — tsc, the tests and all five guards passed, and drizzle
+      # would have failed EVERY post query the moment the worker went live.
+      #
+      # Read-only: it selects from information_schema and nothing else. An
+      # unreachable database WARNS and passes; only real drift fails, so this
+      # cannot turn a Supabase blip into a deploy freeze.
+      - name: Restore .env
+        run: |
+          printf '%s\n' "$DOTENV_PRODUCTION" > .env
+          if [ -n "$DOTENV_OVERRIDES" ]; then printf '%s\n' "$DOTENV_OVERRIDES" >> .env; fi
+        env:
+          DOTENV_PRODUCTION: ${{ secrets.DOTENV_PRODUCTION }}
+          DOTENV_OVERRIDES: ${{ secrets.DOTENV_OVERRIDES }}
+
+      - name: Schema drift (production)
+        run: bun scripts/db/check-drift.ts prod
 
   deploy:
     needs: [test]

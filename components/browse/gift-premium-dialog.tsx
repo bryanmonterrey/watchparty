@@ -79,7 +79,7 @@ export function GiftPremiumDialog({ recipientId, recipientName, open, onOpenChan
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="w-full max-w-sm border-none ring-1 ring-white/10">
+            <DialogContent className="w-full max-w-sm">
                 <DialogHeader className="items-center text-center">
                     <Squircle asChild radius={16}>
                         <div className="grid size-14 place-items-center bg-white/10">

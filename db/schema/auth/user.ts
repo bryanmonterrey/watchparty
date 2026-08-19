@@ -1,4 +1,4 @@
-import { boolean, index, integer, jsonb, pgEnum, pgPolicy, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, index, integer, jsonb, pgEnum, pgPolicy, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import type { SocialLinks } from "@/lib/profile/socials";
 
@@ -23,6 +23,14 @@ export const user = pgTable("user", {
   chatColor: text("chatColor"),                            // live-chat name colour picked in Identity (null = deterministic default, lib/chat/chat-name-color.ts)
   role: text("role").default("user").notNull(),
   verifiedTier: verifiedTierEnum("verified_tier"),
+  // The community server this user REPRESENTS on their posts — one of the
+  // servers they belong to, chosen in Edit profile. Nullable and unset by
+  // default: representing a server is opt-in, and most users never will.
+  // No FK is declared here because community_servers lives in another schema
+  // file and drizzle would need the import; the constraint is in
+  // db/server-tag-column.sql with ON DELETE SET NULL, so deleting a server
+  // clears the badge rather than orphaning it.
+  serverTagId: uuid("server_tag_id"),
   affiliateUsername: text("affiliate_username"),       // org this user is affiliated to (links + drives badge)
   affiliateIconUrl: text("affiliate_icon_url"),         // org logo shown in the affiliate badge square
   gender: boolean("gender").notNull(),

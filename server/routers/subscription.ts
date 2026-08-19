@@ -19,6 +19,7 @@ import { getBoostTreasuryOwner } from "@/lib/premium/boosts";
 import { verifyUsdcPaymentToTreasury, getTreasuryUsdcAta } from "@/lib/chains/solana/verify-usdc-payment";
 import { verifySolPayment } from "@/lib/chains/solana/verify-sol-payment";
 import { createNotification } from "@/server/lib/notify";
+import { payoutDestinationFor } from "@/server/lib/user-wallet";
 
 const LAMPORTS_PER_SOL = 1_000_000_000;
 const PLATFORM_FEE_BPS = 500; // 5% platform fee, taken at claim time
@@ -684,14 +685,14 @@ export const subscriptionRouter = router({
         const gross = rows.reduce((s, r) => s + Number(r.amountUsdc ?? 0), 0);
         if (gross <= 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Nothing to claim" });
 
-        const [u] = await db.select({ wallet: user.wallet_address }).from(user).where(eq(user.id, ctx.user.id)).limit(1);
-        if (!u?.wallet) throw new TRPCError({ code: "BAD_REQUEST", message: "No wallet on file to receive USDC" });
+        const destination = await payoutDestinationFor(ctx.user.id, ctx.user.wallet_address);
+        if (!destination) throw new TRPCError({ code: "BAD_REQUEST", message: "No wallet on file to receive USDC" });
 
         const fee = Math.floor((gross * PLATFORM_FEE_BPS) / 10000);
         const net = gross - fee;
 
         const { transferUsdcFromTreasury } = await import("@/lib/chains/solana/subscriptions/collector");
-        const sig = await transferUsdcFromTreasury(u.wallet, BigInt(net));
+        const sig = await transferUsdcFromTreasury(destination, BigInt(net));
 
         const payoutId = nanoid();
         await db.insert(payouts).values({
@@ -700,7 +701,7 @@ export const subscriptionRouter = router({
             amountLamports: 0,
             amountUsdc: net,
             feeUsdc: fee,
-            recipientWallet: u.wallet,
+            recipientWallet: destination,
             status: "completed",
             txSignature: sig,
             note: "Creator subscription earnings claim",

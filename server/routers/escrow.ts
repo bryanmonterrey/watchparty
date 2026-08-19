@@ -6,6 +6,7 @@ import { user } from "@/db/schema/auth";
 import { eq, and } from "drizzle-orm";
 import bs58 from "bs58";
 import { nanoid } from "nanoid";
+import { payoutDestinationFor } from "@/server/lib/user-wallet";
 
 // web3.js + the Meteora fee-sharing SDK (anchor-based, heavy) load lazily —
 // eager imports here ride into every tRPC isolate via the appRouter graph.
@@ -46,8 +47,16 @@ export const escrowRouter = router({
                     where: eq(user.username, cleanedUsername)
                 });
 
-                if (userRecord && userRecord.wallet_address) {
-                    return { ...split, resolvedAddress: userRecord.wallet_address, isEscrow: false };
+                // Resolve through the shared payout rule rather than the
+                // primary mirror: a recipient whose primary is an external EVM
+                // wallet has a NULL mirror and would silently fall through to
+                // the proxy-escrow path below, which is a materially different
+                // outcome (their money waits to be claimed instead of landing).
+                const recipientWallet = userRecord
+                    ? await payoutDestinationFor(userRecord.id, userRecord.wallet_address)
+                    : null;
+                if (recipientWallet) {
+                    return { ...split, resolvedAddress: recipientWallet, isEscrow: false };
                 }
 
                 // If not found or user has no wallet, generate a unique Proxy Keypair for this escrow claim
@@ -81,7 +90,10 @@ export const escrowRouter = router({
             const currentUser = await db.query.user.findFirst({
                 where: eq(user.id, ctx.session.user.id)
             });
-            if (!currentUser || !currentUser.username || !currentUser.wallet_address) {
+            const receiverWallet = currentUser
+                ? await payoutDestinationFor(currentUser.id, currentUser.wallet_address)
+                : null;
+            if (!currentUser || !currentUser.username || !receiverWallet) {
                 throw new Error("Profile incomplete. Must set username and link wallet.");
             }
 
@@ -124,7 +136,7 @@ export const escrowRouter = router({
                 feeVault: feeVaultPda,
                 user: proxyKeypair.publicKey,
                 payer: treasuryKeypair.publicKey,
-                receiver: new PublicKey(currentUser.wallet_address)
+                receiver: new PublicKey(receiverWallet)
             });
 
             claimTx.feePayer = treasuryKeypair.publicKey;

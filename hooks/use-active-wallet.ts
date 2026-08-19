@@ -22,6 +22,25 @@ export type LinkedWallet = {
     id: string;
     address: string;
     source: "swig" | "extension";
+    /**
+     * Which chain this wallet is ON. null = the multichain generated wallet,
+     * which holds an address on every chain kind. An external wallet is one
+     * chain, and for an EVM one that is what stops the Solana adapter from
+     * being asked whether it is "in use".
+     */
+    chainKind: "solana" | "evm" | "bitcoin" | "sui" | null;
+    /**
+     * The chain this wallet signed in on — 8453 Base, 1 Ethereum. Null when it
+     * predates the column or has no single chain (Solana, and the multichain
+     * generated wallet). The picker needs it because chainKind "evm" cannot
+     * choose between the Base and Ethereum marks.
+     *
+     * OPTIONAL, not merely nullable: the field is being added to the procedure
+     * in a different session's uncommitted work, so this type must tolerate a
+     * payload that does not carry it yet. The row falls back to the kind's
+     * generic mark in that window, which is what a NULL does anyway.
+     */
+    chainId?: number | null;
     label: string | null;
     isPrimary: boolean;
 };

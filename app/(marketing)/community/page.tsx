@@ -17,7 +17,7 @@ export const metadata: Metadata = { title: "communities" };
 const FEATURES: Feature[] = [
     { icon: UserGroupIcon, title: "Servers", body: "Channels for everything your community is into.", accent: "text-twitter" },
     { icon: Mic01Icon, title: "Live spaces", body: "Drop into live audio rooms with your people.", accent: "text-pastelred" },
-    { icon: Chatting01Icon, title: "Group chats", body: "Direct, encrypted conversations with the crew.", accent: "text-jewel" },
+    { icon: Chatting01Icon, title: "Group chats", body: "Direct, encrypted conversations with the crew.", accent: "text-lantern" },
     { icon: AiMagicIcon, title: "Bots", body: "Discord-style automation and integrations.", accent: "text-sunset" },
     { icon: SecurityCheckIcon, title: "Moderation", body: "Roles, mods, and tools to keep it healthy.", accent: "text-twitter" },
     { icon: Compass01Icon, title: "Discover", body: "Find communities built around what you love.", accent: "text-pastelred" },
@@ -25,12 +25,12 @@ const FEATURES: Feature[] = [
 
 // Varied fills so the grid reads as color-as-identity, not white-on-white tiles.
 const BENTO_STYLE = [
-    { bg: "bg-soft-blue", accent: "text-twitter", span: "big" },
-    { bg: "bg-white", accent: "text-pastelred" },
-    { bg: "bg-soft-pink", accent: "text-jewel" },
-    { bg: "bg-white", accent: "text-sunset", span: "wide" },
-    { bg: "bg-pastel-yellow", accent: "text-twitter", span: "wide" },
-    { bg: "bg-white", accent: "text-pastelred", span: "wide" },
+    { bg: "bg-twitter/10", accent: "text-twitter", span: "big" },
+    { bg: "bg-[#111]", accent: "text-pastelred" },
+    { bg: "bg-pastelred/10", accent: "text-lantern" },
+    { bg: "bg-[#111]", accent: "text-sunset", span: "wide" },
+    { bg: "bg-sunset/10", accent: "text-twitter", span: "wide" },
+    { bg: "bg-[#111]", accent: "text-pastelred", span: "wide" },
 ] as const;
 
 const BOTS = [
@@ -47,8 +47,8 @@ const FAQ = [
 
 export default function CommunityPage() {
     return (
-        <ColorScrollPage className="pt-28 sm:pt-32" initial="var(--color-soft-blue)">
-            <BgZone bg="var(--color-soft-blue)">
+        <ColorScrollPage className="pt-28 sm:pt-32" initial="#0e0f13">
+            <BgZone bg="#0e0f13">
                 <MarketingHero
                     eyebrow="Communities"
                     title={<>Find your people</>}
@@ -57,7 +57,7 @@ export default function CommunityPage() {
                     secondaryLabel="Explore"
                     secondaryHref="/explore"
                     visual={
-                        <div className="relative grid place-items-center overflow-hidden rounded-[36px] bg-white/50 px-6 pt-12 ring-1 ring-black/[0.04]">
+                        <div className="relative grid place-items-center overflow-hidden rounded-[36px] bg-white/[0.04] px-6 pt-12 ring-1 ring-white/[0.08]">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                                 src="/communitydesign.png"
@@ -75,14 +75,14 @@ export default function CommunityPage() {
                     title="Servers, spaces, and chats"
                     sub="Everything Discord does, plus live audio and encrypted DMs, right where your audience already is."
                     cards={[
-                        { tone: "bg-soft-blue", node: (<><p className="text-lg font-extrabold tracking-tight text-black">Servers</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniServer /></div></>) },
-                        { tone: "bg-white", node: (<><p className="text-lg font-extrabold tracking-tight text-black">Live spaces</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniSpace /></div></>) },
-                        { tone: "bg-soft-pink", node: (<><p className="text-lg font-extrabold tracking-tight text-black">Group chats</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniChat /></div></>) },
+                        { tone: "bg-twitter/10", node: (<><p className="text-lg font-extrabold tracking-tight text-white">Servers</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniServer /></div></>) },
+                        { tone: "bg-[#111]", node: (<><p className="text-lg font-extrabold tracking-tight text-white">Live spaces</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniSpace /></div></>) },
+                        { tone: "bg-pastelred/10", node: (<><p className="text-lg font-extrabold tracking-tight text-white">Group chats</p><div className="mt-4 flex flex-1 items-center justify-center"><MiniChat /></div></>) },
                     ]}
                 />
             </BgZone>
 
-            <BgZone bg="var(--color-soft-pink)">
+            <BgZone bg="#0d0b12">
                 <BentoGrid
                     title="Built for belonging"
                     items={FEATURES.map((f, i) => ({ icon: f.icon, title: f.title, body: f.body, ...BENTO_STYLE[i] }))}
@@ -94,13 +94,12 @@ export default function CommunityPage() {
                     body="Add Discord-style bots for welcomes, moderation, and token-gated perks, so you can focus on the people, not the busywork."
                     ctaLabel="Build your server"
                     ctaHref="/login"
-                    tone="bg-white"
                     visual={
                         <div className="w-full max-w-sm space-y-3">
                             {BOTS.map(([t, b]) => (
-                                <div key={t} className="rounded-2xl bg-soft-gray p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
-                                    <p className="text-sm font-extrabold tracking-tight text-black">{t}</p>
-                                    <p className="mt-0.5 text-xs font-semibold text-black/55">{b}</p>
+                                <div key={t} className="rounded-2xl bg-white/[0.06] p-4 ring-1 ring-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                                    <p className="text-sm font-extrabold tracking-tight text-white">{t}</p>
+                                    <p className="mt-0.5 text-xs font-semibold text-white/55">{b}</p>
                                 </div>
                             ))}
                         </div>
@@ -108,7 +107,7 @@ export default function CommunityPage() {
                 />
             </BgZone>
 
-            <BgZone bg="#ffffff">
+            <BgZone bg="#050505">
                 <ExploreMore currentHref="/community" />
                 <Faq items={FAQ} />
             </BgZone>

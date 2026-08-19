@@ -75,7 +75,7 @@ export function BadgeStrip({ badges, size = "md", className }: {
             </div>
 
             <Dialog open={showAll} onOpenChange={setShowAll}>
-                <DialogContent className="max-w-sm rounded-[20px] border-none bg-[#101011] p-5 ring-1 ring-white/10">
+                <DialogContent className="max-w-sm rounded-[20px] p-5">
                     <DialogTitle className="font-pixel text-lg text-white">Badges</DialogTitle>
                     <div className="mt-1 flex flex-col gap-1">
                         {badges.map((b) => {

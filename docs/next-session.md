@@ -113,6 +113,38 @@ account, ask: does matching the primary need to be NECESSARY here, or only
 SUFFICIENT? It is almost always only sufficient. Concentrated in
 `server/routers` (42 refs), `components/wallet` (38), `lib/auth` (10).
 
+**Audited 2026-08-19 (`3994ba37`).** Three more found and fixed, all in the
+Helius webhooks: trade-sharing registration, trade attribution, and the assets
+webhook each watched or matched ONLY the primary. Their common signature is
+worth knowing — an unwatched address produces no deliveries, so there is no
+error and no dropped-event log, only data that quietly is not there. The two
+trade halves shared the bug and therefore AGREED with each other, which is what
+hid it; they had to be fixed together.
+
+Cleared in the same pass: the sign-in lookup (`lib/auth/server.ts:535`) already
+checks `linked_wallets` first. NOT bugs but future work: the two payout call
+sites, which belong to §7.
+
+**Server side is DONE as of 2026-08-19.** `server/routers/wallet.ts` went from
+24 mirror reads to zero; every one resolves through `server/lib/user-wallet.ts`.
+Also fixed: perps `reportFill` rejected fills signed by any non-primary wallet
+(losing XP + quest credit for a real trade), and `account.ts` undercounted
+sign-in methods so it refused unlinks that were safe.
+
+Four redundant gates were DELETED rather than rewritten — `exportPrivateKey`,
+the d2 store, `getEncryptedShare` and `signTransaction` each gated on the mirror
+and then did a `user_id`-scoped `encrypted_wallets` lookup that already returns
+the right error. The gate was redundant AND wrong.
+
+⚠️ **NOT audited: `components/` (71 refs), `lib/` (36), `app/` (11),
+`hooks/` (3).** The server is the half that can reject a request or send money
+to the wrong place; the client half mostly DISPLAYS the primary, which is wrong
+more quietly. Someone should still sweep it.
+
+Measured on prod: 22 linked wallets across 20 accounts. Multi-wallet is barely
+exercised — these are unexercised paths rather than rare ones, and ~160 further
+reads of the mirror remain.
+
 ---
 
 ## 4. Environment traps that cost real time this session
@@ -158,33 +190,84 @@ the swap card gained the dialog's protections.
 
 ---
 
+## 7. Private receives + receiving wallet (NEXT CHAT — scoped by the owner, not built)
+
+Raised 2026-08-19 and deliberately deferred: it is a feature conversation, not
+an increment. The owner's framing, kept as given:
+
+> a user has an account with linked wallets, only 1 wallet gets picked as main
+> wallet. in settings later users can choose their **receiving wallet** and
+> whether they want to **receive funds privately** or not. **evm private sends
+> and svm** needs to be implemented. privacy is chosen **at user level** when
+> they choose to receive funds privately. private funds needs to be **claimed
+> in ui (unshielded in private balance)**.
+
+Four distinct pieces, in dependency order:
+
+1. **Receiving wallet** — a per-user choice of WHICH linked wallet receives
+   money, independent of the primary/main wallet. Today there is no such
+   concept: everything pays `user.wallet_address`, the primary mirror.
+2. **User-level privacy flag** — "receive funds privately", set once on the
+   account rather than per payment.
+3. **Private sends on BOTH chains** — EVM and SVM. Neither exists.
+4. **Claim/unshield UI** — private funds land in a shielded balance and are
+   claimed explicitly; the balance and the claim action both need surfaces.
+
+**Where it plugs in — ALREADY BUILT (`server/lib/user-wallet.ts`).**
+
+It is FIVE places that pay a user, not two (an earlier note in this file said
+two; that was wrong and cost nothing only because it was corrected before the
+work was scoped):
+
+    content.ts       paywall unlock   -> the AUTHOR's wallet
+    subscription.ts  creator claim
+    referral.ts      referral earnings
+    predictions.ts   prediction winnings
+    escrow.ts        escrow release (x3 reads)
+
+All five now call `payoutDestinationFor(userId, knownMirror?)`. The module
+deliberately exports TWO names over one rule:
+
+- `solanaAddressFor()` — "which wallet am I": cache invalidation, NFT reads,
+  transaction history, signature checks.
+- `payoutDestinationFor()` — "where do I get paid".
+
+Identical today. **When the receiving-wallet setting lands, only the second
+one changes** — a one-file edit rather than a five-file hunt. The privacy flag
+belongs there too: "which wallet, and shielded or not" is one question answered
+in one place.
+
+`knownMirror` is a performance argument, not a correctness one: callers inside a
+request already hold `user.wallet_address` on the session, and passing it makes
+the common case cost ZERO queries. Without it, fixing a bug that today affects
+nobody would have added a round trip to hot paths (asset invalidation on every
+signing op, getNfts, getTransactions).
+
+⚠️ Both call sites already carry a LATENT failure that this work should fix
+rather than inherit: `user.wallet_address` is NULL when an account's only
+wallet is external EVM, and both paths then hard-fail with "no wallet on file".
+Zero EVM linked wallets exist today (measured: 22 linked wallets, 20 accounts,
+0 EVM), so nobody has hit it — but the login screen now leads with Sign in with
+Base, so the first Base-only creator who earns anything will.
+
 ## 6. Genuinely open
 
 - The funded test above. Everything else is downstream of it.
-- **LI.FI integrator registration — the largest uncollected line, and only the
-  owner can do it.** Every EVM and cross-chain swap earns $0: LI.FI is called
-  with no `integrator` and no `fee`, and refuses both until registration.
-  Confirmed against the live API 2026-08-19:
+- **LI.FI: DONE 2026-08-19.** The integrator is registered and the 1% is
+  collected on every EVM and cross-chain swap (`1896da33`). Proven by scaling
+  rather than by the number merely changing — on a Base ETH->USDC quote,
+  `fee=0.01` adds $0.0191 and `fee=0.02` adds $0.0383, exactly 2x, so the delta
+  is ours and not LI.FI's own 0.25% moving.
 
-  ```
-  no integrator (today)              -> 200  quote OK      (earns $0)
-  integrator=watchparty + fee=0.01   -> 400  "Integrator \"watchparty\" is not
-                                             configured for collecting fees"
-  ```
+  Two things that will otherwise be misread:
+  - `integrator` must stay exactly **`watchparty`** — it is the key the portal
+    registration is filed under, and a typo reverts to charging nothing rather
+    than erroring.
+  - **`LIFI_API_KEY` is NOT what enables the fee.** Measured with and without:
+    the 1% is identical. It only raises rate limits, so an unset key costs
+    throughput and no revenue. It lives in `.env`/`.env.production` and is
+    deliberately NOT in `DOTENV_PRODUCTION` (see below).
 
-  Steps, in order:
-  1. Sign up at https://portal.li.fi/.
-  2. Create the integrator keyed **exactly** `watchparty` — that string is what
-     `lib/chains/swap/lifi.ts` sends; any other spelling needs a code change.
-  3. Configure TWO fee wallets, because one integrator covers both ecosystems:
-     EVM `0x93496D3B5b9bd4E0355Db047c9FA7df05C97c972` (payingheavy.eth) and
-     Solana `NEXT_PUBLIC_TREASURY_PUBKEY` (`C9kxy…`), since `solana-lifi.ts`
-     routes Solana through LI.FI too.
-  4. Set the fee to `0.01` (1%), matching every other chain.
-  5. Take an API key if offered — `li.quest` is called unauthenticated today.
-
-  Then the wiring is small: add `integrator` and `fee` to the quote params in
-  `lib/chains/swap/lifi.ts`. The 400 above turning into a 200 is the proof.
 - **Rates are 1% on every chain** (`lib/chains/fee-bps.ts`, dependency-free so
   client and server share it). Sends were 0.5% until 2026-08-19. The 5% in
   `subscription.ts` is deliberately untouched — that is the platform's cut of
@@ -196,6 +279,15 @@ the swap card gained the dialog's protections.
   ⚠️ The EVM one is payingheavy.eth, which is a LINKED USER WALLET rather than a
   treasury. Harmless while volume is zero; wants a dedicated wallet before it
   is not.
+- **Do not rewrite `DOTENV_OVERRIDES`** — it holds 7 keys that exist nowhere
+  else (MoonPay x2, the three `NEXT_PUBLIC_HELIUS_*` RPC URLs,
+  `COPY_EXECUTOR_SECRET`, `HELIUS_TRADES_BUDGET_PER_MIN`) and secrets cannot be
+  read back. Verified 2026-08-19 against the live workers: 95 secrets = 88
+  shared with local `.env.production` + 7 overrides-only.
+  `DOTENV_PRODUCTION` IS structurally safe to rewrite from the local file, but
+  it was still not done for `LIFI_API_KEY` — names reconcile, values cannot be
+  compared, and a peer who rotated a value without updating the file would be
+  silently reverted. Push it only when something actually needs it.
 - **Env now reaches every deploy path.** All six `Restore .env` steps across
   deploy.yml (4), deploy-container.yml and preview.yml apply
   `DOTENV_PRODUCTION` + `DOTENV_OVERRIDES` identically. Before 2026-08-19 only
