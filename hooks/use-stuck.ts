@@ -10,6 +10,16 @@ import { useEffect, useRef, useState } from "react";
  * the sticky element's own `top` line the element has stuck — which is exactly
  * the moment content starts moving behind it.
  *
+ * `stickySelector` — pass it when the element after the sentinel merely
+ * CONTAINS the sticky one. The trending board is the case that made this
+ * necessary: its sentinel sits before the whole <DataTable>, whose computed
+ * `top` is `auto`, so the offset read as 0 and the observer only fired once
+ * the sentinel reached the very top of the scroller — ~112px of scrolling
+ * AFTER the header cells (sticky at var(--board-stick)) had already stuck.
+ * That gap was a full second of rows sliding visibly under transparent
+ * labels. With the selector the hook measures the real sticky element (the
+ * first matching descendant), so the flip lands at the true stick line.
+ *
  * That's what this is for: a sticky bar only needs an opaque fill while it's
  * stuck. Unstuck it can be transparent, and on home that lets the hero's
  * ambient glow paint through the category tabs and the board's column labels
@@ -20,13 +30,14 @@ import { useEffect, useRef, useState } from "react";
  * breakpoint — resolves to real pixels here instead of being duplicated as a
  * magic number at every call site.
  */
-export function useStuck<T extends HTMLElement = HTMLDivElement>() {
+export function useStuck<T extends HTMLElement = HTMLDivElement>(stickySelector?: string) {
     const sentinelRef = useRef<T>(null);
     const [stuck, setStuck] = useState(false);
 
     useEffect(() => {
         const sentinel = sentinelRef.current;
-        const sticky = sentinel?.nextElementSibling;
+        const sibling = sentinel?.nextElementSibling;
+        const sticky = (stickySelector ? sibling?.querySelector(stickySelector) : null) ?? sibling;
         if (!sentinel || !sticky) return;
 
         // The page scrolls inside the app container, not the window, so a
@@ -53,7 +64,7 @@ export function useStuck<T extends HTMLElement = HTMLDivElement>() {
             observer?.disconnect();
             window.removeEventListener("resize", attach);
         };
-    }, []);
+    }, [stickySelector]);
 
     return { sentinelRef, stuck };
 }

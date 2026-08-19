@@ -57,8 +57,12 @@ export function HomeCategoryPanel() {
             <div ref={tabsSentinel} aria-hidden className="h-px -mb-px" />
             <div
                 className={cn(
-                    "sticky top-0 z-15 h-12 pb-2 transition-colors duration-200 md:top-[var(--header-height)]",
-                    tabsStuck && "bg-canvas",
+                    // duration-0 while stuck = the fill lands the same frame
+                    // the bar sticks; the 300ms only plays on the way BACK to
+                    // transparent, where it melts into the hero glow instead
+                    // of popping off. Same asymmetry as the board's labels.
+                    "sticky top-0 z-15 h-12 pb-2 transition-colors duration-300 md:top-[var(--header-height)]",
+                    tabsStuck && "bg-canvas duration-0",
                 )}
             >
                 <HomeCategoryTabs active={active} onChange={selectTab} />
