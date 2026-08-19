@@ -35,6 +35,9 @@ export function EditProfileDialog({ user, open, onOpenChange }: EditProfileDialo
     const [website, setWebsite] = React.useState(user.website || "");
     const [socials, setSocials] = React.useState<SocialLinks>(user.socials ?? {});
     const [accentColor, setAccentColor] = React.useState<string | null>(user.accentColor ?? null);
+    // The community shown beside this user's name on their posts. Opt-in, and
+    // only ever one — a badge that listed several would stop being a badge.
+    const [serverTagId, setServerTagId] = React.useState<string | null>(user.serverTagId ?? null);
 
     // Image states
     const [avatarFile, setAvatarFile] = React.useState<File | null>(null);
@@ -47,6 +50,12 @@ export function EditProfileDialog({ user, open, onOpenChange }: EditProfileDialo
     const router = useRouter();
     const getPresignedUrl = trpc.upload.getPresignedUrl.useMutation();
     const updateProfile = trpc.user.updateProfile.useMutation();
+    // Fetched only while the dialog is open — nobody needs their community list
+    // loaded on every profile view.
+    const { data: representableServers } = trpc.user.representableServers.useQuery(undefined, {
+        enabled: open,
+        staleTime: 60_000,
+    });
     const utils = trpc.useUtils();
 
     // Sync state with user prop when dialog opens
@@ -156,6 +165,7 @@ export function EditProfileDialog({ user, open, onOpenChange }: EditProfileDialo
                 banner_url: finalBannerUrl,
                 socials: cleanedSocials,
                 accentColor,
+                serverTagId,
             });
 
             appToast.success("Profile updated!");
@@ -379,6 +389,56 @@ export function EditProfileDialog({ user, open, onOpenChange }: EditProfileDialo
                                 </label>
                             </div>
                         </div>
+
+                        {representableServers && representableServers.length > 0 && (
+                            <div className="space-y-3">
+                                <Label className="text-xs uppercase tracking-[0.2em] text-zinc-500 font-black ml-1">
+                                    Community tag
+                                </Label>
+                                <p className="ml-1 text-xs text-zinc-600">
+                                    Shown next to your name on your posts. Only communities you
+                                    belong to that have a tag set can be picked.
+                                </p>
+                                <div className="flex flex-wrap items-center gap-2.5 ml-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => setServerTagId(null)}
+                                        className={cn(
+                                            "h-9 cursor-pointer rounded-full px-3.5 text-xs font-bold transition-all",
+                                            serverTagId === null
+                                                ? "bg-white text-black"
+                                                : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white",
+                                        )}
+                                    >
+                                        None
+                                    </button>
+                                    {representableServers.map((server) => (
+                                        <button
+                                            key={server.id}
+                                            type="button"
+                                            title={server.name}
+                                            onClick={() => setServerTagId(server.id)}
+                                            className={cn(
+                                                "flex h-9 cursor-pointer items-center gap-2 rounded-full px-3.5 text-xs font-bold transition-all",
+                                                serverTagId === server.id
+                                                    ? "bg-white text-black"
+                                                    : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white",
+                                            )}
+                                        >
+                                            {server.imageUrl && (
+                                                // eslint-disable-next-line @next/next/no-img-element
+                                                <img
+                                                    src={server.imageUrl}
+                                                    alt=""
+                                                    className="size-5 shrink-0 rounded-full object-cover"
+                                                />
+                                            )}
+                                            {server.tag}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         <div className="space-y-3">
                             <Label className="text-xs uppercase tracking-[0.2em] text-zinc-500 font-black ml-1">
