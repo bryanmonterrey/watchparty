@@ -1,6 +1,7 @@
 import { db } from "@/db";
 import { user } from "@/db/schema/auth/user";
-import { isNotNull } from "drizzle-orm";
+import { linkedWallets } from "@/db/schema/auth/linked-wallets";
+import { and, eq, isNotNull, isNull, or } from "drizzle-orm";
 import { webhookIsCurrent } from "@/lib/helius/webhook-edit";
 import { isAddressFormat } from "@/lib/chains/address";
 
@@ -35,10 +36,25 @@ export async function syncAssetsWebhook(): Promise<{ webhookID: string; watching
     if (!base) throw new Error("Set NEXT_PUBLIC_BASE_URL to the prod domain.");
     const webhookURL = `${base.replace(/\/$/, "")}/api/webhooks/helius-assets`;
 
-    const rows = await db
-        .select({ address: user.wallet_address })
-        .from(user)
-        .where(isNotNull(user.wallet_address));
+    // EVERY wallet on every account, not just each account's primary.
+    //
+    // This read `user.wallet_address` alone, which mirrors ONE of up to 15
+    // linked wallets — so a user's second wallet was never watched and its
+    // balance never refreshed from a webhook. Same class of miss as the
+    // trade-sharing webhook, and equally quiet: an unwatched address produces
+    // no deliveries and therefore no errors.
+    const [linkedRows, legacyRows] = await Promise.all([
+        db
+            .select({ address: linkedWallets.address })
+            .from(linkedWallets)
+            .where(or(isNull(linkedWallets.chain_kind), eq(linkedWallets.chain_kind, "solana"))),
+        // Accounts that predate linked_wallets still have only the mirror.
+        db
+            .select({ address: user.wallet_address })
+            .from(user)
+            .where(isNotNull(user.wallet_address)),
+    ]);
+    const rows = [...linkedRows, ...legacyRows];
 
     // SOLANA ADDRESSES ONLY. `user.wallet_address` is chain-agnostic since
     // multichain accounts landed, so EVM addresses end up in this list — 2 of
