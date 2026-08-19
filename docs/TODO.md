@@ -160,6 +160,19 @@ Follow-ups (small, whenever):
   `rm -rf .next/dev` regenerates; filter with `grep -v '^\.next/'` meanwhile.
 
 ## 🔜 Loose ends (small)
+- **Rail footer "More" destinations — two placeholders to graduate** (2026-08-19).
+  The /home rail footer's More menu is About / Get app / Developers
+  (`components/rails/rail-footer.tsx`). Both non-Developers links work today but
+  carry a deferred step each:
+  - **Get app → `/download`** shows "Coming soon to the App Store" because the iOS
+    app is unshipped. When it ships, set `APP_STORE_URL` at the top of
+    `app/(legal)/download/page.tsx` — the CTA flips to the real store link by
+    itself, no other change.
+  - **About → `/about`** works signed-in only because `(marketing)/layout.tsx`
+    exempts exactly that pathname from its signed-in→/home redirect (read from the
+    `x-pathname` header). If more marketing pages ever need to be reachable from
+    inside the app, generalize that exemption into a list instead of chaining
+    `!==` checks.
 - **Sniper icon = `Target02Icon`** (2026-08-14). Whenever a surface needs to signify
   *snipers* (early/bot buyers), the mark is HugeIcons `Target02Icon`
   (`import { Target02Icon } from "@hugeicons/core-free-icons"`, rendered through
