@@ -14,6 +14,26 @@ import { siwsClientPlugin } from "better-auth-siws/client";
 import { clearAllSnapshots } from "@/lib/snapshot/store";
 import type { auth } from "./server";
 
+// In-flight dedupe for GET /get-session, and ONLY that. authClient.getSession()
+// makes a real HTTP request per call and a dozen call sites invoke it directly,
+// so concurrent callers (rows mounting, focus refetch + a click handler) used
+// to each pay a request — 2026-08-19 that stampede tripped better-auth's rate
+// limiter (100/60s) and 429'd legitimate session reads for minutes. Identical
+// concurrent GETs now share one response; nothing is cached across time, so
+// sign-in/out boundaries read exactly as fresh as before.
+const inflightGets = new Map<string, Promise<Response>>();
+const dedupedFetch = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+  const url =
+    typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+  const method = (init?.method ?? (input instanceof Request ? input.method : "GET")).toUpperCase();
+  if (method !== "GET" || !url.includes("/get-session")) return fetch(input, init);
+  const existing = inflightGets.get(url);
+  if (existing) return existing.then((r) => r.clone());
+  const pending = fetch(input, init).finally(() => inflightGets.delete(url));
+  inflightGets.set(url, pending);
+  return pending.then((r) => r.clone());
+};
+
 // EVM SIWE client (Base/Hyperliquid) joins next, alongside this Solana SIWS client.
 export const authClient = createAuthClient({
   baseURL:
@@ -21,6 +41,7 @@ export const authClient = createAuthClient({
     (typeof window !== "undefined"
       ? `${window.location.origin}/api/auth`
       : "http://localhost:3001/api/auth"),
+  fetchOptions: { customFetchImpl: dedupedFetch },
   plugins: [
     siwsClientPlugin(),
     passkeyClient(),

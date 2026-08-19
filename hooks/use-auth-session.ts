@@ -55,6 +55,14 @@ export function useAuthSession() {
         // many components mount.
         refetchOnMount: true,
         refetchOnWindowFocus: true, // Refetch when window regains focus (e.g. after passkey dialog)
+        // While the query is in ERROR state, every NEW mount of any of the 94
+        // subscribers restarts a fetch (react-query's retryOnMount default) —
+        // which is what turned one 429 into a minutes-long storm on 2026-08-19:
+        // error → scroll mounts rows → fetch → 429 → error → … The staleTime
+        // bound above only protects the success path. Recovery stays owned by
+        // refetchInterval below (15s, or 60s after a 4xx), which is the paced
+        // retry this hook was already designed around.
+        retryOnMount: false,
         // A dropped request shouldn't read as signed out — but a 4xx must NOT be
         // retried. The answer will not change, and retrying a 429 spends the
         // very budget that produced it: three requests per rejection, which is
