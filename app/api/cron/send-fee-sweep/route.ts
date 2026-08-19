@@ -1,4 +1,4 @@
-// Collect the 1% send fees accrued on EVM transfers.
+// Collect the platform send fees accrued on EVM transfers (rate: lib/chains/fee-bps.ts).
 //
 // EVM sends can't carry the fee in the user's own transaction (a transfer pays
 // exactly one address), so lib/chains/send/fees.ts records what's owed and this

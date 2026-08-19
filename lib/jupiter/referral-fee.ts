@@ -1,7 +1,7 @@
 /**
  * Jupiter platform-fee gating.
  *
- * Jupiter pays our 1% into a *referral ATA* that must already exist FOR THAT
+ * Jupiter pays our platform fee into a *referral ATA* that must already exist FOR THAT
  * OUTPUT MINT. Almost none of them do — only WSOL and USDC were ever set up.
  *
  * The trap is that nothing upstream notices. Quoting with `platformFeeBps`
@@ -21,12 +21,12 @@
  * fee-bearing quote and turn a working swap into a 400.
  *
  * Anything unexpected — no referral configured, an RPC blip — resolves to "no
- * fee". Losing 1% is always better than losing the trade.
+ * fee". Losing the fee is always better than losing the trade.
  *
  * ---
  *
  * The fee is billed to the INPUT mint's account when it can be, and that is
- * what makes the 1% collectable at all. Jupiter charges whichever side you
+ * what makes the fee collectable at all. Jupiter charges whichever side you
  * hand it an account for; measured 2026-08-19 buying BONK with 0.01 SOL and
  * passing the wSOL account, the fee account gained exactly 100,000 lamports —
  * 1% of the INPUT — even though the quote still denominates `platformFee` in

@@ -13,8 +13,8 @@
  * the send views cannot use it and the copies come back.
  */
 
-/** 1% — sends, swaps, every chain. */
-export const PLATFORM_FEE_BPS = 100;
+/** 0.85% — sends, swaps, every chain. (Matches Jupiter's own default.) */
+export const PLATFORM_FEE_BPS = 85;
 
 /** The same rate for callers working in base units. */
 export const PLATFORM_FEE_BPS_BIG = BigInt(PLATFORM_FEE_BPS);

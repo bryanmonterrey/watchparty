@@ -24,9 +24,9 @@ const FILES = [
 ];
 
 describe("platform fee rate", () => {
-    test("is 1% across every chain", () => {
-        expect(PLATFORM_FEE_BPS).toBe(100);
-        expect(PLATFORM_FEE_BPS_BIG).toBe(BigInt(100));
+    test("is 0.85% across every chain", () => {
+        expect(PLATFORM_FEE_BPS).toBe(85);
+        expect(PLATFORM_FEE_BPS_BIG).toBe(BigInt(85));
     });
 
     test("no send path redefines the rate with its own literal", () => {
