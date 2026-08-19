@@ -48,6 +48,7 @@ import { getChain, CHAINS, CHAIN_KINDS } from "@/lib/chains/registry";
 import { getAssetsForChain, hasAssetProvider, type ChainAsset } from "@/lib/chains/assets";
 import { getNativePrice, getTokenPrices } from "@/lib/chains/assets/prices";
 import { heliusQuotaOut, markHeliusQuotaOut } from "@/lib/helius/quota";
+import { resolveFeeAccount, deriveReferralAta } from "@/lib/jupiter/referral-fee";
 import { getEvmAssetsBatch } from "@/lib/chains/assets/evm";
 import {
     getActivityForChain,
@@ -1986,8 +1987,11 @@ export const walletRouter = router({
         }))
         .mutation(async ({ input }) => {
             const feeBps = process.env.JUPITER_PLATFORM_FEE_BPS ?? '50';
-            const hasReferral = !!process.env.JUPITER_REFERRAL_ACCOUNT;
-            const feeParam = hasReferral ? `&platformFeeBps=${feeBps}` : '';
+            // Only bill the platform fee when the referral ATA for this output
+            // mint actually exists — otherwise Jupiter builds a transaction
+            // that reverts on-chain (lib/jupiter/referral-fee.ts).
+            const feeAccount = await resolveFeeAccount(input.outputMint);
+            const feeParam = feeAccount ? `&platformFeeBps=${feeBps}` : '';
             const qs = `inputMint=${input.inputMint}&outputMint=${input.outputMint}&amount=${input.amount}&slippageBps=${input.slippageBps}${feeParam}`;
             // Try primary then lite fallback — both are official Jupiter endpoints
             const endpoints = [
@@ -2025,21 +2029,14 @@ export const walletRouter = router({
             wrapAndUnwrapSol: z.boolean().default(true)
         }))
         .mutation(async ({ ctx, input }) => {
+            // The QUOTE decides whether this swap carries a fee — Jupiter 400s on
+            // a mismatch in either direction, so derive from the quote and never
+            // re-check the ATA here (see lib/jupiter/referral-fee.ts).
             const referralAccount = process.env.JUPITER_REFERRAL_ACCOUNT;
             let feeAccount: string | undefined;
 
-            if (referralAccount && input.quoteResponse?.outputMint) {
-                const { PublicKey } = await import('@solana/web3.js');
-                const REFERRAL_PROGRAM = new PublicKey('REFER4ZgmyYx9c6He5XfaTMiGfdLwRnkV4RPp9t9iF3');
-                // Internal SOL mint → wSOL for fee account derivation
-                const outputMint = input.quoteResponse.outputMint === 'So11111111111111111111111111111111111111111'
-                    ? 'So11111111111111111111111111111111111111112'
-                    : input.quoteResponse.outputMint;
-                const [derived] = PublicKey.findProgramAddressSync(
-                    [Buffer.from('referral_ata'), new PublicKey(referralAccount).toBuffer(), new PublicKey(outputMint).toBuffer()],
-                    REFERRAL_PROGRAM,
-                );
-                feeAccount = derived.toBase58();
+            if (referralAccount && input.quoteResponse?.platformFee && input.quoteResponse?.outputMint) {
+                feeAccount = deriveReferralAta(referralAccount, input.quoteResponse.outputMint);
             }
 
             const body = JSON.stringify({
