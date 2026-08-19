@@ -280,7 +280,7 @@ export default function OnboardingDialog() {
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
             <DialogContent
-                className="overflow-hidden rounded-4xl border-none p-0 sm:max-w-[580px]"
+                className="overflow-hidden rounded-4xl p-0 sm:max-w-[580px]"
                 showCloseButton={false}
             >
                 {/* Fixed-size stage: steps swap inside, the dialog never resizes. */}

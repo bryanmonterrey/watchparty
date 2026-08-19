@@ -411,7 +411,7 @@ export function EditProfileDialog({ user, open, onOpenChange }: EditProfileDialo
             {/* Crop dialog (nested; dismissing = cancel) */}
             {cropTarget && (
                 <Dialog open onOpenChange={(o) => { if (!o) { setCropTarget(null); cropStateRef.current = null; } }}>
-                    <DialogContent className="rounded-4xl border-none p-6 sm:max-w-md" showCloseButton={false}>
+                    <DialogContent className="rounded-4xl p-6 sm:max-w-md" showCloseButton={false}>
                         <DialogTitle className="text-center text-[18px] font-bold tracking-tight text-white">
                             {cropTarget.type === "banner" ? "Adjust your banner" : "Adjust your photo"}
                         </DialogTitle>

@@ -98,7 +98,7 @@ export function EditServerModal() {
     return (
         <>
             <Dialog open={isModalOpen} onOpenChange={handleClose}>
-                <DialogContent className="gap-5 rounded-4xl border-none p-6 sm:max-w-[440px]" showCloseButton={false}>
+                <DialogContent className="gap-5 rounded-4xl p-6 sm:max-w-[440px]" showCloseButton={false}>
                     <DialogTitle className="text-center text-[18px] font-bold tracking-tight text-white">Server settings</DialogTitle>
 
                     <div className="flex flex-col items-center gap-3 py-2">
@@ -162,7 +162,7 @@ export function EditServerModal() {
 
             {cropFile && (
                 <Dialog open onOpenChange={(o) => { if (!o) { setCropFile(null); cropStateRef.current = null; } }}>
-                    <DialogContent className="rounded-4xl border-none p-6 sm:max-w-md" showCloseButton={false}>
+                    <DialogContent className="rounded-4xl p-6 sm:max-w-md" showCloseButton={false}>
                         <DialogTitle className="text-center text-[18px] font-bold tracking-tight text-white">Adjust your icon</DialogTitle>
                         <AvatarCropper
                             file={cropFile}

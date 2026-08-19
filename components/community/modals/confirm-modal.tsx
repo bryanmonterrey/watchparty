@@ -68,7 +68,7 @@ export function ConfirmModal() {
 
     return (
         <Dialog open={isModalOpen} onOpenChange={onClose}>
-            <DialogContent className="gap-4 rounded-4xl border-none p-6 sm:max-w-[400px]" showCloseButton={false}>
+            <DialogContent className="gap-4 rounded-4xl p-6 sm:max-w-[400px]" showCloseButton={false}>
                 <div className="space-y-1.5 text-center">
                     <DialogTitle className="text-[18px] font-bold tracking-tight text-white">{config.title}</DialogTitle>
                     <p className="text-[13px] font-medium leading-relaxed text-zinc-500">{config.body}</p>

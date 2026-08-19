@@ -121,7 +121,7 @@ export function CopyTradeDialog({ traderId, traderName, open, onOpenChange }: Co
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-md rounded-[25px] border-white/10 bg-[#101011]">
+            <DialogContent className="max-w-md rounded-[25px]">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2 text-white">
                         <CopyIcon className="size-4 text-lantern" /> Copy {traderName}

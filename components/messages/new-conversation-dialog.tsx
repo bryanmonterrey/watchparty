@@ -54,7 +54,7 @@ export function NewConversationDialog({
 
     return (
         <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) setSearchQuery(''); }}>
-            <DialogContent className="gap-4 rounded-4xl border-none p-6 sm:max-w-[440px]" showCloseButton={false}>
+            <DialogContent className="gap-4 rounded-4xl p-6 sm:max-w-[440px]" showCloseButton={false}>
                 <DialogTitle className="text-center text-[18px] font-bold tracking-tight text-white">New message</DialogTitle>
 
                 {/* Search */}

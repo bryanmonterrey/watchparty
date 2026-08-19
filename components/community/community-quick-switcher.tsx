@@ -43,7 +43,7 @@ export function CommunityQuickSwitcher({
         <Dialog open={open} onOpenChange={(o) => { if (!o) close(); else onOpenChange(o); }}>
             <DialogContent
                 showCloseButton={false}
-                className="gap-0 overflow-hidden rounded-4xl border-none p-0 sm:max-w-[560px]"
+                className="gap-0 overflow-hidden rounded-4xl p-0 sm:max-w-[560px]"
             >
                 <VisuallyHidden>
                     <DialogTitle>Search communities</DialogTitle>

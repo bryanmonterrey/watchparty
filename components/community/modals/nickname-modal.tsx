@@ -48,7 +48,7 @@ export function NicknameModal() {
 
     return (
         <Dialog open={isModalOpen} onOpenChange={onClose}>
-            <DialogContent className="gap-5 rounded-4xl border-none p-6 sm:max-w-[420px]" showCloseButton={false}>
+            <DialogContent className="gap-5 rounded-4xl p-6 sm:max-w-[420px]" showCloseButton={false}>
                 <div className="text-center">
                     <DialogTitle className="text-[18px] font-bold tracking-tight text-white">Server profile</DialogTitle>
                     <p className="mt-1 text-[13px] font-medium text-zinc-500">

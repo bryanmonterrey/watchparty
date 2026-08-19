@@ -41,7 +41,7 @@ export function MembersModal() {
 
     return (
         <Dialog open={isModalOpen} onOpenChange={onClose}>
-            <DialogContent className="gap-4 rounded-4xl border-none p-6 sm:max-w-[440px]" showCloseButton={false}>
+            <DialogContent className="gap-4 rounded-4xl p-6 sm:max-w-[440px]" showCloseButton={false}>
                 <div className="text-center">
                     <DialogTitle className="text-[18px] font-bold tracking-tight text-white">Members</DialogTitle>
                     <p className="mt-1 text-[13px] font-medium text-zinc-500">

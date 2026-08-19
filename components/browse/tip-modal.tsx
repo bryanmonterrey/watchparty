@@ -95,7 +95,7 @@ export function TipModal({ open, onOpenChange, recipient }: TipModalProps) {
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="w-full max-w-sm border-none ring-1 ring-white/10">
+            <DialogContent className="w-full max-w-sm">
                 <DialogHeader className="items-center text-center">
                     <div className="relative mb-2">
                         <div className="size-16 overflow-hidden rounded-full bg-zinc-800 ring-4 ring-lantern/15">

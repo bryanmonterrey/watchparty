@@ -82,7 +82,7 @@ function GenerateModal({ onGenerated }: { onGenerated: () => void }) {
                     <HugeiconsIcon icon={RefreshIcon} className="size-4" strokeWidth={2} /> Generate connection
                 </PillButton>
             </DialogTrigger>
-            <DialogContent className="max-w-md border-white/5">
+            <DialogContent className="max-w-md">
                 <DialogHeader>
                     <DialogTitle className="text-white">Generate stream connection</DialogTitle>
                 </DialogHeader>

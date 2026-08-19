@@ -79,7 +79,7 @@ export function AskHistoryDialog({
         <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(o) : close())}>
             <DialogContent
                 showCloseButton={false}
-                className="gap-0 overflow-hidden rounded-4xl border-none bg-[#111] p-0 sm:max-w-[560px]"
+                className="gap-0 overflow-hidden rounded-4xl p-0 sm:max-w-[560px]"
             >
                 <VisuallyHidden>
                     <DialogTitle>Your conversations</DialogTitle>

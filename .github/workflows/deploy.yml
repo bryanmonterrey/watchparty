@@ -54,6 +54,7 @@ jobs:
           node scripts/guards/check-file-sizes.mjs
           node scripts/guards/check-text-scale.mjs
           node scripts/guards/check-hover-lighter.mjs
+          node scripts/guards/check-dialog-surface.mjs
 
   deploy:
     needs: [test]

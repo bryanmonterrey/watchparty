@@ -593,7 +593,7 @@ function ProfileSection({ server, memberCount, boostCount }: { server: Community
 
             {cropFile && (
                 <Dialog open onOpenChange={(o) => { if (!o) { setCropFile(null); cropStateRef.current = null; } }}>
-                    <DialogContent className="rounded-4xl border-none p-6 sm:max-w-md" showCloseButton={false}>
+                    <DialogContent className="rounded-4xl p-6 sm:max-w-md" showCloseButton={false}>
                         <DialogTitle className="text-center text-[18px] font-bold tracking-tight text-white">Adjust your icon</DialogTitle>
                         <AvatarCropper
                             file={cropFile}
@@ -1187,7 +1187,7 @@ function PruneDialog({ serverId, onClose }: { serverId: string; onClose: () => v
 
     return (
         <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
-            <DialogContent className="rounded-4xl border-none p-6 sm:max-w-md" showCloseButton={false}>
+            <DialogContent className="rounded-4xl p-6 sm:max-w-md" showCloseButton={false}>
                 <DialogTitle className="text-center text-[18px] font-bold tracking-tight text-white">Prune inactive members</DialogTitle>
                 <p className="text-center text-[14px] font-medium text-zinc-500">
                     Removes members with no messages in the window. Mods, admins, and the owner are never pruned — and anyone removed can rejoin.
