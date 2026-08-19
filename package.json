@@ -98,7 +98,7 @@
     "@wingleeio/mugen": "^0.8.0",
     "ai": "^7.0.68",
     "better-auth": "1.7.1",
-    "better-auth-siws": "^0.2.0",
+    "better-auth-siws": "github:bryanmonterrey/better-auth-siws#dbdf15e",
     "bip322-js": "^3.0.0",
     "bip39": "^3.1.0",
     "boneyard-js": "^1.9.0",

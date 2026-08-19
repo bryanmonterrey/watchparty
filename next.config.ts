@@ -11,6 +11,12 @@ const nextConfig: NextConfig = {
       // @drift-labs/sdk's browser build (keypair loader, anchor NodeWallet)
       // still references `fs` on never-taken paths — stub it for the browser.
       fs: { browser: "./lib/node-browser-stub.js" },
+      // @better-auth/infra dynamically imports these two on SCIM/SSO paths we
+      // never enable, without declaring them — so the bundler cannot resolve
+      // them and the build dies before the code could run. See the stub for
+      // why we alias rather than install.
+      "@better-auth/scim": "./lib/absent-optional-module-stub.js",
+      "@better-auth/sso": "./lib/absent-optional-module-stub.js",
     },
   },
   // `standalone` ONLY for the container build.
