@@ -214,7 +214,7 @@ export function WalletHeader({
                             // justify-start is explicit: the name sits against
                             // the avatar and stays there, whatever width the
                             // trigger ends up with.
-                            className={`-ml-2 flex min-w-0 cursor-pointer items-center justify-start gap-3 rounded-2xl px-2 py-1.5 transition-colors ${accountOpen ? "bg-white/[0.06]" : "hover:bg-white/[0.04]"}`}
+                            className={`-ml-2 flex min-w-0 cursor-pointer items-start justify-start gap-3 rounded-2xl px-2 py-1.5 transition-colors ${accountOpen ? "bg-white/[0.06]" : "hover:bg-white/[0.04]"}`}
                         >
                             <Avatar className="h-10 w-10 shrink-0">
                                 <AvatarImage src={avatarUrl} alt={username} className="object-cover" />
@@ -224,25 +224,31 @@ export function WalletHeader({
                                 the only thing making this two lines, and rendering
                                 one is against house rules anyway (Copy Address on
                                 the power menu is the functional path). */}
+                            {/* items-start on the button: the username row
+                                sits at the TOP of the avatar (owner's call),
+                                not vertically centered on it. The arrow lives
+                                INSIDE the name row so it rides with the text
+                                instead of floating at the avatar's old
+                                midline. */}
                             <div className="flex min-w-0 items-center justify-start gap-1 text-left">
                                 <p className="truncate text-15 font-bold text-white">{username}</p>
                                 <VerifiedBadge
                                     tier={activeUser?.verifiedTier}
                                     hidden={activeUser?.hideVerifiedBadge}
                                 />
+                                {/* The arrow is UNCONDITIONAL, on purpose — a
+                                    single-account gate was tried (2026-08-20)
+                                    and reverted the same day. This panel always
+                                    has something behind it: the wallet-in-use
+                                    picker and Add-an-existing-account are there
+                                    whatever the account count, so the arrow is
+                                    a promise it can always keep. */}
+                                <HugeiconsIcon
+                                    icon={ArrowDown01Icon}
+                                    strokeWidth={2.5}
+                                    className={`size-4 shrink-0 text-zinc-500 transition-transform duration-200 ${accountOpen ? "rotate-180" : ""}`}
+                                />
                             </div>
-                            {/* The arrow is UNCONDITIONAL here, on purpose —
-                                a single-account gate was tried (2026-08-20)
-                                and reverted the same day. This popover always
-                                has something behind it: the wallet-in-use
-                                picker and the Add-an-existing-account action
-                                are there whatever the account count, so the
-                                arrow is a promise the panel can always keep. */}
-                            <HugeiconsIcon
-                                icon={ArrowDown01Icon}
-                                strokeWidth={2.5}
-                                className={`size-4 shrink-0 text-zinc-500 transition-transform duration-200 ${accountOpen ? "rotate-180" : ""}`}
-                            />
                         </button>
                     </MorphPopoverTrigger>
 
