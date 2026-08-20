@@ -269,10 +269,23 @@ export const auth = betterAuth({
     // SINGLE SHARED per-path bucket: one user scrolling /home could (and on
     // 2026-08-19, did) 429 get-session for every user at once.
     //
-    // Both headers are set by Cloudflare itself and every route to the app
-    // passes through CF (proxied domains and workers.dev alike), so clients
-    // can't spoof them. x-forwarded-for stays OFF the list on purpose.
-    ipAddress: { ipAddressHeaders: ["cf-connecting-ip", "x-real-ip"] },
+    // Order matters, and each entry covers one deployment shape:
+    // - cf-connecting-ip: set by Cloudflare at the edge, unspoofable, present
+    //   on the plain-worker path (workers.dev / rollback worker). Checked
+    //   first so a client-sent copy of the headers below can never win where
+    //   this one exists.
+    // - x-watchparty-client-ip: the CONTAINER path. The container-port proxy
+    //   strips cf-connecting-ip and rewrites x-real-ip to its internal hop
+    //   (10.1.0.0), so container/src/index.ts relays the edge's
+    //   cf-connecting-ip in this header — set or deleted unconditionally
+    //   there, so on the only path that reaches the container its value is
+    //   always bridge-controlled.
+    // - x-real-ip: last resort for any shape not covered above.
+    // x-forwarded-for stays OFF the list on purpose: inside the container it
+    // holds the proxy's internal hop, not a client.
+    ipAddress: {
+      ipAddressHeaders: ["cf-connecting-ip", "x-watchparty-client-ip", "x-real-ip"],
+    },
     // Share the session cookie across subdomains. ads.watchparty.xyz has no
     // login of its own — its proxy checks for this cookie and bounces to
     // watchparty's login when missing, so a host-only cookie loops that

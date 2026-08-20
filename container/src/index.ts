@@ -79,6 +79,21 @@ export default {
         // getContainer which returns the stub directly. Chaining .fetch() off
         // the promise compiles fine and fails at runtime.
         const stub = await getRandom(env.NEXT_APP, INSTANCES);
-        return stub.fetch(request);
+
+        // Relay the real client IP across the container hop. The runtime's
+        // container-port proxy rewrites the standard IP headers to its own
+        // internal address — inside the Node server, x-real-ip reads 10.1.0.0
+        // and cf-connecting-ip is gone — which is how every better-auth
+        // session recorded 10.1.0.0 and rate limiting degraded to one shared
+        // bucket for all users. A custom header survives the hop untouched.
+        //
+        // Set or DELETED unconditionally: every request that reaches the
+        // container passes through this Worker, so the value is always ours —
+        // a client-supplied x-watchparty-client-ip never survives.
+        const headers = new Headers(request.headers);
+        const clientIp = request.headers.get("cf-connecting-ip");
+        if (clientIp) headers.set("x-watchparty-client-ip", clientIp);
+        else headers.delete("x-watchparty-client-ip");
+        return stub.fetch(new Request(request, { headers }));
     },
 };
