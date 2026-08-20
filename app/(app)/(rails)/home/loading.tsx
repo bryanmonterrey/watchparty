@@ -49,10 +49,10 @@ export default function HomeLoading() {
                             <span className="shrink-0 whitespace-nowrap px-3.5 py-1.5 text-lg font-semibold tracking-tight text-zinc-500">Recommended</span>
                         </div>
                         {/* Board header: the DataTable renders its real labels
-                            while loading (CELL_TEXT = text-[15px] font-medium,
+                            while loading (CELL_TEXT = text-15 font-medium,
                             zinc-500). At this column width the visible set is
                             Name / Price / Change (volume+mcap need wider). */}
-                        <div className="flex items-center gap-3 py-2 text-[15px] font-medium leading-tight text-zinc-500">
+                        <div className="flex items-center gap-3 py-2 text-15 font-medium leading-tight text-zinc-500">
                             <span className="flex-1">Name</span>
                             <span className="w-16 text-right">Price</span>
                             <span className="w-14 text-right">Change</span>

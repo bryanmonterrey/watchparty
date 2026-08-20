@@ -28,7 +28,7 @@ export function FeedSurfaceLoading() {
                 <div className="flex h-13 w-fit flex-1 items-center justify-center bg-canvas">
                     <span aria-hidden className="ml-1 size-5 opacity-0" />
                     <div className="relative flex h-full items-center">
-                        <span className="text-[15px] font-bold text-zinc-100">For you</span>
+                        <span className="text-15 font-bold text-zinc-100">For you</span>
                         {/* The chevron the real tab renders, as inline SVG so
                             the shell stays chunk-free. */}
                         <span className="ml-1 flex items-center text-zinc-500">
@@ -40,7 +40,7 @@ export function FeedSurfaceLoading() {
                     </div>
                 </div>
                 <div className="flex h-13 w-fit flex-1 items-center justify-center bg-canvas">
-                    <span className="text-[15px] font-bold text-zinc-500">Following</span>
+                    <span className="text-15 font-bold text-zinc-500">Following</span>
                 </div>
             </div>
             {/* The collapsed composer's frame (post-composer.tsx): p-4, the
