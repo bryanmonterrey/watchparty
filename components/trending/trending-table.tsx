@@ -308,9 +308,10 @@ function routerSort(sorting: SortingState): SortKey {
 }
 
 export function TrendingTable({ className }: { className?: string }) {
-    // Volume descending is the board's own order — the ecosystem's biggest
-    // markets first, with every chain interleaved by one number.
-    const [sorting, setSorting] = useState<SortingState>([{ id: "volume", desc: true }]);
+    // Change descending — the movers first (owner's call 2026-08-20, replacing
+    // volume-desc). routerSort maps it to the server's "gainers" sort, so the
+    // QUERY orders it, not the loaded page.
+    const [sorting, setSorting] = useState<SortingState>([{ id: "change", desc: true }]);
 
     const input = useMemo(
         () => ({ sort: routerSort(sorting), timeframe: TIMEFRAME, limit: PAGE }),
@@ -403,7 +404,7 @@ export function TrendingTable({ className }: { className?: string }) {
             }),
             helper.accessor((r) => r.marketCapUsd ?? 0, {
                 id: "marketCap",
-                header: "Market cap",
+                header: "Mcap",
                 sortDescFirst: true,
                 meta: { width: w.marketCap, skeleton: (i, c) => bar(i, c, "h-3 w-14") },
                 cell: ({ row }) => (

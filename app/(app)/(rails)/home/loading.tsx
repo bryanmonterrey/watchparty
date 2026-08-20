@@ -26,7 +26,13 @@ export default function HomeLoading() {
     // double-count and shove the centre column 18rem right.
     return (
         <div className="flex min-h-screen w-full">
-                <main className="relative ml-7 flex w-full max-w-[628px] flex-col md:mt-[var(--header-height)]">
+                {/* The collapsed-rail variant is LOAD-BEARING, not optional
+                    mirroring. Arriving from /coin the shared rail is collapsed
+                    (w-11), and the real column widens to 872px in response —
+                    a skeleton pinned at 628px sat narrow against the collapsed
+                    rail, "aligned to the left", then jumped when the page
+                    landed. Same group-has hook, same widths, same swap. */}
+                <main className="relative ml-7 flex w-full min-w-0 max-w-[628px] flex-col md:mt-[var(--header-height)] group-has-[[data-rail-collapsed=true]]/rails:max-w-[872px]">
                     <div className="h-13" />
                     <div className="flex flex-col" aria-hidden>
                         {Array.from({ length: 6 }).map((_, index) => (
