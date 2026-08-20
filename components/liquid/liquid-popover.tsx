@@ -35,13 +35,14 @@ import { CustomEase } from "gsap/CustomEase";
 import { cn } from "@/lib/utils";
 import { setGooBlur } from "./goo";
 import { measureLiquid, setLiquidFilterRegion, type Geom } from "./liquid-geometry";
+import { createPopoverSeam, createPopoverStretchHost, type PopoverHostCtx } from "./liquid-hosts";
 import { LiquidGooCanvas, SEAM_LAYERS } from "./liquid-goo-canvas";
 import { createLiquidRefs } from "./liquid-refs";
 import { LiquidRows, type LiquidPopoverItem } from "./liquid-rows";
 import { ACCENT, LIQUID_SURFACE, PANEL_PAD, ROW_RADIUS, neonGlow, solidRim } from "./liquid-theme";
 import { prefersReducedMotion } from "./motion";
 import { RowHover, type RowHoverTarget } from "./row-hover";
-import { createLiquidSeam, type LiquidSeam, type SeamJoint } from "./seam";
+import type { LiquidSeam, SeamJoint } from "./seam";
 import { gooSfx } from "./sfx";
 import { HOUSE_SPRING_POINTS, POP_SPRING_POINTS, springEase } from "./springs";
 import { createLiquidStretch, type LiquidStretch, type StretchHost } from "./stretch";
@@ -279,15 +280,13 @@ export function LiquidPopover({
         },
         [offsetWithinPanel, refs],
     );
-
-    /* ── Engines (created once; behaviour reaches them through refs that are
-       reassigned every render, so the newest code always answers) ───────── */
+    /* ── Engines — created once per instance; they read the newest render's
+       callbacks through hostCtxRef (see liquid-hosts.ts). ─────────────────── */
 
     /* Neon rows: a touch shows only the border light; once the merge
        completes (the engine's `joined`), the nearest row catches the accent
        with a soft bloom. Styles are written only on a state change. */
-    const jointsFnRef = useRef<(joints: SeamJoint[]) => void>(() => {});
-    jointsFnRef.current = (joints) => {
+    const jointsFn = (joints: SeamJoint[]) => {
         let lit: number | null = null;
         joints.forEach((joint) => {
             if (!joint.joined || !joint.owners.includes("panel")) {
@@ -311,141 +310,34 @@ export function LiquidPopover({
         });
     };
 
+    const hostCtxRef = useRef<PopoverHostCtx>(null as unknown as PopoverHostCtx);
+    hostCtxRef.current = {
+        refs,
+        geomRef,
+        isOpenRef,
+        timelineRef,
+        grabbedOwnerRef,
+        jointsFn,
+        getTriggerBits,
+        getPanelTrio,
+        innerBits,
+        measure,
+        liquidOn,
+        applyGooBlur,
+        clearRowNeon,
+        fxScale,
+    };
     if (stretchHostRef.current === null) {
-        stretchHostRef.current = {
-            buttonSize: 32,
-            auxLean: 0.14,
-            anchor: () => refs.root,
-            triggerBits: getTriggerBits,
-            /* Only the goo blob wears the rotated directional stretch: the
-               reference's trigger is a circle, where rotation is invisible.
-               An app trigger is a pill or a kebab, and spinning it to the
-               pull's angle would flip it upside down — so the crisp button
-               only LEANS (it rides the icon channel below). */
-            triggerStretchBits: () => [refs.blobTrigger],
-            triggerIcon: () => refs.trigger,
-            effectScale: fxScale,
-            chain: () => refs.chain,
-            auxTrio: () => getPanelTrio(),
-            liquidOn: (target) => {
-                grabbedOwnerRef.current = target === "trigger" ? "trigger" : "panel";
-                measure();
-                liquidOn(GOO_BLUR_GRAB);
-                /* data-grab gates the seam: this light is a gesture's
-                   feedback, not a state the component wears at rest. */
-                refs.root?.setAttribute("data-grab", "");
-                gooSfx.play("grab", { frame: "dark" });
-
-                /* A grab that lands MID-FLIGHT takes the picture over: kill
-                   the open/close run, then walk the panel to wherever it was
-                   heading, ON the component's own timeline — loose tweens
-                   would survive the next run's kill and keep writing toward
-                   the interrupted state. */
-                if (timelineRef.current?.isActive()) {
-                    timelineRef.current.kill();
-                    const settled = isOpenRef.current;
-                    const settle = gsap.timeline();
-                    timelineRef.current = settle;
-                    settle.to(
-                        getPanelTrio(),
-                        {
-                            scale: settled ? 1 : geomRef.current?.restScale ?? 0.08,
-                            rotation: settled ? 0 : -3,
-                            duration: 0.16,
-                            ease: OUT_STRONG,
-                            overwrite: "auto",
-                        },
-                        0,
-                    );
-                    settle.to(
-                        [refs.panelBody, refs.panel],
-                        { autoAlpha: settled ? 1 : 0, duration: 0.12, ease: OUT_STRONG, overwrite: "auto" },
-                        0,
-                    );
-                    settle.to(
-                        innerBits(),
-                        { autoAlpha: settled ? 1 : 0, y: 0, duration: 0.12, ease: OUT_STRONG, overwrite: "auto" },
-                        0,
-                    );
-                }
-                /* The shrunk panel parks INSIDE the trigger while the menu is
-                   closed — it must sit the grab out: it cannot ride the
-                   trigger's lean, so left in the goo it pokes out of the
-                   moving silhouette as a hump. openMenu/closeMenu re-arm it. */
-                gsap.set(refs.blobPanel, {
-                    autoAlpha: target === "trigger" && !isOpenRef.current ? 0 : 1,
-                });
-            },
-            handoff: (tl, at) => {
-                gooSfx.play("release", { frame: "dark" });
-                /* The crisp bodies SNAP on underneath the still-opaque goo —
-                   the two pictures are identical, so nothing changes on
-                   screen — and only the goo fades. */
-                tl.set(refs.bodies, { autoAlpha: 1 }, at);
-                tl.to(refs.goo, { autoAlpha: 0, duration: 0.15, ease: "power1.out" }, at);
-                applyGooBlur(GOO_BLUR_REST, tl, at + 0.16);
-                tl.call(
-                    () => {
-                        refs.root?.removeAttribute("data-liquid");
-                        refs.root?.removeAttribute("data-grab");
-                        clearRowNeon();
-                    },
-                    undefined,
-                    at + 0.15,
-                );
-            },
-        };
+        stretchHostRef.current = createPopoverStretchHost(hostCtxRef);
     }
     if (stretchRef.current === null) {
         stretchRef.current = createLiquidStretch(stretchHostRef.current);
     }
     const stretch = stretchRef.current;
-
     if (seamRef.current === null) {
-        seamRef.current = createLiquidSeam({
-            anchor: () => refs.root,
-            parts: () => {
-                const geom = geomRef.current;
-                return [
-                    {
-                        blob: refs.blobTrigger,
-                        owner: "trigger",
-                        rect: geom
-                            ? {
-                                  x: geom.trigger.x,
-                                  y: geom.trigger.y,
-                                  width: geom.trigger.w,
-                                  height: geom.trigger.h,
-                                  radius: geom.trigger.r,
-                              }
-                            : undefined,
-                    },
-                    {
-                        blob: refs.blobPanel,
-                        owner: "panel",
-                        rect: geom
-                            ? {
-                                  x: geom.panel.x,
-                                  y: geom.panel.y,
-                                  width: geom.panel.w,
-                                  height: geom.panel.h,
-                                  radius: geom.panel.r,
-                              }
-                            : undefined,
-                    },
-                    ...refs.chain.map((blob) => ({ blob, owner: grabbedOwnerRef.current })),
-                ];
-            },
-            layers: () =>
-                SEAM_LAYERS.map((_, index) => ({
-                    gradient: refs.seamGradients[index] ?? null,
-                    paint: refs.seamPaints[index] ?? null,
-                })),
-            /* One hue for every joint — the accent; the gradient stops are
-               already painted with it, so there is nothing to repaint. */
-            joints: (joints) => jointsFnRef.current(joints),
-        });
+        seamRef.current = createPopoverSeam(hostCtxRef);
     }
+
 
     /* ── Resting picture ──────────────────────────────────────────────── */
 
