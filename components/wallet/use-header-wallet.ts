@@ -297,6 +297,8 @@ export function useHeaderWalletLoading() {
          * `address` — an EVM selection blanks `address` by design.
          */
         accountAddress,
+        /** The in-use EVM wallet's address, when that is what's selected. */
+        selectedEvm,
         /** There is a wallet to have a balance at all. */
         hasWallet: !!walletAddress,
         /** Something has answered for this wallet — otherwise, don't show a number. */

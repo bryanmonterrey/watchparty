@@ -76,6 +76,12 @@ export interface WalletDrawerProps {
     username: string;
     avatarUrl: string;
     walletAddress?: string;
+    /**
+     * The wallet in use when it is an external EVM one. The drawer follows the
+     * wallet in use: with this set it shows THAT wallet's EVM balances and
+     * receive address, not the account's derived multichain set.
+     */
+    inUseEvmAddress?: string | null;
     onSignOut: () => Promise<void>;
     onChangeWallet?: () => void;
     onRefresh?: () => void;

@@ -126,3 +126,25 @@ export async function requireSolanaWallet(userId: string, knownMirror?: string |
     if (!address) throw new TRPCError({ code: "NOT_FOUND", message: "No wallet found" });
     return address;
 }
+
+/**
+ * Is this address one of `userId`'s linked wallets? Case-folded for 0x —
+ * EVM addresses are case-insensitive hex, stored lowercase.
+ *
+ * The guard for any procedure that accepts a wallet address from the client:
+ * without it, "show me assets for address X" is an oracle for arbitrary
+ * wallets rather than a view of your own.
+ */
+export async function ownsWallet(userId: string, address: string): Promise<boolean> {
+    const [row] = await db
+        .select({ id: linkedWallets.id })
+        .from(linkedWallets)
+        .where(and(
+            eq(linkedWallets.user_id, userId),
+            address.startsWith("0x")
+                ? sql`lower(${linkedWallets.address}) = ${address.toLowerCase()}`
+                : eq(linkedWallets.address, address),
+        ))
+        .limit(1);
+    return !!row;
+}

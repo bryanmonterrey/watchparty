@@ -14,15 +14,22 @@ import { retryTransient } from "@/lib/query-retry";
 
 interface UseWalletDataProps {
     walletAddress?: string;
+    /**
+     * The wallet in use when it is an external EVM one. The drawer follows the
+     * wallet in use (owner's rule), and for an EVM wallet every account-derived
+     * address is the WRONG wallet: Solana queries stay off, the chain rows are
+     * that address's own EVM balances, and receive offers only its 0x.
+     */
+    inUseEvmAddress?: string | null;
     open?: boolean;
     activeTab: TabId;
 }
 
-export function useWalletData({ walletAddress, open, activeTab }: UseWalletDataProps) {
+export function useWalletData({ walletAddress, inUseEvmAddress, open, activeTab }: UseWalletDataProps) {
     // There is no active network. Balances and activity are aggregated across
     // every chain, and each operation infers its chain from the asset it acts
     // on — picking USDC-on-Base already says which network you meant.
-    const enabled = !!open && !!walletAddress;
+    const enabled = !!open && !!walletAddress && !inUseEvmAddress;
 
     // Every derived address, so receive/send can show the right one per chain.
     const {
@@ -50,7 +57,7 @@ export function useWalletData({ walletAddress, open, activeTab }: UseWalletDataP
 
     // One round trip for every non-Solana chain, rather than a query per chain.
     const { data: chainAssets, isLoading: isLoadingChainAssets, refetch: refetchChainAssets } =
-        trpc.wallet.getAllChainAssets.useQuery(undefined, {
+        trpc.wallet.getAllChainAssets.useQuery({ evmAddress: inUseEvmAddress ?? undefined }, {
             enabled: !!open,
             refetchInterval: open ? 30000 : false,
             staleTime: 30000,
@@ -363,10 +370,15 @@ export function useWalletData({ walletAddress, open, activeTab }: UseWalletDataP
         hiddenTokenMints,
         // Every derived address. Receive picks from these; send/swap infer the
         // chain from the asset being acted on.
-        chainAddresses: {
-            ...(chainAddresses ?? {}),
-            solana: chainAddresses?.solana ?? walletAddress ?? undefined,
-        } as Partial<Record<string, string>>,
+        chainAddresses: (inUseEvmAddress
+            // Only its own address on its own kind — offering the account's
+            // derived BTC/SOL addresses under an EVM wallet's name invites a
+            // deposit to a different wallet than the one on screen.
+            ? { evm: inUseEvmAddress }
+            : {
+                  ...(chainAddresses ?? {}),
+                  solana: chainAddresses?.solana ?? walletAddress ?? undefined,
+              }) as Partial<Record<string, string>>,
         // Receive needs to tell "still fetching" from "there is no address for
         // this chain". Without it, a chain the query never returns shows a
         // skeleton forever, which is indistinguishable from a hung request.

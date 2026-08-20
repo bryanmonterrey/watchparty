@@ -471,8 +471,20 @@ export const walletRouter = router({
      * drawer would otherwise fire a query per chain on open. Fanned out here
      * with allSettled: one unreachable chain must not blank the whole list.
      */
-    getAllChainAssets: protectedProcedure.query(async ({ ctx }) => {
-        const addresses = await getAddressesByKind(ctx.user.id);
+    getAllChainAssets: protectedProcedure
+        .input(z.object({ evmAddress: z.string().optional() }).optional())
+        .query(async ({ ctx, input }) => {
+        let addresses = await getAddressesByKind(ctx.user.id);
+
+        // The drawer follows the WALLET IN USE: an external EVM wallet's assets
+        // live at its own 0x, so the derived-address map is replaced wholesale.
+        if (input?.evmAddress) {
+            if (!(await ownsWallet(ctx.user.id, input.evmAddress))) {
+                throw new TRPCError({ code: "FORBIDDEN", message: "Not your wallet" });
+            }
+            addresses = { evm: input.evmAddress.toLowerCase() } as typeof addresses;
+        }
+
         const allTargets = CHAINS.filter((c) => c.kind !== "solana" && hasAssetProvider(c.id));
 
         // One batched Portfolio call covers the EVM chains Alchemy serves; the
@@ -1961,11 +1973,9 @@ export const walletRouter = router({
             slippageBps: z.number().default(50)
         }))
         .mutation(async ({ input }) => {
-            // The constant, NOT an env var. JUPITER_PLATFORM_FEE_BPS=100 is
-            // baked into the write-only DOTENV_PRODUCTION secret, so an env
-            // override here would silently pin Solana at the old rate while
-            // every other chain reads lib/chains/fee-bps.ts. One number, one
-            // authority.
+            // The constant, never an env var: JUPITER_PLATFORM_FEE_BPS=100 sits in
+            // the write-only DOTENV_PRODUCTION secret and would silently pin Solana
+            // at a stale rate while every other chain reads fee-bps.ts.
             const feeBps = String(PLATFORM_FEE_BPS);
             // Input side first, so a buy pays its fee in SOL/USDC rather than in
             // the coin; skipped when neither side has an account, because

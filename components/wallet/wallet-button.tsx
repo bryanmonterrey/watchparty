@@ -66,7 +66,7 @@ function WalletButtonInner() {
     // prop being empty. The selection-aware `address` goes undefined when an
     // EVM wallet is picked, which made the drawer offer to GENERATE a wallet
     // to a user who already has one.
-    const { loading: headerLoading, accountAddress: walletAddress } = useHeaderWalletLoading();
+    const { loading: headerLoading, accountAddress: walletAddress, selectedEvm } = useHeaderWalletLoading();
     const [isSigningIn, startSigningIn] = useTransition();
 
     const isSignedIn = !!session?.user;
@@ -323,6 +323,7 @@ function WalletButtonInner() {
                         username={session?.user?.username || "User"}
                         avatarUrl={session?.user?.avatar_url || ""}
                         walletAddress={walletAddress}
+                        inUseEvmAddress={selectedEvm}
                         onSignOut={handleSignOut}
                         onChangeWallet={handleChangeWallet}
                     />

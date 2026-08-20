@@ -78,6 +78,7 @@ export function WalletDrawer({
     username,
     avatarUrl,
     walletAddress,
+    inUseEvmAddress,
     onSignOut,
     onChangeWallet,
     open,
@@ -156,7 +157,7 @@ export function WalletDrawer({
         chainAddresses,
         isLoadingChainAddresses,
         refetchChainAddresses,
-    } = useWalletData({ walletAddress, open: resolvedOpen, activeTab });
+    } = useWalletData({ walletAddress, inUseEvmAddress, open: resolvedOpen, activeTab });
 
     const onOpenChangeHandler = (next: boolean) => {
         setIsOpen(next);
@@ -207,7 +208,7 @@ export function WalletDrawer({
                             onSignOut={onSignOut}
                             loading={isLoadingTokens}
                         />
-                        {!walletAddress ? (
+                        {!walletAddress && !inUseEvmAddress ? (
                             <WalletSetupCta />
                         ) : (
                             <>
@@ -239,11 +240,19 @@ export function WalletDrawer({
                                 })()}
                                 <WalletActions
                                     onNavigate={(view) => {
-                                        // Receive defaults to Solana rather than
-                                        // gating on a picker — changing network is
-                                        // available inside the receive screen for
-                                        // the rarer case.
-                                        if (view === "receive") setReceiveChain("solana");
+                                        // An external EVM wallet signs in its own
+                                        // extension — the app holds no key for it,
+                                        // so send/swap here would build against a
+                                        // wallet that cannot sign. Refuse plainly
+                                        // rather than failing at the signature.
+                                        if (inUseEvmAddress && (view === "send" || view === "swap")) {
+                                            appToast.error("This wallet signs in its own extension — switch to the built-in wallet to send or swap here");
+                                            return;
+                                        }
+                                        // Receive defaults to the wallet in use's
+                                        // own chain kind; changing network is
+                                        // available inside the receive screen.
+                                        if (view === "receive") setReceiveChain(inUseEvmAddress ? "ethereum" : "solana");
                                         if (view === "send") setSendInitialToken(null);
                                         setCurrentView(view);
                                     }}
