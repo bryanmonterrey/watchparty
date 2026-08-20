@@ -87,8 +87,9 @@ export type GooDropdownProps = {
 export const GOO_TRIGGER_PILL =
   'flex h-11 cursor-pointer items-center gap-2 rounded-full bg-soft-gray-10 px-4 text-base font-bold text-zinc-400 transition-colors hover:text-flexwhite'
 
-/** Standard panel fill — pair with the default panelRadius/itemHeight. */
-export const GOO_PANEL_FILL = '#111111ff'
+/** Standard panel fill — the demo's dark-frame surface (owner call
+ * 2026-08-20: the liquid popover wears liquid-taffy's own palette). */
+export const GOO_PANEL_FILL = '#212326'
 
 export function gooMenuItem({ icon, label, onClick, href, right, variant = 'default', closeOnSelect = true, key }: {
   icon?: React.ReactNode
