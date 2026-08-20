@@ -148,8 +148,15 @@ export function useWalletData({ walletAddress, inUseEvmAddress, open, activeTab 
 
     // Both sides must be a real address — undefined === undefined would hand
     // back the previous wallet's holdings.
-    const assetData =
-        freshAssets ?? (held && walletAddress && held.address === walletAddress ? held.data : undefined) ?? snapshot;
+    // In EVM-in-use mode there must be NO Solana data at all — not fresh, not
+    // held, not snapshot. The query above is disabled, but the snapshot is the
+    // BUILT-IN wallet's cached holdings, and falling back to it painted a SOL
+    // row inside the Base wallet's drawer whose Deposit then correctly said
+    // "no Solana address". The row was the bug, not the message: an EVM wallet
+    // has no Solana address, so it gets no Solana rows.
+    const assetData = inUseEvmAddress
+        ? undefined
+        : freshAssets ?? (held && walletAddress && held.address === walletAddress ? held.data : undefined) ?? snapshot;
 
     // Nothing has ever answered for this wallet and the query is failing — the
     // list is empty because we don't KNOW, which is not the same as a wallet
