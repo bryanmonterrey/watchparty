@@ -254,29 +254,27 @@ export function WalletHeader({
                                 const isEmbedded = w.source === "swig";
                                 const isEvm = w.chainKind === "evm";
                                 const isActive = active?.address === w.address;
-                                // "In use" is about what SIGNS: the embedded
-                                // wallet is "no adapter connected", any other
-                                // SOLANA wallet is the adapter whose pubkey
-                                // matches this row.
-                                //
-                                // An EVM wallet cannot be an adapter question at
-                                // all — a Solana adapter will never match a 0x
-                                // address, so this row could never read as in use
-                                // no matter what the data said, including for the
-                                // wallet the user literally signed in with. It
-                                // signs through the EVM provider, so selection IS
-                                // the answer for it.
-                                const inUse = isEvm
-                                    ? isActive
-                                    : isEmbedded
-                                      ? usingEmbedded
-                                      : adapterAddress === w.address;
-                                // Its extension's own icon when we can identify
-                                // it (only possible while connected), else a
-                                // generic badge — the DB records that a wallet
-                                // is external, never which product it is.
-                                const icon =
-                                    !isEmbedded && inUse ? activeAdapter?.adapter.icon : undefined;
+                                // EXACTLY ONE wallet is in use: the selected
+                                // one. This used to be two competing notions —
+                                // selection for EVM rows, adapter state for
+                                // Solana rows — and they could both be true at
+                                // once: select the EVM wallet and no Solana
+                                // adapter is connected, so the embedded row
+                                // ALSO ticked (usingEmbedded), showing two
+                                // wallets "in use". The balance chip and the
+                                // buy dialog answer for one wallet, so the
+                                // picker must claim one.
+                                const inUse = isActive;
+                                // Adapter connectivity is a FACT about a Solana
+                                // extension row, not a competing in-use claim.
+                                // It still drives the "· not connected" label,
+                                // the extension's own icon, and whether a click
+                                // needs to connect. EVM rows have no adapter
+                                // question at all — they sign through the EVM
+                                // provider, so selection is their whole story.
+                                const adapterMatches =
+                                    !isEmbedded && !isEvm && adapterAddress === w.address;
+                                const icon = adapterMatches ? activeAdapter?.adapter.icon : undefined;
                                 const rowChain =
                                     isActive && isEvm && activeValueChain
                                         ? activeValueChain
@@ -302,7 +300,7 @@ export function WalletHeader({
                                                     disconnect().catch(() =>
                                                         appToast.error("Couldn't switch wallet"),
                                                     );
-                                                } else if (!isEmbedded && !inUse) {
+                                                } else if (!isEmbedded && !adapterMatches) {
                                                     // We cannot aim a specific
                                                     // extension at a specific
                                                     // address — the user picks
@@ -375,7 +373,7 @@ export function WalletHeader({
                                                             Main
                                                         </span>
                                                     ) : null}
-                                                    {!isEmbedded && !inUse ? (
+                                                    {!isEmbedded && !isEvm && !adapterMatches ? (
                                                         <span className="text-zinc-600">· not connected</span>
                                                     ) : null}
                                                 </span>
