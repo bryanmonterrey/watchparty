@@ -257,6 +257,22 @@ export const auth = betterAuth({
   advanced: {
     useSecureCookies: process.env.NODE_ENV === "production",
     generateId: () => crypto.randomUUID(),
+    // Read the client IP from Cloudflare's headers, NOT x-forwarded-for.
+    //
+    // better-auth 1.7's default is x-forwarded-for alone — and on this stack
+    // that header does not exist at the edge (verified from the worker's
+    // logged request headers: cf-connecting-ip and x-real-ip carry the real
+    // client IP, x-forwarded-for is absent). The only XFF better-auth ever
+    // saw was the one the container synthesizes for its internal hop, which
+    // is how every session recorded ipAddress 10.1.0.0 — and why 1.7's rate
+    // limiter warned "could not determine a client IP" and fell back to a
+    // SINGLE SHARED per-path bucket: one user scrolling /home could (and on
+    // 2026-08-19, did) 429 get-session for every user at once.
+    //
+    // Both headers are set by Cloudflare itself and every route to the app
+    // passes through CF (proxied domains and workers.dev alike), so clients
+    // can't spoof them. x-forwarded-for stays OFF the list on purpose.
+    ipAddress: { ipAddressHeaders: ["cf-connecting-ip", "x-real-ip"] },
     // Share the session cookie across subdomains. ads.watchparty.xyz has no
     // login of its own — its proxy checks for this cookie and bounces to
     // watchparty's login when missing, so a host-only cookie loops that
