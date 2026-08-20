@@ -1,5 +1,5 @@
 import React from "react";
-import { HomeLeftRail } from "@/components/home/home-left-rail";
+import { HomeLeftRailLazy } from "@/components/home/home-left-rail-lazy";
 
 // The coin alerts rail, hoisted out of the pages that used to each mount their
 // own. Everything under this group — /home, /feed, /coin/<mint> — gets the same
@@ -22,7 +22,7 @@ export default function RailsLayout({ children }: { children: React.ReactNode })
         // group-has-[[data-rail-collapsed=true]]. The row is the nearest common
         // ancestor, which is why the group lives here.
         <div className="group/rails relative flex min-h-screen w-full px-1">
-            <HomeLeftRail />
+            <HomeLeftRailLazy />
             {/* min-w-0 so a wide child (the token page's grid, the feed's
                 columns) shrinks instead of pushing the rail off-screen. */}
             <div className="flex min-w-0 flex-1">{children}</div>
