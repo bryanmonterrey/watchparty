@@ -136,6 +136,16 @@ the d2 store, `getEncryptedShare` and `signTransaction` each gated on the mirror
 and then did a `user_id`-scoped `encrypted_wallets` lookup that already returns
 the right error. The gate was redundant AND wrong.
 
+**Known gap: the balance chip does not FOLLOW the picker selection.** The
+picker's "wallet in use" (localStorage, `hooks/use-active-wallet.ts`) drives
+the buy dialog and, since `b5762be2`, is the single source of the in-use tick.
+But the header balance chip still reads the account's PRIMARY/server-resolved
+wallet (`useHeaderWalletLoading` → getWalletAssets + getActiveWallet), so
+selecting a non-primary wallet moves the tick and the buy dialog while the chip
+keeps showing the primary's balance. The owner's stated rule is "chip = total
+balance of the wallet in use"; making that true means threading the selected
+address through the flicker-hardened header queries. Real wiring, not a tick.
+
 **Reviewer findings deferred, not dismissed** (an independent review angle ran
 2026-08-19; two of its findings were applied — a duplicate wallet resolution in
 getTransactions and a dead import — two are banked here):
