@@ -30,7 +30,10 @@ const post = (path, body) =>
   fetch(`${BASE}/api/auth${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    // `{}` for "no body": the deployed worker 415s a POST without a JSON
+    // content-type and 400s a content-type with an unparsable empty body —
+    // this matches what lib/chains/evm/sign-in.ts actually sends.
+    body: JSON.stringify(body ?? {}),
   });
 
 let failures = 0;

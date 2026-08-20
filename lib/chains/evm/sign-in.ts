@@ -16,10 +16,17 @@ const AUTH_URL =
 // nonce is no longer keyed by address either (it is stored under the nonce
 // itself), which is why the address doesn't need to exist yet.
 export async function siweNonce(): Promise<string> {
+  // `{}` with an explicit JSON content-type, NOT a bodyless POST: the deployed
+  // worker answers 415 "Content-Type is required" to a POST without one, and
+  // 1.7's `.strict()` schema then wants a parsable body. An empty object is
+  // the whole allowed shape. (auth.handler called directly in Node tolerated
+  // the bodyless form, so only the deployed smoke caught this.)
   const res = await fetch(`${AUTH_URL}/siwe/nonce`, {
     method: "POST",
     credentials: "include",
     keepalive: true,
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
   });
   if (!res.ok) throw new Error("Failed to start sign-in.");
   return (await res.json()).nonce;

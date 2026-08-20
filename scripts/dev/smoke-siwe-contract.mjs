@@ -47,10 +47,14 @@ const check = (name, ok, detail = "") => {
   if (!ok) failures++;
 };
 
-// 1) Nonce with NO body — the 1.7 shape our client now sends.
-const nonceRes = await post("/siwe/nonce");
+// 1) Nonce with an EMPTY OBJECT body — the 1.7 shape our client now sends.
+// Not bodyless: auth.handler in Node tolerates a bodyless POST, but the
+// deployed worker 415s it ("Content-Type is required"), so asserting the
+// bodyless form here passed while production failed. `{}` is the shape
+// lib/chains/evm/sign-in.ts sends and the strict schema allows.
+const nonceRes = await post("/siwe/nonce", {});
 const noncePayload = await nonceRes.json().catch(() => ({}));
-check("POST /siwe/nonce with no body", nonceRes.status === 200 && !!noncePayload.nonce, `status ${nonceRes.status}`);
+check("POST /siwe/nonce with {} body", nonceRes.status === 200 && !!noncePayload.nonce, `status ${nonceRes.status}`);
 
 // 2) Full round trip: sign the message, verify with ONLY {message, signature}.
 const account = privateKeyToAccount(generatePrivateKey());
