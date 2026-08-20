@@ -18,6 +18,7 @@ import {
 } from "@/components/motion/popover-morph";
 import { useDeviceSessions, MAX_DEVICE_ACCOUNTS } from "@/hooks/use-device-sessions";
 import { useAuthSession } from "@/hooks/use-auth-session";
+import { trpc } from "@/lib/trpc/client";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useActiveWallet, type LinkedWallet } from "@/hooks/use-active-wallet";
 import { ChainIcon } from "@/components/wallet/chain-icon";
@@ -134,6 +135,24 @@ export function WalletHeader({
     // Swig wallet, so one source covers the whole list — the hardcoded
     // "Watchparty wallet" row is gone with it.
     const { wallets: linked, active, setActive: setActiveWallet } = useActiveWallet(accountOpen);
+
+    // The chain the ACTIVE EVM wallet actually holds value on — the same
+    // resolution the balance chip renders (server/lib/active-wallet.ts ranks
+    // the four EVM chains by USD and falls back to the sign-in chain). The
+    // active row defers to it so the two surfaces can never disagree while
+    // both are on screen: without this, sign in on Ethereum, bridge everything
+    // to Base, and the row said Ethereum while the chip said Base — both
+    // "correct", reported as a bug. Non-active rows keep the sign-in hint;
+    // they have no chip to contradict. Cached server-side, fetched only while
+    // the popover is open and only for an EVM active wallet.
+    const { data: activeResolved } = trpc.wallet.getActiveWallet.useQuery(undefined, {
+        enabled: accountOpen && active?.chainKind === "evm",
+        staleTime: 60_000,
+    });
+    const activeValueChain =
+        activeResolved?.native?.chainId != null
+            ? getChainByEvmId(activeResolved.native.chainId)?.id ?? null
+            : null;
     const adapterAddress = adapterPublicKey?.toBase58() ?? null;
 
     // Still needed, but only to CONNECT one: an extension wallet can't sign
@@ -258,7 +277,10 @@ export function WalletHeader({
                                 // is external, never which product it is.
                                 const icon =
                                     !isEmbedded && inUse ? activeAdapter?.adapter.icon : undefined;
-                                const rowChain = walletChainId(w);
+                                const rowChain =
+                                    isActive && isEvm && activeValueChain
+                                        ? activeValueChain
+                                        : walletChainId(w);
                                 return (
                                     <li
                                         key={w.id}

@@ -18,7 +18,6 @@ import { recordView, viewerHandle } from "@/server/lib/record-view";
 import { recordQuestEvent } from "@/server/lib/quests";
 import { recordSignal, ACTION } from "@/lib/feed-ranker/signals";
 import { upsertPost, deletePost } from "@/lib/typesense/sync";
-import { effectiveVerifiedTier } from "@/lib/verified-tier";
 import { postSelectFields, authorSelectFields, mapPostRow } from "@/server/lib/post-shape";
 import { verifySolPayment } from "@/lib/chains/solana/verify-sol-payment";
 import { createVideoProcedures } from "./content/create-video";

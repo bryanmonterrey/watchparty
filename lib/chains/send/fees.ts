@@ -1,4 +1,4 @@
-// The 1% send fee on EVM chains: accrue now, sweep later.
+// The platform send fee on EVM chains (lib/chains/fee-bps.ts): accrue now, sweep later.
 //
 // Every other chain takes the fee inside the user's own transaction — Solana
 // adds an instruction, Bitcoin adds an output. An EVM transfer pays exactly one

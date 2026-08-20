@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useConnection } from '@solana/wallet-adapter-react';
 import { trpc } from '@/lib/trpc/client';
-import { authClient } from '@/lib/auth/client';
+import { useAuthSession } from '@/hooks/use-auth-session';
 import {
     getActiveSession,
     storeSession,
@@ -24,6 +24,19 @@ interface UseSwigSessionReturn {
     clearSwigSession: () => Promise<void>;
 }
 
+// One slot fetch per 30s across every mount of this hook, for the same reason
+// as the shared session read below: this hook lives in every component that
+// can sign, so a per-mount getSlot was one /api/rpc POST (a Helius credit) per
+// rendered coin row. Slots advance ~2.5/s; expiry validation doesn't care
+// about 30s of drift. Failures aren't cached — 0 means "couldn't ask".
+let slotCache: { at: number; slot: number } | null = null;
+async function getSlotShared(connection: { getSlot: (c: 'finalized') => Promise<number> }): Promise<number> {
+    if (slotCache && Date.now() - slotCache.at < 30_000) return slotCache.slot;
+    const slot = await connection.getSlot('finalized').catch(() => 0);
+    if (slot) slotCache = { at: Date.now(), slot };
+    return slot;
+}
+
 export function useSwigSession(): UseSwigSessionReturn {
     const { connection } = useConnection();
     const [session, setSession] = useState<ActiveSession | null>(null);
@@ -34,22 +47,31 @@ export function useSwigSession(): UseSwigSessionReturn {
     const frostCommit = trpc.wallet.frostCommit.useMutation();
     const frostSign = trpc.wallet.frostSign.useMutation();
 
+    // The user id comes from the SHARED session query (one request per 30s
+    // app-wide), never from authClient.getSession() — that helper makes a real
+    // HTTP request per call, and this hook mounts once per component that can
+    // sign (every coin row via useQuickBuy, every trade panel, …). On
+    // 2026-08-19 that was ~100 get-session requests/min from one browser
+    // scrolling /home, which tripped better-auth's rate limiter (100/60s) and
+    // 429'd the LEGITIMATE session reads — the header tiles fell into their
+    // skeletons while the feed was quietly DDoSing our own auth endpoint.
+    const { data: authSession } = useAuthSession();
+    const userId = authSession?.user?.id;
+
     // Load cached session from IndexedDB on mount
     useEffect(() => {
+        if (!userId) return;
         let cancelled = false;
         const load = async () => {
             try {
-                const s = await authClient.getSession();
-                const userId = s.data?.user?.id;
-                if (!userId) return;
-                const slot = await connection.getSlot('finalized').catch(() => 0);
+                const slot = await getSlotShared(connection);
                 const active = await getActiveSession(userId, slot);
                 if (!cancelled && active) setSession(active);
             } catch { /* non-fatal */ }
         };
         load();
         return () => { cancelled = true; };
-    }, [connection]);
+    }, [connection, userId]);
 
     const ensureSession = useCallback(async (): Promise<ActiveSession | null> => {
         if (session) return session;
@@ -59,12 +81,10 @@ export function useSwigSession(): UseSwigSessionReturn {
         setIsLoading(true);
 
         try {
-            const s = await authClient.getSession();
-            const userId = s.data?.user?.id;
             if (!userId) return null;
 
             // Check IndexedDB for a valid cached session first
-            const slot = await connection.getSlot('finalized').catch(() => 0);
+            const slot = await getSlotShared(connection);
             const cached = await getActiveSession(userId, slot);
             if (cached) { setSession(cached); return cached; }
 
@@ -160,17 +180,15 @@ export function useSwigSession(): UseSwigSessionReturn {
             setIsLoading(false);
             ensureInProgress.current = false;
         }
-    }, [session, connection, frostSetup, frostCommit, frostSign]);
+    }, [session, connection, frostSetup, frostCommit, frostSign, userId]);
 
     const clearSwigSession = useCallback(async () => {
-        const s = await authClient.getSession();
-        const userId = s.data?.user?.id;
         if (userId) {
             await clearSession(userId);
             await clearFrostClientShare(userId);
         }
         setSession(null);
-    }, []);
+    }, [userId]);
 
     return { session, isLoading, ensureSession, clearSwigSession };
 }

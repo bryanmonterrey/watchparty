@@ -40,6 +40,7 @@ import { db } from "@/db";
 import { user } from "@/db/schema/auth/user";
 import { linkedWallets } from "@/db/schema/auth/linked-wallets";
 import { isAddressFormat } from "@/lib/chains/address";
+import { TRPCError } from "@trpc/server";
 
 /**
  * The Solana address this account acts as, or null when it has none.
@@ -111,4 +112,17 @@ export async function payoutDestinationFor(
     knownMirror?: string | null,
 ): Promise<string | null> {
     return solanaAddressFor(userId, knownMirror);
+}
+
+/**
+ * `solanaAddressFor`, throwing the standard NOT_FOUND when the account has no
+ * Solana wallet. Exists because six procedures in the wallet router pasted the
+ * same four-line resolve-or-throw block — the next change to this rule (a
+ * better error distinguishing "EVM-only account" from "no wallet at all", say)
+ * should land in one place, not nine.
+ */
+export async function requireSolanaWallet(userId: string, knownMirror?: string | null): Promise<string> {
+    const address = await solanaAddressFor(userId, knownMirror);
+    if (!address) throw new TRPCError({ code: "NOT_FOUND", message: "No wallet found" });
+    return address;
 }
