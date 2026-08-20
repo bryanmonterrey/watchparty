@@ -9,6 +9,7 @@ import { NewsCard } from "@/components/browse/discover-right-rail";
 import { RailFooter } from "@/components/rails/rail-footer";
 import { HomeActionDock } from "./home-action-dock";
 import { ClipsOverlay } from "./clips-overlay";
+import { FeedSurfaceLoading } from "@/components/browse/feed-skeleton";
 import { useHomeFeedOverlay } from "@/hooks/use-home-feed-overlay";
 
 // h-[calc(100svh-5rem)], not h-[100svh]. The 5rem (80px) is the mb-20 the video
@@ -33,26 +34,6 @@ const BrowseFeed = dynamic(
     () => import("@/components/browse/browse-feed").then((module) => module.BrowseFeed),
     { ssr: false, loading: () => <FeedSurfaceLoading /> },
 );
-
-function FeedSurfaceLoading() {
-    return (
-        <div className="flex flex-col">
-            <div className="sticky top-[var(--header-height)] h-13 bg-canvas" />
-            {Array.from({ length: 6 }).map((_, index) => (
-                <div key={index} className="border-b border-soft-gray/10 p-4">
-                    <div className="flex gap-3">
-                        <div className="size-11 rounded-full shimmer-skeleton" />
-                        <div className="flex-1 space-y-3">
-                            <div className="h-3.5 w-2/5 rounded-full shimmer-skeleton" />
-                            <div className="h-3.5 w-4/5 rounded-full shimmer-skeleton" />
-                            {index % 2 === 1 && <div className="aspect-video w-full rounded-xl shimmer-skeleton" />}
-                        </div>
-                    </div>
-                </div>
-            ))}
-        </div>
-    );
-}
 
 function DiscoverFeedSurface() {
     return (
