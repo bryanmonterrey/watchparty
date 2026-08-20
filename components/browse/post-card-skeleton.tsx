@@ -1,5 +1,7 @@
-"use client";
-
+// No "use client" — this is pure JSX, and it must stay server-safe: it renders
+// inside app/(app)/(rails)/feed/loading.tsx, which paints from the RSC payload
+// before any client chunk exists. Client modules (browse-feed, the dynamic
+// fallbacks) import it exactly as before.
 export function PostCardSkeleton({ withMedia = false }: { withMedia?: boolean }) {
     return (
         <div className="flex flex-row items-start gap-3 border-b border-flexwhite/15 bg-canvas px-4 py-3">
