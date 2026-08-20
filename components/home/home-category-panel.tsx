@@ -1,10 +1,22 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { HomeCategoryTabs, HOME_TABS } from "./home-category-tabs";
 import { TrendingTable } from "@/components/trending/trending-table";
+import { HomeRecommendedSkeleton } from "./home-recommended-skeleton";
 import { useStuck } from "@/hooks/use-stuck";
 import { cn } from "@/lib/utils";
+
+// Lazy: the video card inside (hover preview, morph icons, market-cap chip)
+// only downloads when Recommended is actually selected — Trending Coins is the
+// default tab and shouldn't pay for it. The skeleton doubles as the chunk-load
+// fallback so selecting the tab paints the same frame the query-loading state
+// will.
+const HomeRecommended = dynamic(
+    () => import("./home-recommended").then((m) => m.HomeRecommended),
+    { ssr: false, loading: () => <HomeRecommendedSkeleton /> },
+);
 
 // Home's category tabs plus whatever the selected tab shows.
 //
@@ -79,6 +91,7 @@ export function HomeCategoryPanel() {
                 the tabs sit at 0 and this is just their height. */}
             <div className="z-0 flex-1 overflow-clip [--board-stick:3rem] md:[--board-stick:calc(var(--header-height)+3rem)]">
                 {active === "Trending Coins" && <TrendingTable />}
+                {active === "Recommended" && <HomeRecommended />}
             </div>
         </>
     );

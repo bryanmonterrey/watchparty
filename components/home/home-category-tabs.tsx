@@ -20,8 +20,8 @@ import { TabScrollArrow } from "./tab-scroll-arrow";
 // The other eight selected and showed an empty column, so cutting them removes
 // dead ends rather than features.
 //
-// Recommended has no content wired yet either, exactly like the eight it
-// replaces; it's a destination to build against, not a working tab.
+// Recommended renders HomeRecommended (home-recommended.tsx): the ranked video
+// feed as titled 2×3 card grids — "For You" first, then a section per category.
 export const HOME_TABS = [
     "Trending Coins",
     "Recommended",
