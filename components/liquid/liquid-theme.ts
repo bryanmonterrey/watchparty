@@ -12,19 +12,14 @@ export const PANEL_PAD = 8;
 export const ROW_RADIUS = 16;
 export const SEPARATOR_ROW_H = 12;
 
-/* THE DEMO'S PALETTE, adopted whole (owner call 2026-08-20 — "use demo's").
-   These are liquid-taffy's dark-frame values verbatim: the panel surface is
-   the stage grey, the rim the Figma 6%-white stroke pre-composited over it,
-   and the joint light the family's lifted seam violet. The app's twitter2
-   accent stays out of the liquid — the popover speaks the reference's
-   colour language. */
+/* THE DEMO'S SURFACE, the APP'S LIGHT (owner calls, both 2026-08-20): the
+   panel wears liquid-taffy's dark-frame body verbatim — the stage grey and
+   its Figma 6%-white stroke pre-composited into a solid — but the joint
+   light and the welded-row neon speak twitter2, the app's accent. The demo's
+   seam violet was tried and reverted the same day. */
 export const LIQUID_SURFACE = "#212326";
 export const LIQUID_RIM = "#2f3235";
-/* The dark frame's seam — what a joint lights in, and what a welded row's
-   neon blooms with (the demo colours neon by each row's own motif hue; app
-   rows carry none, so they fall back to the family's one violet, exactly as
-   the demo's no-motif path does). */
-export const LIQUID_SEAM = "#8a68ff";
+export const ACCENT = "#358efc";
 
 export function mixHex(one: string, two: string, amount: number) {
     const parse = (hex: string) => [1, 3, 5].map((at) => parseInt(hex.slice(at, at + 2), 16));
@@ -36,7 +31,9 @@ export function mixHex(one: string, two: string, amount: number) {
         .join("")}`;
 }
 
-export const SEAM_PAINT = LIQUID_SEAM;
+/* A whisper of white over the accent — just enough luminance for a 1px line
+   on the near-black rim (liquid-taffy's seamHue, fed the app's accent). */
+export const SEAM_PAINT = mixHex(ACCENT, "#ffffff", 0.08);
 
 /* The neon under a lit row: the accent at partial opacity, twice — a tight
    core and a wider bloom. Brand-tinted glow, per the house shadow rule. */

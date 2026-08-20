@@ -38,7 +38,7 @@ import { measureLiquid, setLiquidFilterRegion, type Geom } from "./liquid-geomet
 import { LiquidGooCanvas, SEAM_LAYERS } from "./liquid-goo-canvas";
 import { createLiquidRefs } from "./liquid-refs";
 import { LiquidRows, type LiquidPopoverItem } from "./liquid-rows";
-import { LIQUID_SEAM, LIQUID_SURFACE, PANEL_PAD, ROW_RADIUS, neonGlow, solidRim } from "./liquid-theme";
+import { ACCENT, LIQUID_SURFACE, PANEL_PAD, ROW_RADIUS, neonGlow, solidRim } from "./liquid-theme";
 import { prefersReducedMotion } from "./motion";
 import { RowHover, type RowHoverTarget } from "./row-hover";
 import { createLiquidSeam, type LiquidSeam, type SeamJoint } from "./seam";
@@ -277,8 +277,8 @@ export function LiquidPopover({
                 return;
             }
             const on = index === lit;
-            item.style.color = on ? LIQUID_SEAM : "";
-            item.style.filter = on ? neonGlow(LIQUID_SEAM) : "";
+            item.style.color = on ? ACCENT : "";
+            item.style.filter = on ? neonGlow(ACCENT) : "";
         });
     };
 
