@@ -1,60 +1,40 @@
 'use client'
 
 import React from 'react'
-import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { Squircle } from '@/components/ui/squircle'
-import {
-  MorphPopover,
-  MorphPopoverContent,
-  MorphPopoverTrigger,
-} from '@/components/motion/popover-morph'
+import { LiquidPopover, type LiquidPopoverItem } from '@/components/liquid/liquid-popover'
 
-// Every dropdown in the app is a GooDropdown. The engine is @beui/popover-morph
-// (components/motion/popover-morph.tsx, added through the shadcn registry): the
-// panel is laid out at full size, clipped to the corner nearest the trigger,
-// and unclips as one piece. There is NO neck — the panel is a separate surface
-// that grows out of the trigger's corner.
+// Every dropdown in the app is a GooDropdown. The engine is the LIQUID
+// POPOVER (components/liquid/liquid-popover.tsx) — liquid-taffy's anchored
+// dropdown on the app's dark frame, adopted app-wide (owner call 2026-08-20):
+// the panel pours out of its trigger as goo, dives back in on close, the
+// trigger and panel can be grabbed and stretched like taffy, hover travels as
+// one pill under the rows, and every gesture makes a quiet synthesized sound
+// (mute with `gooSfx.mute()` from components/liquid/sfx.ts).
 //
-// It replaced @beui/popover (the goo one), which fused trigger and panel into
-// one blob through an SVG blur+threshold filter. That was working as designed,
-// but the connector read as a mistake: the fill bridged the gap at every gap
-// value our call sites pass (6/8/10px — the neck only pinches off past ~12px),
-// so every menu in the app looked tethered to its button. Owner call 2026-07-29.
+// It replaced @beui/popover-morph (components/motion/popover-morph.tsx, still
+// used directly by wallet-drawer2), which had itself replaced the original
+// fused-goo popover. The 2026-07-29 objection to that one — a permanent neck
+// tethering every menu to its button — does not apply here: at REST the liquid
+// panel is a separate crisp squircle with a real border; the goo exists only
+// while the picture is in motion.
 //
 // The API here is UNCHANGED on purpose: ~70 call sites across ~40 files pass
-// `items[]` plus width/align/side/header/maxPanelHeight, and rewriting each into
-// the compositional <MorphPopover><MorphPopoverTrigger/><MorphPopoverContent/>
-// would be an enormous, risky diff for no user-visible gain. So this file is an
-// ADAPTER — menu semantics (rows, separators, labels, closeOnSelect) stay here,
-// motion and geometry come from the beui component.
+// `items[]` plus width/align/side/header/maxPanelHeight, and the liquid engine
+// speaks that API natively. This file is a thin adapter that keeps the item
+// builder + the trigger/panel style constants where every call site imports
+// them from.
 //
-// The name stays GooDropdown, and so do `gooStrength` / GOO_PANEL_FILL: renaming
-// them means touching every call site to rename a thing that still works.
+// One behavioural difference from the beui engine: the panel does NOT portal
+// to <body> — the goo, the panel and the trigger must live in one coordinate
+// space for the pour and the grab to be one picture. A menu hard against a
+// scroll-container edge may need side="top" again (those props all still
+// work, and many call sites never dropped them).
 //
-// What holds from the previous engine:
-//   · the panel PORTALS to <body>, so a menu near a container edge is no longer
-//     clipped. The pre-beui one deliberately did NOT portal, which is why call
-//     sites near the viewport bottom had to pass side="top" to compensate. Those
-//     props still work — they're just no longer load-bearing.
-//   · position follows scroll and resize (ResizeObserver + capture-phase
-//     scroll), where the old geometry was measured once per open.
-//
-// Four props are now no-ops. They're still accepted so no call site breaks;
-// see the destructure below for what each one's job was.
+// Four props are still accepted and ignored so no call site breaks:
+// spring / buttonRadius / shift / gooStrength — see the destructure.
 
-export type GooDropdownItem = {
-  key?: string | number
-  /** 'custom' renders the label node bare (no button wrapper) — for rows that are interactive components themselves. */
-  type?: 'item' | 'label' | 'separator' | 'custom'
-  label?: React.ReactNode
-  onClick?: () => void
-  href?: string
-  className?: string
-  height?: number
-  /** Set false to keep the menu open after clicking (view switches, async flows). */
-  closeOnSelect?: boolean
-}
+export type GooDropdownItem = LiquidPopoverItem
 
 type SpringConfig = {
   type: 'spring'
@@ -82,41 +62,26 @@ export type GooDropdownProps = {
   /** Panel width in px. */
   width?: number
   align?: 'start' | 'end'
-  /** Shift along the align axis, in px — see MorphPopoverContent.alignOffset. */
+  /** Shift along the align axis, in px. */
   alignOffset?: number
-  /** No-op since the beui popover — see the destructure. */
+  /** No-op — kept so call sites compile. */
   shift?: number
   side?: 'top' | 'bottom'
-  /** Distance between trigger and panel — the goo bridges this. */
+  /** Distance between trigger and panel — the pour crosses this. */
   gap?: number
   itemHeight?: number
   /** Clamp the panel height; items scroll inside when content exceeds it. */
   maxPanelHeight?: number
   disabled?: boolean
-  /** No-op since the beui popover — see the destructure. */
+  /** No-op — kept so call sites compile. */
   buttonRadius?: number
   panelRadius?: number
   fill?: string
   gooStrength?: number
-  /** No-op since the beui popover — see the destructure. */
+  /** No-op — kept so call sites compile. */
   spring?: SpringConfig
   className?: string
 }
-
-const PANEL_PAD = 8
-const SEPARATOR_ROW_H = 12
-
-// Row corner radius. Rows are SQUIRCLED (Lisse clip-path), not rounded-* —
-// owner call 2026-07-22: "i didn't want everything rounded full, i wanted all
-// corners squircled".
-const ROW_RADIUS = 16
-
-// ── THE dropdown standard (design-principles §Dropdowns) ────────────────────
-// Every menu in the app is a GooDropdown built from these, so they can't
-// drift: 44px (h-11) SQUIRCLED rows, text-base font-bold, #0a0a0a panel,
-// radius 24 (the component defaults), and an h-11 pill trigger. Pass a
-// pre-rendered icon node (lucide or HugeiconsIcon — builder is icon-system
-// agnostic) and an optional `right` slot for checkmarks/badges.
 
 /** Standard pill trigger for dropdowns (h-11, matches the button standard). */
 export const GOO_TRIGGER_PILL =
@@ -142,11 +107,14 @@ export function gooMenuItem({ icon, label, onClick, href, right, variant = 'defa
     href,
     closeOnSelect,
     className: cn(
-      // No rounded-* — the row is squircled by the component (clip-path).
+      // No rounded-* — the row is squircled by the engine (clip-path).
+      // No hover:bg either: the hover FILL is the liquid engine's travelling
+      // pill, one highlight for the whole list. Danger keeps its red tint —
+      // that hover is semantic, not just "you are here".
       'gap-3 px-4 py-1.5 cursor-pointer text-lg font-bold group',
       variant === 'danger'
         ? 'text-red-500 hover:bg-red-500/10 hover:text-red-500'
-        : 'text-zinc-200 hover:bg-white/5 hover:text-white',
+        : 'text-zinc-200 hover:text-white',
     ),
     label: (
       <>
@@ -170,7 +138,7 @@ export function GooDropdown({
   triggerClassName,
   triggerAriaLabel,
   items,
-  open: controlledOpen,
+  open,
   onOpenChange,
   stopPropagation = false,
   header,
@@ -185,162 +153,40 @@ export function GooDropdown({
   disabled = false,
   panelRadius = 24,
   fill = GOO_PANEL_FILL,
-  gooStrength: _gooStrength,
   className,
-  // Accepted and ignored — the beui popover owns motion and geometry now:
-  //   spring       → its own SPRING_PANEL / clip tween (lib/ease.ts)
-  //   buttonRadius → the panel no longer morphs out of the trigger's shape
-  //   shift        → align start/end covers every current call site
-  //   gooStrength  → there is no goo filter to feed; kept so call sites compile
+  // Accepted and ignored — the liquid engine owns motion and geometry:
+  //   spring       → the family's sampled physical springs (liquid/springs.ts)
+  //   buttonRadius → the trigger blob is measured off the real button
+  //   shift        → align start/end + alignOffset covers every call site
+  //   gooStrength  → the goo's blur/threshold pairs are solved, not tunable
   spring: _spring,
   buttonRadius: _buttonRadius,
   shift: _shift,
+  gooStrength: _gooStrength,
 }: GooDropdownProps) {
-  const [uncontrolled, setUncontrolled] = React.useState(false)
-  const isControlled = controlledOpen !== undefined
-  const open = isControlled ? controlledOpen : uncontrolled
-
-  const setOpen = React.useCallback((next: boolean) => {
-    if (!isControlled) setUncontrolled(next)
-    onOpenChange?.(next)
-  }, [isControlled, onOpenChange])
-
-  const rowHeight = (item: GooDropdownItem) =>
-    item.height ?? (item.type === 'separator' ? SEPARATOR_ROW_H : itemHeight)
-
-  const select = (item: GooDropdownItem) => {
-    item.onClick?.()
-    if (item.closeOnSelect !== false) setOpen(false)
-  }
-
   return (
-    <MorphPopover
+    <LiquidPopover
+      trigger={trigger}
+      triggerClassName={triggerClassName}
+      triggerAriaLabel={triggerAriaLabel}
+      items={items}
       open={open}
-      onOpenChange={(next) => { if (!disabled) setOpen(next) }}
+      onOpenChange={onOpenChange}
+      stopPropagation={stopPropagation}
+      header={header}
+      headerHeight={headerHeight}
+      width={width}
+      align={align}
+      alignOffset={alignOffset}
+      side={side}
+      gap={gap}
+      itemHeight={itemHeight}
+      maxPanelHeight={maxPanelHeight}
+      disabled={disabled}
+      panelRadius={panelRadius}
+      fill={fill}
       className={className}
-    >
-      <MorphPopoverTrigger>
-        <button
-          type="button"
-          aria-label={triggerAriaLabel}
-          disabled={disabled}
-          className={cn(
-            'outline-none focus-visible:ring-2 focus-visible:ring-ring/50',
-            triggerClassName,
-            disabled && 'pointer-events-none opacity-50',
-          )}
-          onClick={stopPropagation ? (e) => e.stopPropagation() : undefined}
-        >
-          {trigger}
-        </button>
-      </MorphPopoverTrigger>
-
-      {/* Rows are full-bleed and the width is the caller's, so the panel keeps
-          no padding of its own — PANEL_PAD is the inset the rows sit in. */}
-      <MorphPopoverContent
-        side={side}
-        align={align}
-        alignOffset={alignOffset}
-        sideOffset={gap}
-        radius={panelRadius}
-        fill={fill}
-        className="max-w-none p-0"
-      >
-        <div
-          role="menu"
-          onClick={stopPropagation ? (e) => e.stopPropagation() : undefined}
-          className="flex flex-col"
-          style={{ width, padding: PANEL_PAD, maxHeight: maxPanelHeight }}
-        >
-          {header && (
-            <div className="shrink-0" style={{ height: headerHeight }}>
-              {header}
-            </div>
-          )}
-
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-            {items.map((item, i) => {
-              const h = rowHeight(item)
-              const k = item.key ?? i
-
-              if (item.type === 'separator') {
-                return (
-                  <div key={k} className="flex shrink-0 items-center px-2" style={{ height: h }}>
-                    <div className={cn('h-px w-full bg-border/10', item.className)} />
-                  </div>
-                )
-              }
-
-              if (item.type === 'custom') {
-                // Squircled like every other row. Safe for rows whose component
-                // opens a dialog — Radix portals to <body>, so clip-path here
-                // never clips it.
-                return (
-                  <Squircle key={k} asChild radius={ROW_RADIUS}>
-                    <div className={cn('shrink-0 overflow-hidden', item.className)} style={{ height: h }}>
-                      {item.label}
-                    </div>
-                  </Squircle>
-                )
-              }
-
-              if (item.type === 'label') {
-                return (
-                  <div
-                    key={k}
-                    className={cn(
-                      'flex shrink-0 items-center px-3 text-xs font-semibold text-muted-foreground',
-                      item.className,
-                    )}
-                    style={{ height: h }}
-                  >
-                    {item.label}
-                  </div>
-                )
-              }
-
-              // The BASE row IS the app standard (design-principles §1.2):
-              // SQUIRCLED rows (never rounded-*, which is redundant under Lisse's
-              // clip-path), px-4, text-base font-bold, zinc-200 → white on hover.
-              // A call site can still override via item.className, but it no
-              // longer has to style rows at all.
-              const rowClass = cn(
-                'flex w-full shrink-0 items-center px-4 py-2 text-left text-base font-bold text-zinc-200 transition-colors duration-150 hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:bg-white/5 focus-visible:text-white',
-                item.className,
-              )
-
-              return (
-                <Squircle key={k} asChild radius={ROW_RADIUS}>
-                  {item.href ? (
-                    <Link
-                      role="menuitem"
-                      tabIndex={open ? 0 : -1}
-                      href={item.href}
-                      onClick={() => select(item)}
-                      className={rowClass}
-                      style={{ height: h }}
-                    >
-                      {item.label}
-                    </Link>
-                  ) : (
-                    <button
-                      role="menuitem"
-                      type="button"
-                      tabIndex={open ? 0 : -1}
-                      onClick={() => select(item)}
-                      className={rowClass}
-                      style={{ height: h }}
-                    >
-                      {item.label}
-                    </button>
-                  )}
-                </Squircle>
-              )
-            })}
-          </div>
-        </div>
-      </MorphPopoverContent>
-    </MorphPopover>
+    />
   )
 }
 
