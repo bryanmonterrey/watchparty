@@ -88,8 +88,19 @@ export function HomeCategoryPanel() {
                 when nobody sets it, so it stays usable outside home), which
                 keeps home's layout math here instead of baked into a component
                 that isn't home's. Below md the fixed app header is hidden, so
-                the tabs sit at 0 and this is just their height. */}
-            <div className="z-0 flex-1 overflow-clip [--board-stick:3rem] md:[--board-stick:calc(var(--header-height)+3rem)]">
+                the tabs sit at 0 and this is just their height.
+
+                overflow-clip ONLY while the board is up. The clip predates the
+                Recommended tab, and the video cards' hover backdrop is an
+                inset-[-12px] outset by design (trending-video-card.tsx — the
+                carousel look this grid reuses), so under a clipping wrapper
+                every card on the column edge had its hover tint and preview
+                chopped flush at the grid line (owner, 8/20). The board keeps
+                the clip it has always had; the grid gets the bleed back. */}
+            <div className={cn(
+                "z-0 flex-1 [--board-stick:3rem] md:[--board-stick:calc(var(--header-height)+3rem)]",
+                active === "Trending Coins" && "overflow-clip",
+            )}>
                 {active === "Trending Coins" && <TrendingTable />}
                 {active === "Recommended" && <HomeRecommended />}
             </div>
