@@ -605,6 +605,19 @@ The auth stack is sensitive to transitive versions. Two non-obvious pins/fixes w
   - **`@better-auth/expo`'s `getCookie()` returns a Promise now.** Un-awaited it
     sends the string `"[object Promise]"` as the Cookie header — not an error,
     just a silently unauthenticated app.
+  - **`secondaryStorage` now REQUIRES `increment` (and `getAndDelete`).** 1.7's
+    secondary-storage rate limiting throws `Secondary-storage rate limiting
+    requires SecondaryStorage.increment` on EVERY auth request — but only where
+    `rateLimit.enabled` is true, which here is `NODE_ENV === "production"`. So
+    tsc, `bun test`, both contract smokes and a plain `bun` boot of the real
+    `lib/auth/server.ts` all stayed green, and the failure surfaced as the
+    deployed preview worker 500ing on `/api/auth/ok`. Diagnosed by running the
+    OpenNext build under local `wrangler dev` (preview versions emit no
+    observability events, so the deployed 500 had no visible stack), then
+    reproduced in one line: `NODE_ENV=production bun` + `auth.handler(/ok)`.
+    The redis wrapper in `lib/auth/server.ts` implements both now — `increment`
+    fails OPEN (returns 1) like its get/set siblings, so a redis outage pauses
+    rate limiting instead of taking sign-in down.
   - better-call is still `1.4.0` on 1.7.1, so the `overrides` pin is unchanged.
 
 - **Don't add `better-call` as a direct dependency** — it's better-auth's *internal* RPC/endpoint framework (same authors), not a package we consume. No published better-auth has adopted better-call `2.x` (re-checked 2026-08-19: `@latest` 1.7.1 → `1.4.0`, `@rc` 1.7.0-rc.6 → `1.4.0`, `@beta` → `1.3.7`, `@canary` → `0.2.15-beta.7`). Forcing `better-call@2.0.5` in produced **31 type errors in `lib/auth/server.ts`** (verified 2026-06-27, mobile tsc): every plugin (`expo`, `siwe`, `custom-session`, `multi-session`, `two-factor`, `dash`) becomes *not assignable to `BetterAuthPlugin`*, because the plugins' `endpoints` carry better-call 1.3.7's `Endpoint` type while `BetterAuthPlugin` resolves `Endpoint` from 2.0.5 — two type identities colliding at the registration site. **Not fixable in our code** (only `as any` per plugin, which throws away auth type-safety) and **not a stale-install issue** (deterministic reinstall reproduces it). We get better-call 2.x *with types intact* automatically once better-auth adopts it upstream; until then stay on latest better-auth and let it pick its own better-call. Import `APIError` from `better-auth/api`, not `better-call`. **Watch for the upstream flip** with `npm view better-auth@beta dependencies.better-call` (also `@latest`/`@rc`) — when it returns `2.x`, better-auth has adopted it and a plain `bun update better-auth` brings it in cleanly. No GitHub issue tracks this migration (as of 2026-06-27); the npm dependency is the signal.

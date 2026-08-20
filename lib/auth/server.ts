@@ -199,6 +199,37 @@ export const auth = betterAuth({
         /* ignore */
       }
     },
+    // Required by better-auth 1.7: rate limiting over secondary storage now
+    // THROWS at request time without an atomic increment — which took the
+    // whole /api/auth/* surface down, but only where rateLimit is enabled
+    // (NODE_ENV=production), so every local check stayed green and the first
+    // failure was the deployed preview worker returning 500 on /api/auth/ok.
+    //
+    // Contract: post-increment value; TTL (seconds) applies on CREATION only,
+    // so the counter expires a fixed window after its first hit. `count === 1`
+    // is the creation signal INCR gives us atomically.
+    increment: async (key: string, ttl: number) => {
+      try {
+        const count = await redis.incr(key);
+        if (count === 1 && ttl > 0) await redis.expire(key, ttl);
+        return count;
+      } catch {
+        // Redis unavailable — fail OPEN like get/set above: rate limiting
+        // pauses, sign-in keeps working. Returning 1 reads as "first hit".
+        return 1;
+      }
+    },
+    // Also part of 1.7's SecondaryStorage contract (used for one-shot values
+    // like nonces). GETDEL is atomic server-side; same stringify rule as get.
+    getAndDelete: async (key: string) => {
+      try {
+        const val = await redis.getdel(key);
+        if (val === null || val === undefined) return null;
+        return typeof val === "string" ? val : JSON.stringify(val);
+      } catch {
+        return null;
+      }
+    },
   },
 
   database: drizzleAdapter(db, {
