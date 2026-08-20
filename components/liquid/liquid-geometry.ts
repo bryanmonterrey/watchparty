@@ -188,3 +188,34 @@ export function measureLiquid(refs: LiquidRefs, params: GeomParams): Geom | null
     });
     return geom;
 }
+
+/* The blur is re-rasterized over the FILTER REGION every frame of a flight,
+   and the region measureLiquid writes carries 72px of grab headroom on every
+   side — needed for a pulled finger, pure cost for a plain open/close (the
+   reference's whole canvas was 320×308; a 450px menu's is several times
+   that, and the difference is the open stutter). This tightens the region to
+   the trigger∪panel bounds plus the blur's own tail while the picture is
+   only pouring; the next grab's measure() restores the full region. */
+export function setLiquidFilterRegion(refs: LiquidRefs, geom: Geom, mode: "flight" | "grab") {
+    /* 24px ≈ three σ at the working blur (5) plus the rim — past that the
+       filter output is zero anyway. */
+    const inset = 24;
+    const x0 =
+        mode === "grab" ? 0 : Math.max(0, Math.min(geom.trigger.x, geom.panel.x) - inset);
+    const y0 =
+        mode === "grab" ? 0 : Math.max(0, Math.min(geom.trigger.y, geom.panel.y) - inset);
+    const x1 =
+        mode === "grab"
+            ? geom.canvasW
+            : Math.min(geom.canvasW, Math.max(geom.trigger.x + geom.trigger.w, geom.panel.x + geom.panel.w) + inset);
+    const y1 =
+        mode === "grab"
+            ? geom.canvasH
+            : Math.min(geom.canvasH, Math.max(geom.trigger.y + geom.trigger.h, geom.panel.y + geom.panel.h) + inset);
+    [refs.gooFilter, refs.rimFilter, refs.rimMask].forEach((region) => {
+        region?.setAttribute("x", String(x0));
+        region?.setAttribute("y", String(y0));
+        region?.setAttribute("width", String(x1 - x0));
+        region?.setAttribute("height", String(y1 - y0));
+    });
+}

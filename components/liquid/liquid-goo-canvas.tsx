@@ -7,6 +7,8 @@
    re-render `filter: url()` applied to an HTML element whose children
    animate. Sized and placed by liquid-geometry's measureLiquid. */
 
+import { memo } from "react";
+
 import { GOO_RIM_THRESHOLDS, gooThreshold } from "./goo";
 import type { LiquidRefs } from "./liquid-refs";
 import { SEAM_PAINT } from "./liquid-theme";
@@ -26,7 +28,7 @@ export interface GooCanvasIds {
    the spare that lets a re-contact light while the previous light dies. */
 export const SEAM_LAYERS = [0, 1] as const;
 
-export function LiquidGooCanvas({
+function LiquidGooCanvasImpl({
     refs,
     ids,
     fill,
@@ -43,6 +45,12 @@ export function LiquidGooCanvas({
                 refs.goo = el;
             }}
             className="pointer-events-none absolute z-[1] overflow-visible"
+            /* Hidden in the MARKUP, not only by the mount effect: the SSR HTML
+               must arrive invisible, or every menu paints for the beat before
+               hydration. gsap's autoAlpha overwrites these same two
+               properties, and React never rewrites an unchanged style prop,
+               so the two owners cannot fight. */
+            style={{ opacity: 0, visibility: "hidden" }}
             aria-hidden="true"
             focusable="false"
         >
@@ -231,3 +239,8 @@ export function LiquidGooCanvas({
         </svg>
     );
 }
+
+/* Memoized: the parent re-renders on every hover-target change, and this
+   subtree is the expensive one (two filter chains, a mask, gradients) with
+   fully stable props — the refs bag and ids never change identity. */
+export const LiquidGooCanvas = memo(LiquidGooCanvasImpl);

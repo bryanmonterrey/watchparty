@@ -34,7 +34,7 @@ import { CustomEase } from "gsap/CustomEase";
 
 import { cn } from "@/lib/utils";
 import { setGooBlur } from "./goo";
-import { measureLiquid, type Geom } from "./liquid-geometry";
+import { measureLiquid, setLiquidFilterRegion, type Geom } from "./liquid-geometry";
 import { LiquidGooCanvas, SEAM_LAYERS } from "./liquid-goo-canvas";
 import { createLiquidRefs } from "./liquid-refs";
 import { LiquidRows, type LiquidPopoverItem } from "./liquid-rows";
@@ -497,7 +497,11 @@ export function LiquidPopover({
         stretch.kill();
         isOpenRef.current = true;
         setOpen(true);
-        measure();
+        const geom = measure();
+        /* A plain open never grows a finger — rasterize the blur over the
+           trigger∪panel bounds only. The next grab's measure() restores the
+           full region. */
+        if (geom) setLiquidFilterRegion(refs, geom, "flight");
 
         if (prefersReducedMotion()) {
             setStaticState(true);
@@ -569,6 +573,7 @@ export function LiquidPopover({
             isOpenRef.current = false;
             setOpen(false);
             setHoverTarget(null);
+            if (geomRef.current) setLiquidFilterRegion(refs, geomRef.current, "flight");
 
             if (prefersReducedMotion()) {
                 setStaticState(false);
@@ -814,7 +819,7 @@ export function LiquidPopover({
             ref={(el) => {
                 refs.root = el;
             }}
-            className={cn("relative inline-flex", className)}
+            className={cn("relative inline-flex select-none", className)}
             onClick={stopPropagation ? (e) => e.stopPropagation() : undefined}
         >
             {/* Layer 1: the crisp panel body — the resting picture: a true
@@ -832,6 +837,12 @@ export function LiquidPopover({
                         refs.panelBody = el;
                     }}
                     className="absolute overflow-visible will-change-transform"
+                    /* Hidden in the MARKUP too — the SSR HTML must arrive
+                       invisible or every menu flashes open, unstyled, for the
+                       beat before hydration (no border, transparent bg: the
+                       "rough" first paint). gsap's autoAlpha writes these same
+                       properties from the mount effect on. */
+                    style={{ opacity: 0, visibility: "hidden" }}
                     focusable="false"
                 >
                     <path
@@ -857,7 +868,9 @@ export function LiquidPopover({
                 role="menu"
                 inert={!effectiveOpen}
                 className="absolute z-[2] flex flex-col will-change-transform"
-                style={{ width, padding: PANEL_PAD, maxHeight: maxPanelHeight }}
+                /* opacity/visibility: the same SSR-invisible rule as the panel
+                   body above — the rows must not paint before hydration. */
+                style={{ width, padding: PANEL_PAD, maxHeight: maxPanelHeight, opacity: 0, visibility: "hidden" }}
                 onPointerDown={handlePanelPointerDown}
                 onPointerMove={handleGrabPointerMove}
                 onPointerUp={releasePress}
@@ -890,7 +903,6 @@ export function LiquidPopover({
                     <LiquidRows
                         items={items}
                         itemHeight={itemHeight}
-                        open={effectiveOpen}
                         refs={refs}
                         onSelect={select}
                         onRowPointerDown={handleItemPointerDown}

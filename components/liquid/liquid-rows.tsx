@@ -7,7 +7,7 @@
    scales as one mass), and the hover FILL belongs to the travelling pill in
    the panel, not to the row. */
 
-import React, { type PointerEvent as ReactPointerEvent } from "react";
+import React, { memo, type PointerEvent as ReactPointerEvent } from "react";
 import Link from "next/link";
 
 import { cn } from "@/lib/utils";
@@ -28,10 +28,9 @@ export type LiquidPopoverItem = {
     closeOnSelect?: boolean;
 };
 
-export function LiquidRows({
+function LiquidRowsImpl({
     items,
     itemHeight,
-    open,
     refs,
     onSelect,
     onRowPointerDown,
@@ -39,7 +38,6 @@ export function LiquidRows({
 }: {
     items: LiquidPopoverItem[];
     itemHeight: number;
-    open: boolean;
     refs: LiquidRefs;
     onSelect: (item: LiquidPopoverItem) => void;
     onRowPointerDown: (event: ReactPointerEvent<HTMLElement>) => void;
@@ -110,7 +108,10 @@ export function LiquidRows({
                 );
                 const rowProps = {
                     role: "menuitem" as const,
-                    tabIndex: open ? 0 : -1,
+                    /* Constant on purpose — the panel's `inert` blocks focus
+                       while closed, and flipping tabIndex per open re-rendered
+                       every row at the first frame of the pour. */
+                    tabIndex: 0,
                     className: rowClass,
                     style: { height: h },
                     onClick: () => onSelect(item),
@@ -146,3 +147,9 @@ export function LiquidRows({
         </>
     );
 }
+
+/* Memoized: the parent re-renders on every hover-target change and once per
+   open/close, and rows are the other expensive subtree (a Lisse squircle
+   per row). All props are referentially stable across those renders, so the
+   rows render exactly once per items change. */
+export const LiquidRows = memo(LiquidRowsImpl);
