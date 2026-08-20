@@ -104,6 +104,29 @@ const SCREEN_STALE_AFTER_MS = 6 * 60 * 60 * 1000;
  */
 const SCREEN_REFRESH_MS = 6 * 60 * 60 * 1000;
 
+/**
+ * The fast lane: a row whose own stats look like a rug in progress gets
+ * re-measured after 1h instead of 6.
+ *
+ * Exists since HAT (2026-08-20): a coin that pumps +249,857% and rugs AFTER
+ * its last screen keeps riding a stale healthy figure for up to the full
+ * refresh TTL. The rug signature is already sitting in the row — a
+ * thousand-fold price move, or millions of "volume" against a double-digit
+ * holder count (HAT: 37 holders, $9.6M claimed; SOLUG: 24 and $16.8M).
+ * Wall-clock, not credits: the screen's caller is already bounded per pass
+ * and this only changes WHEN a row becomes eligible, never how many are read.
+ *
+ * The holder clause requires a REPORTED count on purpose — `NULL < 200` is
+ * not true in SQL, so majors whose holder count the pairs feed omits (SOL
+ * itself) don't get dragged into the fast lane by their volume alone.
+ */
+const SUSPICIOUS_REFRESH_MS = 60 * 60 * 1000;
+const suspiciousRow = () => sql`(
+    abs(coalesce(${trendingCoins.priceChange1h}, 0)) >= 1000
+    OR abs(coalesce(${trendingCoins.priceChange24h}, 0)) >= 5000
+    OR (${trendingCoins.volume24hUsd} >= 1000000 AND ${trendingCoins.holdersCount} < 200)
+)`;
+
 /** Stop starting new calls this long into a pass. The cron's `maxDuration` is
  *  120s and each screen call carries an 8s timeout, so a full 20-coin pass
  *  against a slow provider could otherwise outlive the request. */
@@ -213,6 +236,12 @@ export async function screenBoardLiquidity(limit: number): Promise<LiquidityScre
                     or(
                         isNull(trendingCoins.liquidityScreenedAt),
                         lt(trendingCoins.liquidityScreenedAt, new Date(Date.now() - SCREEN_REFRESH_MS)),
+                        // Rug-shaped rows re-qualify on the fast lane — see
+                        // suspiciousRow above.
+                        and(
+                            suspiciousRow(),
+                            lt(trendingCoins.liquidityScreenedAt, new Date(Date.now() - SUSPICIOUS_REFRESH_MS)),
+                        )!,
                     ),
                     // gte() with the COLUMN, never a Date interpolated into a
                     // sql template — drizzle needs the column to reach its

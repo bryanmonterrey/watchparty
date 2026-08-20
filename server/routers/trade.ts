@@ -178,10 +178,14 @@ export const tradeRouter = router({
         }))
         .query(async ({ input }) => {
             try {
-                return await withCache(
+                // The liquidity filter runs OUTSIDE this cache, per request —
+                // see below. The cached value is the RAW upstream list.
+                const feed = await withCache(
                     // v2: "new" became Pulse-backed (lifecycle lanes with real
                     // bonding state) — the row semantics changed, so the old
-                    // cached shape must not serve alongside it.
+                    // cached shape must not serve alongside it. (Old v2 entries
+                    // were written pre-filtered; re-filtering them is a no-op,
+                    // so the key survives the filter moving out of the cache.)
                     `trade:chainfeed:v2:${input.chain}:${input.list}`,
                     mobulaCadence().chainFeedTtl,
                     async () => {
@@ -210,10 +214,7 @@ export const tradeRouter = router({
                             if (lanes) {
                                 return {
                                     enabled: mobulaEnabled(),
-                                    tokens: await dropMeasuredUntradeable(
-                                        input.chain,
-                                        pulseLanesToTradeTokens(input.chain, lanes),
-                                    ),
+                                    tokens: pulseLanesToTradeTokens(input.chain, lanes),
                                 };
                             }
                             // null = Pulse can't serve this chain — fall
@@ -240,16 +241,26 @@ export const tradeRouter = router({
                             }
                         }
 
-                        // This board is a live passthrough and carries no
-                        // liquidity of its own, so the floor /trending applies
-                        // in SQL has to be applied here from what we already
-                        // measured. See server/lib/measured-liquidity.
-                        return {
-                            enabled: mobulaEnabled(),
-                            tokens: await dropMeasuredUntradeable(input.chain, mapped),
-                        };
+                        return { enabled: mobulaEnabled(), tokens: mapped };
                     }
                 );
+
+                // This board is a live passthrough and carries no liquidity of
+                // its own, so the floor /trending applies in SQL has to come
+                // from what we already measured (server/lib/measured-liquidity).
+                //
+                // PER REQUEST, outside the cache — deliberately, since HAT
+                // (2026-08-20): the filter fails open on a transient DB error,
+                // and when it ran inside the cache callback that unfiltered
+                // list was CACHED, pinning a measured $0.60 rug to the board
+                // for a full 5-minute window per blip. Out here a blip degrades
+                // exactly one response, the next request filters again, and a
+                // coin vanishes the moment it is measured instead of at the
+                // next cache fill. Cost: one indexed IN-query per request.
+                return {
+                    enabled: feed.enabled,
+                    tokens: await dropMeasuredUntradeable(input.chain, feed.tokens),
+                };
             } catch {
                 // Upstream failure (timeout, 429 on the free key's 1 RPS when
                 // several chains fan out together): answer empty but DON'T
