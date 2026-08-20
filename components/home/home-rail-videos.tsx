@@ -131,11 +131,12 @@ export function HomeRailVideos() {
     // out with no outline. Nothing in the markup explained that — both branches
     // passed `bordered` — but they were two different elements at two different
     // places in the tree, so the swap tore the whole card down and built a new
-    // one. The outline isn't a CSS border: RailShell hands it to Lisse as an
-    // `innerBorder`, which is stroked into a wrapper Lisse sizes from a
-    // ResizeObserver, so a card that mounts and remeasures at an awkward moment
-    // can come up unstroked. A shell that is never rebuilt can't. The loading
-    // and loaded states are the same element now, and only the ROWS swap.
+    // one. (The outline WAS Lisse's `innerBorder` — stroked into a wrapper
+    // sized from a ResizeObserver, so a card that mounted at an awkward moment
+    // came up unstroked; keeping one never-rebuilt shell only narrowed that.
+    // RailShell draws a plain CSS hairline now, outlined from the first frame,
+    // which closes the class entirely.) The loading and loaded states are the
+    // same element, and only the ROWS swap.
     //
     // Not on Online: that tab's list isn't this feed, and RailOnlineList carries
     // its own skeleton — the feed still loading shouldn't blank it.

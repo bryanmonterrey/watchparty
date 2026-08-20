@@ -182,10 +182,10 @@ function OnlineRowSkeleton({ index, count }: { index: number; count: number }) {
         <div className="flex w-full items-center gap-3 p-2">
             <span className="size-9 shrink-0 rounded-full shimmer-skeleton" style={pulse} />
             <span className="flex min-w-0 flex-1 flex-col gap-1.5">
-                <span className="h-3.5 w-24 rounded-xs shimmer-skeleton" style={pulse} />
-                <span className="h-3 w-16 rounded-xs shimmer-skeleton" style={pulse} />
+                <span className="h-3.5 w-24 rounded-full shimmer-skeleton" style={pulse} />
+                <span className="h-3 w-16 rounded-full shimmer-skeleton" style={pulse} />
             </span>
-            <span className="h-3 w-8 shrink-0 rounded-xs shimmer-skeleton" style={pulse} />
+            <span className="h-3 w-8 shrink-0 rounded-full shimmer-skeleton" style={pulse} />
         </div>
     );
 }

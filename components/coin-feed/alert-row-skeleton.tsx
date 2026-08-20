@@ -24,12 +24,12 @@ export function AlertRowSkeleton({ index, count }: { index: number; count: numbe
             </div>
             <div className="flex min-w-0 flex-1 flex-col gap-2 pt-0.5">
                 <div className="flex items-center gap-2">
-                    <span style={pulse} className="h-3 w-24 rounded-xs shimmer-skeleton" />
-                    <span style={pulse} className="ml-auto h-3 w-6 rounded-xs shimmer-skeleton" />
+                    <span style={pulse} className="h-3 w-24 rounded-full shimmer-skeleton" />
+                    <span style={pulse} className="ml-auto h-3 w-6 rounded-full shimmer-skeleton" />
                 </div>
                 <div className="flex items-center gap-1.5">
                     <span style={pulse} className="size-4.5 rounded-full shimmer-skeleton" />
-                    <span style={pulse} className="h-3 w-2/3 rounded-xs shimmer-skeleton" />
+                    <span style={pulse} className="h-3 w-2/3 rounded-full shimmer-skeleton" />
                 </div>
             </div>
         </div>

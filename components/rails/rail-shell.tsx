@@ -66,11 +66,24 @@ export function RailShell({
         // h-screen sticky columns, so without it the list runs flush into the
         // viewport edge. pb-2 is separate, and only keeps the last row off the
         // bottom from the inside.
-        <div className={cn("mb-2 grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] grid-cols-[minmax(0,1fr)]", className)}>
+        <div
+            className={cn(
+                "mb-2 grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] grid-cols-[minmax(0,1fr)]",
+                // The outline is a plain CSS border now, NOT Lisse's innerBorder.
+                // Lisse draws after a client-side measure, so on a fresh mount
+                // the skeleton rows painted inside a borderless box while the
+                // news card below — whose border is plain CSS — was outlined
+                // from the first frame. Same hairline recipe as that card
+                // (rounded-[25px] border-soft-gray/[0.12]), so the two boxes
+                // match in the loading state AND after it. The squircle still
+                // clips the content; only the hairline moved to CSS.
+                bordered && "rounded-[25px] border border-soft-gray/[0.12]",
+                className,
+            )}
+        >
             <Squircle
                 radius={radius}
                 autoEffects={false}
-                innerBorder={bordered ? RAIL_BORDER : undefined}
                 className="flex size-full min-h-0 flex-col pb-2"
             >
                 {/* shrink-0: the header is fixed furniture, the scroller below
