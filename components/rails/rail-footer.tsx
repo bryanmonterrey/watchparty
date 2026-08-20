@@ -45,7 +45,7 @@ export function RailFooter({ className }: { className?: string }) {
         <nav
             aria-label="Footer"
             className={cn(
-                "flex flex-wrap items-center gap-x-2 gap-y-1.5 px-1 text-11 font-medium text-zinc-600",
+                "flex flex-wrap items-center gap-x-2 gap-y-1.5 px-1 text-xs font-medium text-zinc-600",
                 className,
             )}
         >
