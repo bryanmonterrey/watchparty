@@ -15,11 +15,12 @@
 // client chunk at all, so it paints immediately while the group's JS loads.
 //
 // Geometry mirrors what the PAGE renders (the header-skeletons-mirror-tiles
-// rule): the max-w-[628px] centre with ml-7 and the h-13 toolbar spacer, the
-// w-96 right rail (xl+). The left rail belongs to the (rails) LAYOUT, which
-// wraps this fallback and draws it itself.
-// Rows copy FeedSurfaceLoading so the route-level and component-level states
-// are indistinguishable — the swap between them must not be visible.
+// rule) — and "the page" means /home's FIRST SCREEN: the hero, the category
+// tabs, the trending board. The first version copied the browse feed's rows
+// here, which was the wrong anatomy — the feed lives below the fold, so the
+// navigation painted feed cards where a hero and a board were about to land
+// (owner: "browse feed isn't part of the current navigation"). The left rail
+// belongs to the (rails) LAYOUT, which wraps this fallback and draws itself.
 export default function HomeLoading() {
     // ONLY the page slot. This renders INSIDE the (rails) layout, which
     // already draws the real left rail beside it — a rail spacer here would
@@ -33,20 +34,28 @@ export default function HomeLoading() {
                     rail, "aligned to the left", then jumped when the page
                     landed. Same group-has hook, same widths, same swap. */}
                 <main className="relative ml-7 flex w-full min-w-0 max-w-[628px] flex-col md:mt-[var(--header-height)] group-has-[[data-rail-collapsed=true]]/rails:max-w-[872px]">
-                    <div className="h-13" />
-                    <div className="flex flex-col" aria-hidden>
-                        {Array.from({ length: 6 }).map((_, index) => (
-                            <div key={index} className="border-b border-soft-gray/10 p-4">
-                                <div className="flex gap-3">
-                                    <div className="size-11 rounded-full shimmer-skeleton" />
-                                    <div className="flex-1 space-y-3">
-                                        <div className="h-3.5 w-2/5 rounded-full shimmer-skeleton" />
-                                        <div className="h-3.5 w-4/5 rounded-full shimmer-skeleton" />
-                                        {index % 2 === 1 && (
-                                            <div className="aspect-video w-full rounded-xl shimmer-skeleton" />
-                                        )}
-                                    </div>
+                    <div aria-hidden>
+                        {/* Hero: aspect-video full-bleed, same box as
+                            HomeCenterColumn's HERO_BASE. A media stand-in, so
+                            it stays rectangular — pills are for text. */}
+                        <div className="aspect-video w-full shimmer-skeleton" />
+                        {/* Category tabs: the real bar is h-12 with pb-2. */}
+                        <div className="flex h-12 items-center gap-2 pb-2 pt-3">
+                            {[64, 96, 80, 72].map((w) => (
+                                <div key={w} className="h-8 rounded-full shimmer-skeleton" style={{ width: w }} />
+                            ))}
+                        </div>
+                        {/* Board rows: coin avatar + text pills, the trending
+                            table's own row anatomy. */}
+                        {Array.from({ length: 7 }).map((_, index) => (
+                            <div key={index} className="flex items-center gap-3 py-3">
+                                <div className="size-9 shrink-0 rounded-full shimmer-skeleton" />
+                                <div className="flex-1 space-y-2">
+                                    <div className="h-3.5 w-1/4 rounded-full shimmer-skeleton" />
+                                    <div className="h-3 w-1/6 rounded-full shimmer-skeleton" />
                                 </div>
+                                <div className="h-3.5 w-14 rounded-full shimmer-skeleton" />
+                                <div className="h-3.5 w-14 rounded-full shimmer-skeleton" />
                             </div>
                         ))}
                     </div>

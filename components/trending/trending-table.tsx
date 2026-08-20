@@ -282,7 +282,7 @@ function NameCell({ row }: { row: TrendingRow }) {
 const helper = createDataTableColumnHelper<TrendingRow>();
 
 const bar = (i: number, count: number, cls: string) => (
-    <span style={staggerPulse(i, count)} className={cn("block rounded-xs shimmer-skeleton", cls)} />
+    <span style={staggerPulse(i, count)} className={cn("block rounded-full shimmer-skeleton", cls)} />
 );
 
 /**
