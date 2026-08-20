@@ -41,7 +41,10 @@ import {
     Logo4,
     FlagLogo,
     QuestsIcon,
+    ShortsIcon,
 } from "@/components/icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { GridViewIcon, SourceCodeIcon, Target02Icon, Video01Icon } from "@hugeicons/core-free-icons"
 import { trpc } from "@/lib/trpc/client"
 import { usePremiumOverlay } from "@/lib/premium/overlay-store"
 import { WithAuth } from "@/components/auth/with-auth"
@@ -50,6 +53,21 @@ import { NotificationsPanel } from "@/components/notifications/notifications-pan
 import { useNotificationsOverlay } from "@/lib/notifications/overlay-store"
 import { useAuthSession } from "@/hooks/use-auth-session"
 import { GooDropdown } from "@/components/ui/goo-dropdown"
+
+// The More menu's rows, one shape: icon + label, the row hover fill supplied
+// by the liquid engine's travelling pill (no hover:bg here).
+const MORE_ICON = "w-5 h-5 shrink-0 text-zinc-500 group-hover:text-white transition-colors"
+const moreItem = (key: string, href: string, icon: React.ReactNode, label: string) => ({
+    key,
+    href,
+    className: "gap-3 px-4 text-lg font-medium text-zinc-300 hover:text-white group",
+    label: (
+        <>
+            {icon}
+            {label}
+        </>
+    ),
+})
 
 // Dims the row while its route loads (useLinkStatus must render inside the
 // <Link>). The 150ms transition delay keeps fast navigations flash-free —
@@ -160,7 +178,14 @@ export function AppSidebar() {
     // page mounts with data already in the React Query cache (staleTime is 5m,
     // so it actually serves). prefetch* respects staleTime — repeat hovers are
     // free, and a fresh cache entry is never refetched.
-    const prefetchForItem = (title: string) => {
+    const prefetchForItem = (title: string, url: string) => {
+        // Warm the ROUTE too, not just its queries. Every (app) page is
+        // force-dynamic, so <Link>'s default prefetch stops at the loading
+        // boundary — the first navigation still pays a worker round-trip for
+        // the RSC payload. router.prefetch fetches the full payload, and the
+        // client cache holds it for staleTimes.static, so hover-to-click
+        // navigations swap instantly instead of painting the loading skeleton.
+        if (url !== "#") router.prefetch(url)
         switch (title) {
             case "Home":
                 utils.content.getVideoFeed.prefetchInfinite({ limit: 36 })
@@ -300,8 +325,8 @@ export function AppSidebar() {
                                             <SidebarMenuButton
                                                 asChild={itemUrl !== "#"}
                                                 size="lg"
-                                                onMouseEnter={() => prefetchForItem(item.title)}
-                                                onFocus={() => prefetchForItem(item.title)}
+                                                onMouseEnter={() => prefetchForItem(item.title, itemUrl)}
+                                                onFocus={() => prefetchForItem(item.title, itemUrl)}
                                                 className={cn(
                                                     "text-lg !w-auto !justify-start !p-0 transition-all duration-150 ease-in-out font-medium h-12 relative isolate hover:bg-transparent active:bg-transparent before:absolute before:inset-y-0 before:left-2 before:right-2 before:rounded-full before:z-[-1] before:transition-colors before:duration-150 hover:before:bg-sidebar-hover modal-trigger gap-0",
                                                     isActive ? "text-flexwhite font-bold" : "text-flexwhite/85 hover:text-white/85"
@@ -389,9 +414,11 @@ export function AppSidebar() {
                                 onOpenChange={setMoreOpen}
                                 side="top"
                                 align="start"
-                                // Panel starts at the "More" label (right of the
-                                // icon column) instead of hugging the viewport edge.
-                                shift={68}
+                                // The panel STARTS at the More button's center:
+                                // its left edge sits half the icon column (68px)
+                                // in, which is also where the pour originates
+                                // when the rail is collapsed.
+                                alignOffset={34}
                                 width={320}
                                 gap={8}
                                 triggerClassName={cn(
@@ -424,29 +451,22 @@ export function AppSidebar() {
                                         </AnimatePresence>
                                     </span>
                                 }
+                                // Everything reachable but not worth a main-nav
+                                // slot: discovery destinations first, then the
+                                // two other surfaces (studio + console live on
+                                // their own subdomains), Settings last. Row fill
+                                // hover belongs to the engine's travelling pill,
+                                // so rows only shift their text colour.
                                 items={[
-                                    {
-                                        key: "quests",
-                                        href: "/quests",
-                                        className: "gap-3 px-4 text-lg font-medium text-zinc-300 hover:bg-white/5 hover:text-white group",
-                                        label: (
-                                            <>
-                                                <QuestsIcon className="w-5 h-5 text-zinc-500 group-hover:text-white transition-colors" />
-                                                Quests
-                                            </>
-                                        ),
-                                    },
-                                    {
-                                        key: "settings",
-                                        href: "/settings",
-                                        className: "gap-3 px-4 text-lg font-medium text-zinc-300 hover:bg-white/5 hover:text-white group",
-                                        label: (
-                                            <>
-                                                <SettingsIcon className="w-5 h-5 text-zinc-500 group-hover:text-white transition-colors" />
-                                                Settings
-                                            </>
-                                        ),
-                                    },
+                                    moreItem("predictions", "/trade/predictions", <HugeiconsIcon icon={Target02Icon} className={MORE_ICON} />, "Predictions"),
+                                    moreItem("shorts", "/shorts", <ShortsIcon className={MORE_ICON} />, "Shorts"),
+                                    moreItem("categories", "/category", <HugeiconsIcon icon={GridViewIcon} className={MORE_ICON} />, "Categories"),
+                                    moreItem("quests", "/quests", <QuestsIcon className={MORE_ICON} />, "Quests"),
+                                    { key: "sep-surfaces", type: "separator" as const },
+                                    moreItem("studio", "https://studio.watchparty.xyz", <HugeiconsIcon icon={Video01Icon} className={MORE_ICON} />, "Creator Studio"),
+                                    moreItem("developer", "https://console.watchparty.xyz", <HugeiconsIcon icon={SourceCodeIcon} className={MORE_ICON} />, "Developer"),
+                                    { key: "sep-settings", type: "separator" as const },
+                                    moreItem("settings", "/settings", <SettingsIcon className={MORE_ICON} />, "Settings"),
                                 ]}
                             />
                         </SidebarMenuItem>

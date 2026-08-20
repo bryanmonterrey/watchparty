@@ -79,7 +79,7 @@ export type LiquidPopoverProps = {
     headerHeight?: number;
     /** Panel width in px. */
     width?: number;
-    align?: "start" | "end";
+    align?: "start" | "center" | "end";
     /** Shift along the align axis, in px. */
     alignOffset?: number;
     side?: "top" | "bottom";
@@ -425,7 +425,17 @@ export function LiquidPopover({
         gsap.set([refs.panelBody, refs.panel], { autoAlpha: 0 });
         gsap.set(innerBits(), { autoAlpha: 0 });
         gsap.set(refs.chain, { scale: 0, transformOrigin: "50% 50%" });
-        gsap.set(refs.blobTrigger, { transformOrigin: "50% 50%" });
+        /* The trigger blob stays OUT of the picture — permanently. In the
+           reference the trigger is a bordered circle, so the goo redrawing it
+           rim-and-all was pixel-identical; the app's triggers are borderless
+           icon buttons and pills, and the same redraw materialized an OUTLINED
+           pill around them for the length of every flight (the owner's
+           "outline around the trigger", 2026-08-20). Hidden by style rather
+           than removed: the stretch engine still tweens it (harmless), and
+           hiddenByStyle drops it from the seam's parts automatically. The pour
+           still originates at the trigger's center — only the phantom body is
+           gone; during a grab the finger's beads carry the liquid alone. */
+        gsap.set(refs.blobTrigger, { transformOrigin: "50% 50%", autoAlpha: 0 });
         gsap.set(refs.goo, { autoAlpha: 0 });
         gsap.set(refs.bodies, { autoAlpha: 1 });
 

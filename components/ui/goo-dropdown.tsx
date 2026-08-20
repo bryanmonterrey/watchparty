@@ -61,7 +61,7 @@ export type GooDropdownProps = {
   headerHeight?: number
   /** Panel width in px. */
   width?: number
-  align?: 'start' | 'end'
+  align?: 'start' | 'center' | 'end'
   /** Shift along the align axis, in px. */
   alignOffset?: number
   /** No-op — kept so call sites compile. */

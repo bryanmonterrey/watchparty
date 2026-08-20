@@ -19,7 +19,7 @@ export const SEAM_RADIUS = 20;
 
 export interface GeomParams {
     width: number;
-    align: "start" | "end";
+    align: "start" | "center" | "end";
     alignOffset: number;
     side: "top" | "bottom";
     gap: number;
@@ -61,7 +61,12 @@ export function measureLiquid(refs: LiquidRefs, params: GeomParams): Geom | null
     const th = triggerEl.offsetHeight || 32;
     const panelW = panelEl.offsetWidth || width;
     const panelH = panelEl.offsetHeight || 0;
-    const panelLeft = align === "start" ? alignOffset : tw - panelW - alignOffset;
+    const panelLeft =
+        align === "start"
+            ? alignOffset
+            : align === "center"
+              ? (tw - panelW) / 2 + alignOffset
+              : tw - panelW - alignOffset;
     const panelTop = side === "bottom" ? th + gap : -(gap + panelH);
 
     const canvasLeft = Math.min(0, panelLeft) - CANVAS_PAD;
