@@ -1,4 +1,7 @@
-/* Ported verbatim from liquid-taffy (arknow91/liquid-taffy, MIT). */
+/* Ported from liquid-taffy (arknow91/liquid-taffy, MIT). One addition:
+   host.effectScale — the reference's press squash and splat are tuned for a
+   32px circle, and on the app's larger triggers the same amplitudes read as
+   the button ballooning; the host scales them down with trigger size. */
 /* The grab — the family's shared gesture, ONE implementation.
 
    Press any liquid body and drag: a chain of beads is drawn out of its rim as
@@ -99,6 +102,10 @@ export interface StretchHost {
      Optional, defaulting to false: a plus-only trigger (the dropdowns')
      never asks. */
   triggerRigid?(): boolean;
+  /* 0..1 multiplier on the trigger's deformation amplitudes (press squash,
+     hold stretch, landing splat). Optional, defaulting to 1 — the reference's
+     own feel. */
+  effectScale?(): number;
 }
 
 export interface LiquidStretch {
@@ -133,6 +140,7 @@ export function createLiquidStretch(host: StretchHost): LiquidStretch {
   let timeline: gsap.core.Timeline | null = null;
 
   const isTriggerRigid = () => host.triggerRigid?.() ?? false;
+  const fx = () => host.effectScale?.() ?? 1;
 
   /* Pointer released or cancelled before a click could resolve: spring home.
      After a real pull the liquid finger snaps back into the rim and the
@@ -199,12 +207,13 @@ export function createLiquidStretch(host: StretchHost): LiquidStretch {
       );
       tl.to(host.triggerIcon(), { x: 0, y: 0, duration: 0.5, ease: SPRING }, 0);
       if (wasStretched) {
+        const f = fx();
         tl.to(
           host.triggerBits(),
           {
             keyframes: [
-              { scaleX: 1.2, scaleY: 0.82, duration: 0.09, ease: "power2.out" },
-              { scaleX: 0.93, scaleY: 1.09, duration: 0.11, ease: "power1.inOut" },
+              { scaleX: 1 + 0.2 * f, scaleY: 1 - 0.18 * f, duration: 0.09, ease: "power2.out" },
+              { scaleX: 1 - 0.07 * f, scaleY: 1 + 0.09 * f, duration: 0.11, ease: "power1.inOut" },
               { scaleX: 1, scaleY: 1, duration: 0.4, ease: SPRING },
             ],
             overwrite: "auto",
@@ -258,7 +267,7 @@ export function createLiquidStretch(host: StretchHost): LiquidStretch {
     /* The press squash belongs to the PLUS. The cross is a pad button among
        pad buttons, and none of them dents when you take hold of it. */
     if (target === "trigger" && !isTriggerRigid()) {
-      gsap.to(host.triggerBits(), { scale: 0.85, duration: 0.1, ease: OUT_STRONG, overwrite: "auto" });
+      gsap.to(host.triggerBits(), { scale: 1 - 0.15 * fx(), duration: 0.1, ease: OUT_STRONG, overwrite: "auto" });
     }
   };
 
@@ -328,12 +337,13 @@ export function createLiquidStretch(host: StretchHost): LiquidStretch {
 
     /* The trigger leans into the pull (up to ~8px) and stretches a touch
        along it — the mass visibly follows the grabbed piece. */
+    const f = fx();
     gsap.to(host.triggerStretchBits(), {
       x: ux * pull * 0.18,
       y: uy * pull * 0.18,
       rotation: (Math.atan2(dy, dx) * 180) / Math.PI,
-      scaleX: (1 + tension * 0.12) * 0.85,
-      scaleY: (1 - tension * 0.06) * 0.85,
+      scaleX: (1 + tension * 0.12) * (1 - 0.15 * f),
+      scaleY: (1 - tension * 0.06) * (1 - 0.15 * f),
       duration: 0.25,
       ease: "power3.out",
       overwrite: "auto",

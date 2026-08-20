@@ -162,6 +162,18 @@ export function LiquidPopover({
     }, [align, alignOffset, gap, panelRadius, refs, side, width]);
 
     const getTriggerBits = useCallback(() => [refs.blobTrigger, refs.trigger], [refs]);
+    /* How hard the trigger may deform. The reference's swell/squash/splat are
+       tuned for a 32px circle; on a full-width row trigger (the sidebar's
+       More) the same 1.16 swell inflates the button's own hover pill into a
+       visibly oversized blob. Amplitude falls off with trigger size — full
+       feel on icon buttons, a breath on wide rows. */
+    const fxScale = useCallback(() => {
+        const geom = geomRef.current;
+        if (!geom) {
+            return 1;
+        }
+        return Math.min(1, Math.max(0.25, 44 / Math.max(geom.tw, geom.th)));
+    }, []);
     const getPanelTrio = useCallback(() => [refs.blobPanel, refs.panelBody, refs.panel], [refs]);
     /* The stagger's targets, DOM order: header content, then each row's
        content wrapper. */
@@ -295,6 +307,7 @@ export function LiquidPopover({
                only LEANS (it rides the icon channel below). */
             triggerStretchBits: () => [refs.blobTrigger],
             triggerIcon: () => refs.trigger,
+            effectScale: fxScale,
             chain: () => refs.chain,
             auxTrio: () => getPanelTrio(),
             liquidOn: (target) => {
@@ -517,15 +530,22 @@ export function LiquidPopover({
         timelineRef.current = tl;
 
         tl.set([refs.panelBody, refs.panel], { autoAlpha: 1 }, 0);
-        /* Re-arm the panel blob a closed-state grab may have hidden. */
-        tl.set(refs.blobPanel, { autoAlpha: 1 }, 0);
+        /* The goo panel MATERIALIZES as it grows rather than starting shown:
+           parked at rest-scale it is a tiny outlined squircle sitting right on
+           the button. The reference never saw this — its parked panel hid
+           inside the trigger circle's own goo mass, and that mass is gone (the
+           borderless-trigger fix). Fading in across the ooze keeps the first
+           visible panel already in motion. */
+        tl.fromTo(refs.blobPanel, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.12, ease: "power1.out" }, 0.03);
         tl.set(getPanelTrio(), { x: 0, y: 0 }, 0);
         tl.set(refs.blobTrigger, { rotation: 0 }, 0);
         /* Park the grab chain in case this click ended a sponge pull. */
         tl.to(refs.chain, { x: 0, y: 0, scale: 0, duration: 0.14, ease: OUT_STRONG, overwrite: "auto" }, 0);
 
-        /* The button swells as the drop gathers, then shakes it off. */
-        tl.to(triggerBits, { x: 0, y: 0, scale: 1.16, duration: 0.13, ease: OUT_STRONG }, 0);
+        /* The button swells as the drop gathers, then shakes it off —
+           amplitude scaled to the trigger's size (see fxScale). */
+        const f = fxScale();
+        tl.to(triggerBits, { x: 0, y: 0, scale: 1 + 0.16 * f, duration: 0.13, ease: OUT_STRONG }, 0);
         tl.to(triggerBits, { scale: 1, duration: 0.34, ease: SPRING }, 0.15);
 
         /* The dropdown oozes out, then fires on the pop spring — swinging
@@ -563,7 +583,7 @@ export function LiquidPopover({
         tl.to(refs.goo, { autoAlpha: 0, duration: 0.16, ease: "power1.out" }, 0.47);
         applyGooBlur(GOO_BLUR_REST, tl, 0.64);
         tl.call(() => refs.root?.removeAttribute("data-liquid"), undefined, 0.63);
-    }, [applyGooBlur, clearRowNeon, getPanelTrio, getTriggerBits, innerBits, liquidOn, measure, refs, setOpen, setStaticState, side, stretch]);
+    }, [applyGooBlur, clearRowNeon, fxScale, getPanelTrio, getTriggerBits, innerBits, liquidOn, measure, refs, setOpen, setStaticState, side, stretch]);
 
     const closeMenu = useCallback(
         (fromTrigger: boolean) => {
@@ -589,6 +609,10 @@ export function LiquidPopover({
             timelineRef.current = tl;
 
             tl.set(refs.blobPanel, { autoAlpha: 1 }, 0);
+            /* The mirror of the open's materialize: the drop dissolves as it
+               lands so no outlined dot survives at the button. Gone by 0.17,
+               when the panel parks at rest-scale. */
+            tl.to(refs.blobPanel, { autoAlpha: 0, duration: 0.07, ease: "power1.in" }, 0.1);
             tl.set(refs.blobTrigger, { rotation: 0 }, 0);
             tl.to(triggerBits, { x: 0, y: 0, duration: 0.1, ease: OUT_STRONG }, 0);
             tl.to(refs.chain, { x: 0, y: 0, scale: 0, duration: 0.1, ease: OUT_STRONG, overwrite: "auto" }, 0);
@@ -626,12 +650,13 @@ export function LiquidPopover({
 
             /* The drop lands IN the button and the button is liquid too: a
                modest splat, a small slosh back, then it rings itself round. */
+            const f = fxScale();
             tl.to(
                 triggerBits,
                 {
                     keyframes: [
-                        { scaleX: 1.18, scaleY: 0.84, duration: 0.05, ease: "power2.out" },
-                        { scaleX: 0.95, scaleY: 1.06, duration: 0.07, ease: "power1.inOut" },
+                        { scaleX: 1 + 0.18 * f, scaleY: 1 - 0.16 * f, duration: 0.05, ease: "power2.out" },
+                        { scaleX: 1 - 0.05 * f, scaleY: 1 + 0.06 * f, duration: 0.07, ease: "power1.inOut" },
                         { scaleX: 1, scaleY: 1, duration: 0.24, ease: SPRING },
                     ],
                     overwrite: "auto",
@@ -644,7 +669,7 @@ export function LiquidPopover({
             applyGooBlur(GOO_BLUR_REST, tl, 0.33);
             tl.call(() => refs.root?.removeAttribute("data-liquid"), undefined, 0.32);
         },
-        [applyGooBlur, clearRowNeon, getPanelTrio, getTriggerBits, innerBits, liquidOn, refs, setOpen, setStaticState, side, stretch],
+        [applyGooBlur, clearRowNeon, fxScale, getPanelTrio, getTriggerBits, innerBits, liquidOn, refs, setOpen, setStaticState, side, stretch],
     );
 
     /* Controlled open: the prop drives the same choreography the clicks do. */
