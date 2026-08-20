@@ -27,6 +27,24 @@ const nextConfig: NextConfig = {
   // deploy is byte-for-byte what it was.
   output: process.env.BUILD_TARGET === "container" ? "standalone" : undefined,
   experimental: {
+    // Client router cache for page segments. The whole (app) tree is
+    // force-dynamic (the layout reads the session cookie), and Next's default
+    // for dynamic segments is staleTimes.dynamic = 0 — every soft navigation
+    // refetches the page's RSC payload from the worker, even to a page visited
+    // seconds ago. That round-trip is why /home ↔ /feed felt slow and why
+    // home/loading.tsx painted on every RE-navigation (the router shows the
+    // loading boundary while the refetch is in flight; the initial document
+    // load never suspends, so it never shows there).
+    //
+    // Caching these payloads is safe here because (app) pages render client
+    // wrappers whose DATA lives in TanStack Query — the RSC payload is static
+    // JSX that doesn't go stale. Layouts aren't affected either way: partial
+    // rendering already skips refetching shared layouts on navigation, so the
+    // session gate in (app)/layout.tsx runs exactly as often as before.
+    staleTimes: {
+      dynamic: 300,
+      static: 300,
+    },
     // Barrel-file packages, rewritten to per-module imports at build time.
     //
     // `import { UserIcon } from "@hugeicons/core-free-icons"` reads like one
