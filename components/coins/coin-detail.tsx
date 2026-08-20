@@ -620,7 +620,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
 
     const TABS: { id: TableTab; label: string }[] = [
         { id: "holders", label: "Holders" },
-        { id: "swaps", label: "Swaps" },
+        { id: "swaps", label: "Transactions" },
         // Counts TAGS, not traders. It read `rows.length` — the folded trader
         // count — under a label that says Tags, so the number was always about
         // a different thing than the word next to it.
@@ -694,7 +694,7 @@ function CoinTable({ coin }: { coin: CoinViewData }) {
                     emptyState={<p className="px-4 py-6 text-left text-sm text-zinc-500">No trader activity yet.</p>}
                 />
             ) : tab === "swaps" ? (
-                <SwapsTable trades={trades} loading={isLoading} />
+                <SwapsTable trades={trades} loading={isLoading} network={coin.network} />
             ) : (
                 <MentionsTable mentions={mentions} loading={mentionsLoading} />
             )}

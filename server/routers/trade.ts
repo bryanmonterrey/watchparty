@@ -332,6 +332,10 @@ export const tradeRouter = router({
                         isBuy: r.isBuy,
                         usdValue: r.usdValue,
                         tokenAmount: r.tokenAmount,
+                        // Execution price, straight from the provider — the
+                        // table's Price column must show the fill, not today's
+                        // quote, or every row would read the same number.
+                        priceUsd: r.priceUsd,
                         ts: r.ts,
                         txHash: r.txHash,
                     };

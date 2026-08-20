@@ -18,6 +18,9 @@ import { DataTable, createDataTableColumnHelper } from "@/components/ui/data-tab
 import { stableHoverColor } from "@/lib/stable-hover-color";
 import { formatRelativeTime } from "@/lib/date-utils";
 import { cn } from "@/lib/utils";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { LinkSquare02Icon } from "@hugeicons/core-free-icons";
+import { explorerTxUrl } from "@/lib/coin-feed/networks";
 
 /** One swap, exactly as `trade.coinTrades` returns it. */
 export interface SwapRow {
@@ -27,7 +30,11 @@ export interface SwapRow {
     isBuy: boolean;
     usdValue: number;
     tokenAmount: number;
+    /** Execution price at the fill; null when the provider didn't carry one. */
+    priceUsd: number | null;
+    /** Unix SECONDS — the tape's unit everywhere (coin_trades, candles, tags). */
     ts: number;
+    txHash: string;
 }
 
 /** One post that wrote this coin's ticker, as `tags.forCoin` returns it. */
@@ -49,6 +56,13 @@ const tokens = (n: number) =>
     n >= 1_000_000 ? `${(n / 1_000_000).toFixed(2)}M`
     : n >= 1_000 ? n.toLocaleString(undefined, { maximumFractionDigits: 0 })
     : n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+
+/** Execution price. Significant digits below $1 — memecoin prices live in the
+ *  leading zeros, and toFixed(4) renders most of them as $0.0000. */
+const price = (n: number) =>
+    n >= 1
+        ? `$${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+        : `$${n.toLocaleString(undefined, { maximumSignificantDigits: 4 })}`;
 
 /** Wallet-only rows still need a stable, non-address label — the house rule is
  *  that a wallet address is never rendered for a human to read. */
@@ -73,7 +87,16 @@ function Who({ row }: { row: { username: string | null; avatarUrl: string | null
 
 const swapHelper = createDataTableColumnHelper<SwapRow>();
 
-export function SwapsTable({ trades, loading }: { trades: SwapRow[]; loading: boolean }) {
+export function SwapsTable({
+    trades,
+    loading,
+    network,
+}: {
+    trades: SwapRow[];
+    loading: boolean;
+    /** Chain slug, for the per-row explorer link. */
+    network: string;
+}) {
     const columns = React.useMemo(
         () => [
             swapHelper.accessor("account", {
@@ -108,17 +131,57 @@ export function SwapsTable({ trades, loading }: { trades: SwapRow[]; loading: bo
                     </span>
                 ),
             }),
+            swapHelper.accessor("priceUsd", {
+                header: "Price",
+                meta: { width: "104px", align: "right" },
+                // The FILL price, falling back to usd/amount when the provider
+                // didn't carry one — never the coin's current quote, or every
+                // row would read the same number.
+                cell: ({ row }) => {
+                    const p =
+                        row.original.priceUsd ??
+                        (row.original.tokenAmount > 0 && row.original.usdValue > 0
+                            ? row.original.usdValue / row.original.tokenAmount
+                            : null);
+                    return (
+                        <span className="text-15 font-medium tabular-nums text-zinc-400">
+                            {p != null ? price(p) : "—"}
+                        </span>
+                    );
+                },
+            }),
             swapHelper.accessor("ts", {
                 header: "When",
                 meta: { width: "96px", align: "right" },
+                // ts is unix SECONDS (the tape's unit everywhere); Date wants
+                // milliseconds. Unscaled, every 2026 trade renders as Jan 1970.
                 cell: ({ row }) => (
                     <span className="text-15 font-medium tabular-nums text-zinc-500">
-                        {row.original.ts ? formatRelativeTime(new Date(row.original.ts).toISOString()) : "—"}
+                        {row.original.ts ? formatRelativeTime(new Date(row.original.ts * 1000).toISOString()) : "—"}
                     </span>
                 ),
             }),
+            swapHelper.accessor("txHash", {
+                header: "Txn",
+                meta: { width: "56px", align: "right" },
+                cell: ({ row }) => {
+                    const href = explorerTxUrl(network, row.original.txHash);
+                    if (!href) return null;
+                    return (
+                        <a
+                            href={href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label="View transaction on explorer"
+                            className="inline-flex text-zinc-500 transition-colors hover:text-white"
+                        >
+                            <HugeiconsIcon icon={LinkSquare02Icon} className="size-4" strokeWidth={1.75} />
+                        </a>
+                    );
+                },
+            }),
         ],
-        [],
+        [network],
     );
 
     return (
@@ -135,7 +198,7 @@ export function SwapsTable({ trades, loading }: { trades: SwapRow[]; loading: bo
             rowHoverRadius={12}
             rowHoverColor={(r) => stableHoverColor(r.account)}
             className="px-1.5 pb-1.5"
-            emptyState={<p className="px-4 py-6 text-left text-sm text-zinc-500">No swaps in the last 24h.</p>}
+            emptyState={<p className="px-4 py-6 text-left text-sm text-zinc-500">No transactions in the last 24h.</p>}
         />
     );
 }
@@ -163,9 +226,11 @@ export function MentionsTable({ mentions, loading }: { mentions: MentionRow[]; l
             mentionHelper.accessor("ts", {
                 header: "When",
                 meta: { width: "96px", align: "right" },
+                // Same unit as the swaps table: tags.forCoin returns unix
+                // seconds, Date wants milliseconds.
                 cell: ({ row }) => (
                     <span className="text-15 font-medium tabular-nums text-zinc-500">
-                        {row.original.ts ? formatRelativeTime(new Date(row.original.ts).toISOString()) : "—"}
+                        {row.original.ts ? formatRelativeTime(new Date(row.original.ts * 1000).toISOString()) : "—"}
                     </span>
                 ),
             }),

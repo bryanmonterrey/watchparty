@@ -212,6 +212,39 @@ export function explorerUrl(network: string, tokenAddress: string, poolAddress?:
     return null;
 }
 
+/** Same hosts as EXPLORERS, pointed at a TRANSACTION. Only the chains whose
+ *  path shape differs from `/tx/` need an entry of their own. */
+const TX_PATHS: Record<string, (h: string) => string> = {
+    solana: (h) => `https://solscan.io/tx/${h}`,
+    eth: (h) => `https://etherscan.io/tx/${h}`,
+    base: (h) => `https://basescan.org/tx/${h}`,
+    bsc: (h) => `https://bscscan.com/tx/${h}`,
+    arbitrum: (h) => `https://arbiscan.io/tx/${h}`,
+    polygon_pos: (h) => `https://polygonscan.com/tx/${h}`,
+    avax: (h) => `https://snowtrace.io/tx/${h}`,
+    optimism: (h) => `https://optimistic.etherscan.io/tx/${h}`,
+    ton: (h) => `https://tonviewer.com/transaction/${h}`,
+    "sui-network": (h) => `https://suivision.xyz/txblock/${h}`,
+    aptos: (h) => `https://explorer.aptoslabs.com/txn/${h}`,
+    "sei-network": (h) => `https://seitrace.com/tx/${h}`,
+    hyperevm: (h) => `https://hyperevmscan.io/tx/${h}`,
+    robinhood: (h) => `https://explorer.chain.robinhood.com/tx/${h}`,
+    berachain: (h) => `https://berascan.com/tx/${h}`,
+    blast: (h) => `https://blastscan.io/tx/${h}`,
+    linea: (h) => `https://lineascan.build/tx/${h}`,
+    tron: (h) => `https://tronscan.org/#/transaction/${h}`,
+    unichain: (h) => `https://uniscan.xyz/tx/${h}`,
+    sonic: (h) => `https://sonicscan.org/tx/${h}`,
+    abstract: (h) => `https://abscan.org/tx/${h}`,
+};
+
+/** Explorer link for one transaction, or null when the chain (or hash) is
+ *  unknown — a table cell renders nothing rather than a dead link. */
+export function explorerTxUrl(network: string, txHash: string | null | undefined): string | null {
+    if (!txHash) return null;
+    return TX_PATHS[network]?.(txHash) ?? null;
+}
+
 /**
  * Where a row's "buy" goes for a chain we can't swap in-app (everything but
  * Solana, which routes through Jupiter in the wallet).
