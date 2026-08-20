@@ -17,6 +17,35 @@ import { trpc } from "@/lib/trpc/client";
 // pays would be worse than no picker at all.
 
 const ACTIVE_KEY = "wallet:active";
+const ACTIVE_EVENT = "wallet:active-changed";
+
+function readStoredActive(): string | null {
+    return typeof window === "undefined" ? null : localStorage.getItem(ACTIVE_KEY);
+}
+function subscribeActive(cb: () => void) {
+    window.addEventListener(ACTIVE_EVENT, cb);
+    // Other tabs write localStorage without our event; "storage" covers them.
+    window.addEventListener("storage", cb);
+    return () => {
+        window.removeEventListener(ACTIVE_EVENT, cb);
+        window.removeEventListener("storage", cb);
+    };
+}
+
+/**
+ * The SELECTED wallet address ("wallet in use"), subscribable.
+ *
+ * localStorage writes do not re-render other components, so before this the
+ * picker and anything else reading the selection could disagree for a whole
+ * session: the header balance chip is mounted permanently and would keep
+ * whatever it read at mount. useSyncExternalStore + an event from setActive is
+ * what lets the chip FOLLOW the selection (the owner's rule: the chip shows
+ * the balance of the wallet in use). Server snapshot is null so SSR and the
+ * first client render agree.
+ */
+export function useActiveAddress(): string | null {
+    return React.useSyncExternalStore(subscribeActive, readStoredActive, () => null);
+}
 
 export type LinkedWallet = {
     id: string;
@@ -66,13 +95,9 @@ export function useActiveWallet(enabled = true) {
         retry: false,
     });
 
-    const [activeAddress, setActiveAddress] = React.useState<string | null>(null);
-
-    // Restore on the client only — reading localStorage during render would
-    // desync SSR and hydration.
-    React.useEffect(() => {
-        setActiveAddress(localStorage.getItem(ACTIVE_KEY));
-    }, []);
+    // One source of truth shared with useActiveAddress — a private useState
+    // here was a second copy of the selection that nothing else could see.
+    const activeAddress = useActiveAddress();
 
     // `.wallets`, not the payload itself: the procedure returns
     // `{ wallets, max }`. This read `(wallets.data ?? []) as LinkedWallet[]`,
@@ -88,8 +113,10 @@ export function useActiveWallet(enabled = true) {
     );
 
     const setActive = React.useCallback((address: string) => {
-        setActiveAddress(address);
         localStorage.setItem(ACTIVE_KEY, address);
+        // Same-tab subscribers (the balance chip) re-read on this; the
+        // "storage" event only fires in OTHER tabs.
+        window.dispatchEvent(new Event(ACTIVE_EVENT));
     }, []);
 
     /** Display names, resolved once so the numbering is stable across renders

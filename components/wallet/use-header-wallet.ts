@@ -5,6 +5,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletReadyState } from "@solana/wallet-adapter-base";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { trpc } from "@/lib/trpc/client";
+import { useActiveAddress } from "@/hooks/use-active-wallet";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { getRealtimeClient } from "@/lib/supabase/realtime-client";
 import { useForceLoading } from "@/lib/debug-loading";
@@ -150,9 +151,22 @@ export function useHeaderWalletAddress() {
     }, [adapterAddress, graceExpired, connecting, adapterPresent]);
 
     const waitingOnAdapter = !adapterAddress && !graceExpired && (connecting || adapterPresent);
-    const address = adapterAddress ?? (waitingOnAdapter ? undefined : session?.user?.wallet_address);
 
-    return { address, waitingOnAdapter, session };
+    // The SELECTION ("wallet in use") is authoritative when it exists — the
+    // owner's rule is that the balance chip shows the wallet in use, and the
+    // buy dialog already spends from it. An EVM selection has no Solana
+    // address at all, so it comes back as `selectedEvm` and the Solana address
+    // stays undefined — which is exactly the state the EVM chip path keys on.
+    // No selection (never opened the picker) keeps the old resolution:
+    // connected adapter, then the account's primary mirror.
+    const selection = useActiveAddress();
+    const selectedEvm = selection?.startsWith("0x") ? selection : null;
+    const address = selectedEvm
+        ? undefined
+        : selection ?? adapterAddress ?? (waitingOnAdapter ? undefined : session?.user?.wallet_address);
+
+    // An explicit selection needs no adapter grace: the address is known now.
+    return { address, waitingOnAdapter: selection ? false : waitingOnAdapter, selectedEvm, session };
 }
 
 /**
@@ -174,7 +188,7 @@ export function useHeaderWalletLoading() {
     // Debug switch (?debug-loading) pins all three tiles into their skeletons.
     const forceLoading = useForceLoading();
     const { isLoading: sessionLoading, isError: sessionError, data: sessionData } = useAuthSession();
-    const { address: walletAddress, waitingOnAdapter, session } = useHeaderWalletAddress();
+    const { address: walletAddress, waitingOnAdapter, selectedEvm, session } = useHeaderWalletAddress();
 
     // An errored session read that never produced an answer is UNKNOWN, not
     // signed-out. data stays undefined only when no request has ever succeeded
@@ -239,10 +253,15 @@ export function useHeaderWalletLoading() {
     // for a wallet that is not Solana and has no SOL. getActiveWallet answers
     // what the wallet actually IS. Only asked when there is no Solana address to
     // show, so a Solana user never pays for it.
-    const activeQuery = trpc.wallet.getActiveWallet.useQuery(undefined, {
-        enabled: !sessionLoading && !sessionUnknown && !waitingOnAdapter && !walletAddress && !!sessionData?.user,
-        staleTime: 60_000,
-    });
+    const activeQuery = trpc.wallet.getActiveWallet.useQuery(
+        // The selected EVM wallet, when that is what's in use — the server
+        // resolves ITS value chain and balance, not the primary's.
+        { address: selectedEvm ?? undefined },
+        {
+            enabled: !sessionLoading && !sessionUnknown && !waitingOnAdapter && !walletAddress && !!sessionData?.user,
+            staleTime: 60_000,
+        },
+    );
     // `isPending` is true for a DISABLED query too, so fetchStatus is what
     // distinguishes "in flight" from "never asked" — without it the chip would
     // hold its skeleton forever for a signed-out visitor.

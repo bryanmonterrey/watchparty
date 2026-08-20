@@ -246,7 +246,9 @@ export const walletRouter = router({
     listLinkedWallets: protectedProcedure.query(({ ctx }) => listWalletsForUser(ctx.user.id)),
 
     /** The wallet in use, and the chain it is on. See server/lib/active-wallet.ts. */
-    getActiveWallet: protectedProcedure.query(({ ctx }) => resolveActiveWallet(ctx.user.id)),
+    getActiveWallet: protectedProcedure
+        .input(z.object({ address: z.string().min(20).max(120).optional() }).optional())
+        .query(({ ctx, input }) => resolveActiveWallet(ctx.user.id, input?.address ?? null)),
 
     getLinkNonce: protectedProcedure
         .input(z.object({ address: z.string().min(32) }))

@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { user } from "@/db/schema/auth/user";
 import { linkedWallets, MAX_LINKED_WALLETS } from "@/db/schema/auth/linked-wallets";
@@ -119,7 +119,48 @@ async function evmNativeBalance(
  * Falls back to the legacy column for accounts that predate linked_wallets, so
  * this is safe to read everywhere rather than only on new accounts.
  */
-export async function resolveActiveWallet(userId: string): Promise<ActiveWallet | null> {
+export async function resolveActiveWallet(
+    userId: string,
+    /**
+     * The wallet the CLIENT has selected ("wallet in use"), when it has one.
+     * The picker's selection lives in localStorage, so the server cannot know
+     * it — the caller must say. Scoped to this user's own rows, so a forged
+     * address resolves to nothing and falls through to the primary; never an
+     * oracle for arbitrary wallets. 0x compare is case-folded because EVM
+     * addresses are case-insensitive hex (stored lowercase since bb5485e7,
+     * but the client may hold a checksummed copy).
+     */
+    preferredAddress?: string | null,
+): Promise<ActiveWallet | null> {
+    if (preferredAddress) {
+        const [selected] = await db
+            .select({
+                address: linkedWallets.address,
+                source: linkedWallets.source,
+                chainKind: linkedWallets.chain_kind,
+                chainId: linkedWallets.chain_id,
+                label: linkedWallets.label,
+            })
+            .from(linkedWallets)
+            .where(and(
+                eq(linkedWallets.user_id, userId),
+                preferredAddress.startsWith("0x")
+                    ? sql`lower(${linkedWallets.address}) = ${preferredAddress.toLowerCase()}`
+                    : eq(linkedWallets.address, preferredAddress),
+            ))
+            .limit(1);
+        if (selected) {
+            const { chainId, ...rest } = selected;
+            const wallet = rest as ActiveWallet;
+            if (wallet.chainKind === "evm") {
+                wallet.native = await evmNativeBalance(wallet.address, chainId ?? null);
+            }
+            return wallet;
+        }
+        // A stale selection (wallet since unlinked) falls through to the
+        // primary rather than erroring — same rule the client hook applies.
+    }
+
     const [primary] = await db
         .select({
             address: linkedWallets.address,

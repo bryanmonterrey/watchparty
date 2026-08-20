@@ -145,10 +145,15 @@ export function WalletHeader({
     // "correct", reported as a bug. Non-active rows keep the sign-in hint;
     // they have no chip to contradict. Cached server-side, fetched only while
     // the popover is open and only for an EVM active wallet.
-    const { data: activeResolved } = trpc.wallet.getActiveWallet.useQuery(undefined, {
-        enabled: accountOpen && active?.chainKind === "evm",
-        staleTime: 60_000,
-    });
+    const { data: activeResolved } = trpc.wallet.getActiveWallet.useQuery(
+        // Resolve the SELECTED wallet — without the address this answered for
+        // the primary, and the value-chain badge landed on the wrong row.
+        { address: active?.address },
+        {
+            enabled: accountOpen && active?.chainKind === "evm" && !!active?.address,
+            staleTime: 60_000,
+        },
+    );
     const activeValueChain =
         activeResolved?.native?.chainId != null
             ? getChainByEvmId(activeResolved.native.chainId)?.id ?? null
