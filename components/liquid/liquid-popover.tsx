@@ -844,9 +844,34 @@ export function LiquidPopover({
             ref={(el) => {
                 refs.root = el;
             }}
-            className={cn("relative inline-flex select-none", className)}
+            className={cn("group/liquid relative inline-flex select-none", className)}
             onClick={stopPropagation ? (e) => e.stopPropagation() : undefined}
         >
+            {/* THE OVERFLOW CLIPPER. The three liquid layers below are
+                absolutely positioned at PANEL geometry while closed (the
+                pre-measure that makes the pour instant), and hidden only by
+                autoAlpha — but visibility:hidden still contributes SCROLLABLE
+                OVERFLOW. A dropdown near a viewport edge (home's rail footer)
+                handed the app scroller 182px of horizontal dead space plus a
+                strip below the fold, reported 8/20 as "I can scroll
+                horizontally now".
+
+                So: clipped whenever the goo is idle AND the menu is closed —
+                the two flags the engine already maintains. data-liquid on the
+                root covers every goo activation (open pour, close dive,
+                trigger grabs) and is removed at every settle; data-open here
+                covers the at-rest open panel after the pour's data-liquid is
+                dropped. Clipping affects painting only, never layout, so
+                measureLiquid reads the same boxes.
+
+                On the WRAPPER, not the root: the trigger stays a direct child
+                of the root so its focus-visible ring is never clipped. No
+                pointer-events juggling — the trigger paints later at the same
+                z, and the panel receives its own events inside this box. */}
+            <div
+                className="absolute inset-0 overflow-clip group-data-[liquid]/liquid:overflow-visible data-[open]:overflow-visible"
+                data-open={effectiveOpen ? "" : undefined}
+            >
             {/* Layer 1: the crisp panel body — the resting picture: a true
                 Apple squircle with the border as a stroke. No shadow — the
                 dark frame carries none, which is also the house rule. */}
@@ -934,6 +959,7 @@ export function LiquidPopover({
                         onHoverRow={hoverRow}
                     />
                 </div>
+            </div>
             </div>
 
             <button
