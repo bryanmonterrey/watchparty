@@ -225,6 +225,27 @@ an increment. The owner's framing, kept as given:
 > they choose to receive funds privately. private funds needs to be **claimed
 > in ui (unshielded in private balance)**.
 
+**THE WALLET ROLE MODEL — decided by the owner 2026-08-20. Three roles, no
+more.** Design private receives against this, not just the receiving pointer:
+
+| Role | Answers | Stored |
+|---|---|---|
+| **Primary / Main** | identity default — everything falls back here | `linked_wallets.is_primary` → the mirror |
+| **In use** | what signs/spends this session | localStorage selection (`hooks/use-active-wallet.ts`) |
+| **Receiving** (+ private flag) | where money lands | `user.receiving_wallet_id` — TO BUILD |
+
+Rules that came with the decision:
+- Receiving is a POINTER (exactly one, defaults to primary when unset), never a
+  per-wallet flag — a flag allows zero or two.
+- Every wallet gets an editable NAME: `linked_wallets.label` already exists and
+  `linkWallet` accepts it; only the rename UI + mutation are missing.
+- Subscription funding is NOT a fourth role: the on-chain allowance binds to
+  whichever wallet signs the approval (checkout signs with the wallet in use),
+  so it is chosen at subscribe time — default primary — and changing it later
+  is an explicit revoke-and-reapprove flow, not a pointer edit. Surface which
+  wallet each subscription pulls from.
+- No "display wallet": identity covers it; a fourth pointer buys confusion.
+
 Four distinct pieces, in dependency order:
 
 1. **Receiving wallet** — a per-user choice of WHICH linked wallet receives
