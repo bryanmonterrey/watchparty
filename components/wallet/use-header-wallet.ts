@@ -165,8 +165,18 @@ export function useHeaderWalletAddress() {
         ? undefined
         : selection ?? adapterAddress ?? (waitingOnAdapter ? undefined : session?.user?.wallet_address);
 
+    // The ACCOUNT's Solana address, ignoring the selection. Two different
+    // questions were riding on one value: "which wallet's balance is on
+    // screen" (selection-aware, the chip) and "does this account have a
+    // wallet at all" (the drawer's generate-wallet CTA). With an EVM wallet
+    // merely SELECTED, the first is undefined by design — and the drawer read
+    // that as "no wallet, offer to generate one" to a user whose generated
+    // wallet was sitting right there in the picker.
+    const accountAddress =
+        adapterAddress ?? (waitingOnAdapter && !selection ? undefined : session?.user?.wallet_address);
+
     // An explicit selection needs no adapter grace: the address is known now.
-    return { address, waitingOnAdapter: selection ? false : waitingOnAdapter, selectedEvm, session };
+    return { address, accountAddress, waitingOnAdapter: selection ? false : waitingOnAdapter, selectedEvm, session };
 }
 
 /**
@@ -188,7 +198,7 @@ export function useHeaderWalletLoading() {
     // Debug switch (?debug-loading) pins all three tiles into their skeletons.
     const forceLoading = useForceLoading();
     const { isLoading: sessionLoading, isError: sessionError, data: sessionData } = useAuthSession();
-    const { address: walletAddress, waitingOnAdapter, selectedEvm, session } = useHeaderWalletAddress();
+    const { address: walletAddress, accountAddress, waitingOnAdapter, selectedEvm, session } = useHeaderWalletAddress();
 
     // An errored session read that never produced an answer is UNKNOWN, not
     // signed-out. data stays undefined only when no request has ever succeeded
@@ -278,8 +288,15 @@ export function useHeaderWalletLoading() {
             (!known && !!walletAddress && query.isPending) ||
             activeLoading,
         data,
-        /** Whose balance this is — the drawer must open on the same wallet. */
+        /** Whose balance this is — the wallet IN USE (selection-aware). */
         address: walletAddress,
+        /**
+         * The account's own Solana address, selection-IGNORING. This is the
+         * "does a wallet exist" answer: the drawer's setup CTA and anything
+         * else offering to GENERATE a wallet must key on this, never on
+         * `address` — an EVM selection blanks `address` by design.
+         */
+        accountAddress,
         /** There is a wallet to have a balance at all. */
         hasWallet: !!walletAddress,
         /** Something has answered for this wallet — otherwise, don't show a number. */

@@ -61,7 +61,12 @@ function WalletButtonInner() {
     const sessionUnknown = sessionError && session === undefined;
     // Shared with the balance chip + Create button so all three header tiles
     // leave their skeletons in the same paint (see useHeaderWalletLoading).
-    const { loading: headerLoading, address: walletAddress } = useHeaderWalletLoading();
+    // `accountAddress`, not `address`: the drawer is the account's wallet hub
+    // (its own per-chain rows cover the rest), and its setup CTA keys on this
+    // prop being empty. The selection-aware `address` goes undefined when an
+    // EVM wallet is picked, which made the drawer offer to GENERATE a wallet
+    // to a user who already has one.
+    const { loading: headerLoading, accountAddress: walletAddress } = useHeaderWalletLoading();
     const [isSigningIn, startSigningIn] = useTransition();
 
     const isSignedIn = !!session?.user;
