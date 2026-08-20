@@ -87,9 +87,12 @@ export type GooDropdownProps = {
 export const GOO_TRIGGER_PILL =
   'flex h-11 cursor-pointer items-center gap-2 rounded-full bg-soft-gray-10 px-4 text-base font-bold text-zinc-400 transition-colors hover:text-flexwhite'
 
-/** Standard panel fill — the demo's dark-frame surface (owner call
- * 2026-08-20: the liquid popover wears liquid-taffy's own palette). */
-export const GOO_PANEL_FILL = '#212326'
+/** Standard panel fill — the ORIGINAL GooDropdown black, back by owner call
+ * (2026-08-20, same day): the liquid engine stays — motion, seam, neon — but
+ * the surface reverts from the demo's #212326 stage grey to the panel colour
+ * every dropdown wore before the engine swap. The rim needs no edit:
+ * solidRim() sees a non-demo fill and derives ~6.5% white over the face. */
+export const GOO_PANEL_FILL = '#111111'
 
 export function gooMenuItem({ icon, label, onClick, href, right, variant = 'default', closeOnSelect = true, key }: {
   icon?: React.ReactNode
