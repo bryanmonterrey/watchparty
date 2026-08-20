@@ -143,6 +143,23 @@ export function LiquidPopover({
 
     const [isOpen, setIsOpen] = useState(false);
     const [hoverTarget, setHoverTarget] = useState<RowHoverTarget | null>(null);
+    /* HATCH-ON-DEMAND. A feed page mounts sixty-plus of these at once, and the
+       full liquid picture per instance — goo canvas, panel rows, measure()'s
+       interleaved layout reads/writes, gsap's per-SVG getBBox origins, two
+       ResizeObservers — ran inside ONE React commit: a measured 21.9s main
+       thread block on /feed (the "page isn't responding" dialog). Until a
+       popover is first hovered or pressed it renders ONLY its trigger; the
+       machinery mounts on hatch, and a cold click opens via pendingOpen once
+       the hatch effect has placed the resting picture. */
+    const [hatched, setHatched] = useState(false);
+    const hatchedRef = useRef(false);
+    const pendingOpenRef = useRef(false);
+    const hatch = useCallback(() => {
+        if (!hatchedRef.current) {
+            hatchedRef.current = true;
+            setHatched(true);
+        }
+    }, []);
 
     const isControlled = controlledOpen !== undefined;
     const rim = solidRim(fill);
@@ -432,7 +449,13 @@ export function LiquidPopover({
 
     /* ── Resting picture ──────────────────────────────────────────────── */
 
+    /* The resting picture, placed when the machinery MOUNTS (hatch), not when
+       the component does — see the hatch note above. */
+    const openMenuRef = useRef<() => void>(() => {});
     useLayoutEffect(() => {
+        if (!hatched) {
+            return;
+        }
         const geom = measure();
         gsap.set(getPanelTrio(), { scale: geom?.restScale ?? 0.08, rotation: -3 });
         gsap.set([refs.panelBody, refs.panel], { autoAlpha: 0 });
@@ -460,6 +483,12 @@ export function LiquidPopover({
         if (refs.panel) observer.observe(refs.panel);
         if (refs.trigger) observer.observe(refs.trigger);
 
+        /* A cold click hatched first and parked the open here. */
+        if (pendingOpenRef.current) {
+            pendingOpenRef.current = false;
+            openMenuRef.current();
+        }
+
         return () => {
             observer.disconnect();
             timelineRef.current?.kill();
@@ -467,11 +496,11 @@ export function LiquidPopover({
             stretchRef.current?.kill();
             seamRef.current?.kill();
         };
-        /* Mount only — a re-run re-parks the panel at rest while isOpen still
+        /* Hatch only — a re-run re-parks the panel at rest while isOpen still
            says open. Prop-driven geometry changes go through measure() via
            the ResizeObserver and the pre-open measure instead. */
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [hatched]);
 
     const setStaticState = useCallback(
         (open: boolean) => {
@@ -505,6 +534,13 @@ export function LiquidPopover({
     );
 
     const openMenu = useCallback(() => {
+        if (!refs.panel) {
+            /* Cold click on a never-hatched popover: mount the machinery, and
+               the hatch effect runs this open once the picture is placed. */
+            pendingOpenRef.current = true;
+            hatch();
+            return;
+        }
         timelineRef.current?.kill();
         pressTweenRef.current?.kill();
         stretch.kill();
@@ -583,7 +619,7 @@ export function LiquidPopover({
         tl.to(refs.goo, { autoAlpha: 0, duration: 0.16, ease: "power1.out" }, 0.47);
         applyGooBlur(GOO_BLUR_REST, tl, 0.64);
         tl.call(() => refs.root?.removeAttribute("data-liquid"), undefined, 0.63);
-    }, [applyGooBlur, clearRowNeon, fxScale, getPanelTrio, getTriggerBits, innerBits, liquidOn, measure, refs, setOpen, setStaticState, side, stretch]);
+    }, [applyGooBlur, clearRowNeon, fxScale, getPanelTrio, getTriggerBits, hatch, innerBits, liquidOn, measure, refs, setOpen, setStaticState, side, stretch]);
 
     const closeMenu = useCallback(
         (fromTrigger: boolean) => {
@@ -672,6 +708,8 @@ export function LiquidPopover({
         [applyGooBlur, clearRowNeon, fxScale, getPanelTrio, getTriggerBits, innerBits, liquidOn, refs, setOpen, setStaticState, side, stretch],
     );
 
+    openMenuRef.current = openMenu;
+
     /* Controlled open: the prop drives the same choreography the clicks do. */
     useEffect(() => {
         if (!isControlled || controlledOpen === isOpenRef.current) {
@@ -706,6 +744,12 @@ export function LiquidPopover({
             if (disabled) {
                 return;
             }
+            if (!refs.panel) {
+                /* First-ever touch: mount the machinery; the grab gesture is
+                   available from the next press on. */
+                hatch();
+                return;
+            }
             const geom = measure();
             /* The engine's grab origin is anchor + buttonSize/2 on BOTH axes;
                the y base compensates for a non-square trigger so the finger
@@ -715,7 +759,7 @@ export function LiquidPopover({
                 y: geom ? geom.th / 2 - geom.tw / 2 : 0,
             });
         },
-        [disabled, measure, stretch],
+        [disabled, hatch, measure, refs, stretch],
     );
 
     /* Grabbing the panel: same sponge, measured from the grab point itself.
@@ -868,6 +912,7 @@ export function LiquidPopover({
                 of the root so its focus-visible ring is never clipped. No
                 pointer-events juggling — the trigger paints later at the same
                 z, and the panel receives its own events inside this box. */}
+            {hatched && (<>
             <div
                 className="absolute inset-0 overflow-clip group-data-[liquid]/liquid:overflow-visible data-[open]:overflow-visible"
                 data-open={effectiveOpen ? "" : undefined}
@@ -961,6 +1006,7 @@ export function LiquidPopover({
                 </div>
             </div>
             </div>
+            </>)}
 
             <button
                 ref={(el) => {
@@ -978,6 +1024,7 @@ export function LiquidPopover({
                     disabled && "pointer-events-none opacity-50",
                 )}
                 onClick={toggleMenu}
+                onPointerEnter={hatch}
                 onPointerDown={handleTriggerPointerDown}
                 onPointerMove={handleGrabPointerMove}
                 onPointerUp={releasePress}
