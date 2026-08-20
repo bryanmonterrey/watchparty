@@ -687,7 +687,11 @@ export function AlertsRail({ className, onCollapse }: { className?: string; onCo
                                 className="hidden-scrollbar"
                                 spinnerRow={
                                     <div className="flex justify-center py-3">
-                                        <div className="size-4 animate-spin rounded-full border-2 border-white/20 border-t-white/70" />
+                                        {/* The brand loader's palette (LoadMore's
+                                            twitter2 arc over a 25% track), at the
+                                            rail's own size — colors only, per the
+                                            owner. */}
+                                        <div className="size-4 animate-spin rounded-full border-2 border-twitter2/25 border-t-twitter2" />
                                     </div>
                                 }
                             />
