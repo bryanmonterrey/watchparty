@@ -96,7 +96,11 @@ export function WalletHeader({
     const activeUser = session?.user as
         | { verifiedTier?: string | null; hideVerifiedBadge?: boolean | null }
         | undefined;
-    const { accounts, setActive, revoke, atCapacity } = useDeviceSessions(accountOpen);
+    // Enabled while the header is mounted (the drawer is open), not only while
+    // the popover is: the trigger's arrow depends on HOW MANY accounts are
+    // signed in, and that must be known before the popover opens. One cached
+    // request per drawer open (60s staleTime).
+    const { accounts, setActive, revoke, atCapacity } = useDeviceSessions(true);
 
     // WALLET IN USE — deliberately NOT the main wallet.
     //
@@ -231,11 +235,19 @@ export function WalletHeader({
                                     hidden={activeUser?.hideVerifiedBadge}
                                 />
                             </div>
-                            <HugeiconsIcon
-                                icon={ArrowDown01Icon}
-                                strokeWidth={2.5}
-                                className={`size-4 shrink-0 text-zinc-500 transition-transform duration-200 ${accountOpen ? "rotate-180" : ""}`}
-                            />
+                            {/* The arrow promises a SWITCH, and with one
+                                account there is nothing to switch to — the
+                                popover still opens (the wallet-in-use picker
+                                lives in it), but the chip reads as identity,
+                                not as a nav dropdown. Owner's call after the
+                                arrow got mistaken for the messages switcher. */}
+                            {accounts.length > 1 && (
+                                <HugeiconsIcon
+                                    icon={ArrowDown01Icon}
+                                    strokeWidth={2.5}
+                                    className={`size-4 shrink-0 text-zinc-500 transition-transform duration-200 ${accountOpen ? "rotate-180" : ""}`}
+                                />
+                            )}
                         </button>
                     </MorphPopoverTrigger>
 

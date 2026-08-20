@@ -24,6 +24,19 @@ export function MessagesNav() {
     const active = conversations.find((c) => c.id === activeId);
     const title = active ? (active.groupName || active.otherParticipantName || "Chat") : "Messages";
 
+    // No conversations, no dropdown. With zero items the goo panel opened as a
+    // 2px sliver — a dropdown that visibly does nothing — and the nearest
+    // working dropdown in that corner is the ACCOUNT switcher, which is exactly
+    // what the title then got mistaken for. A caret is a promise; make it only
+    // when there is something to switch between.
+    if (conversations.length === 0) {
+        return (
+            <span className="flex h-10 items-center px-3 text-lg font-bold tracking-tight text-white">
+                Messages
+            </span>
+        );
+    }
+
     return (
         <GooDropdown
             align="start"
