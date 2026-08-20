@@ -127,9 +127,20 @@ export interface LiquidStretch {
 
 export function createLiquidStretch(host: StretchHost): LiquidStretch {
   let pressed = false;
-  /* Cursor distance from the grab base during a hold — decides whether a
-     release is a plain un-press or a sponge snap-back. */
+  /* POINTER TRAVEL since the press began — decides whether a release is a
+     plain un-press or a sponge snap-back, and whether the click that follows
+     is a drag's click to suppress. TRAVEL, not distance from the trigger's
+     center: the visual pull is center-based (grabBase, below), but a wide
+     pill trigger puts almost every real click >12px from its center, and
+     browsers fire at least one pointermove between down and up even when the
+     cursor is still — so a center-based threshold swallowed the click on
+     every hatched popover unless it landed dead-middle ("doesn't open until
+     I click it a few times", owner, 8/20; measured: a click 15px off a
+     pill's center never opened it). */
   let stretchDist = 0;
+  /* Where the press began, viewport coords — the base stretchDist travels
+     from. */
+  let downPoint = { x: 0, y: 0 };
   let suppressClick = false;
   let grabTarget: StretchTarget | null = null;
   /* The grabbed element's center, in the trigger's coordinate space — the
@@ -245,6 +256,7 @@ export function createLiquidStretch(host: StretchHost): LiquidStretch {
     }
     pressed = true;
     stretchDist = 0;
+    downPoint = { x: event.clientX, y: event.clientY };
     grabTarget = target;
     grabBase = { x: base.x, y: base.y };
     /* A quick RE-GRAB races the previous release: its timeline is still
@@ -288,7 +300,9 @@ export function createLiquidStretch(host: StretchHost): LiquidStretch {
     const dx = event.clientX - (anchorRect.left + half + grabBase.x);
     const dy = event.clientY - (anchorRect.top + half + grabBase.y);
     const dist = Math.hypot(dx, dy);
-    stretchDist = dist;
+    /* dist (from the grab base) drives the VISUAL pull below; the release
+       verdicts use travel from the down-point — see the declaration note. */
+    stretchDist = Math.hypot(event.clientX - downPoint.x, event.clientY - downPoint.y);
     /* Small dead zone in the middle; past it the finger follows the cursor
        but never beyond GRAB_MAX — the sponge stops giving. */
     const reach = Math.max(0, dist - 6);
