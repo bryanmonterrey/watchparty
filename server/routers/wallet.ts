@@ -51,7 +51,7 @@ import { getNativePrice, getTokenPrices } from "@/lib/chains/assets/prices";
 import { heliusQuotaOut, markHeliusQuotaOut } from "@/lib/helius/quota";
 import { resolveFeeAccount, feeAccountForSwap } from "@/lib/jupiter/referral-fee";
 import { PLATFORM_FEE_BPS } from "@/lib/chains/fee-bps";
-import { payoutDestinationFor, requireSolanaWallet, solanaAddressFor } from "@/server/lib/user-wallet";
+import { ownsWallet, payoutDestinationFor, requireSolanaWallet, solanaAddressFor } from "@/server/lib/user-wallet";
 import { getEvmAssetsBatch } from "@/lib/chains/assets/evm";
 import {
     getActivityForChain,

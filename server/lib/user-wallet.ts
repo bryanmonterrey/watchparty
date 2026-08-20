@@ -35,7 +35,7 @@
  * callers already wired — rather than being threaded through five files.
  */
 
-import { and, asc, desc, eq, or, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, or, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { user } from "@/db/schema/auth/user";
 import { linkedWallets } from "@/db/schema/auth/linked-wallets";
