@@ -28,7 +28,7 @@ export default function AppError({
           deployed bundle. Kept small and muted — it is diagnostics, not the
           message. */}
       {error?.stack && (
-        <pre className="mt-1 max-w-lg overflow-x-auto whitespace-pre-wrap break-words text-left text-[10px] leading-relaxed text-zinc-600">
+        <pre className="mt-1 max-w-lg overflow-x-auto whitespace-pre-wrap break-words text-left text-11 leading-relaxed text-zinc-600">
           {error.stack.split("\n").slice(0, 4).join("\n")}
         </pre>
       )}
