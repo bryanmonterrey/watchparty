@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { startTransition, useEffect, useLayoutEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { motion } from "motion/react";
 import { HomeCenterColumn } from "./home-center-column";
@@ -11,6 +11,7 @@ import { HomeActionDock } from "./home-action-dock";
 import { ClipsOverlay } from "./clips-overlay";
 import { FeedSurfaceLoading } from "@/components/browse/feed-skeleton";
 import { useHomeFeedOverlay } from "@/hooks/use-home-feed-overlay";
+import HomeLoading from "@/app/(app)/(rails)/home/loading";
 
 // h-[calc(100svh-5rem)], not h-[100svh]. The 5rem (80px) is the mb-20 the video
 // card used to carry INSIDE this box: the card's own height is
@@ -51,6 +52,25 @@ function DiscoverFeedSurface() {
 }
 
 export function HomePageSurface() {
+    /* PROGRESSIVE ENTRY — the fix for "/home stalls and skips its loaders".
+       The route shell (loading.tsx) paints only while the RSC payload is
+       pending, which for this mostly-static page is instants — then the CLIENT
+       mount used to render the whole surface in one commit. With warm
+       snapshots that commit paints the full board and rails at once, and the
+       squircle machinery measures every element against a freshly-written
+       clip-path: a profiled ~1s synchronous block, during which the OLD page
+       stayed frozen and no loader ever appeared.
+
+       So the mounted page's FIRST commit is the same shell the route serves —
+       cheap, paints immediately, pixel-identical to loading.tsx so nothing
+       jumps — and the real surface enters in a transition right after. The
+       heavy commit still happens, but behind a painted loading frame instead
+       of a frozen previous page. */
+    const [entered, setEntered] = useState(false);
+    useEffect(() => {
+        startTransition(() => setEntered(true));
+    }, []);
+
     const feedOpen = useHomeFeedOverlay((state) => state.open);
     const closeFeed = useHomeFeedOverlay((state) => state.onClose);
     const previousScroll = useRef(0);
@@ -79,6 +99,8 @@ export function HomePageSurface() {
     }, [closeFeed, feedOpen]);
 
     useEffect(() => () => closeFeed(), [closeFeed]);
+
+    if (!entered) return <HomeLoading />;
 
     if (feedOpen) return <DiscoverFeedSurface />;
 
