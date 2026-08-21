@@ -1,3 +1,40 @@
+import type { CSSProperties, ReactNode } from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowUp01Icon, GripVerticalIcon, PercentIcon } from "@hugeicons/core-free-icons";
+import { cn } from "@/lib/utils";
+
+/** One header cell as DataTable draws it: the reorder grip, then the label
+ *  and its sort caret at 35% — the resting opacity of an unsorted column. */
+function ShellHeader({
+    label,
+    className,
+    style,
+    align,
+    sortable,
+}: {
+    label: ReactNode;
+    className?: string;
+    style?: CSSProperties;
+    align?: "right";
+    sortable?: boolean;
+}) {
+    return (
+        <div className={cn("flex shrink-0 items-center", className)} style={style}>
+            <span className="flex w-5 shrink-0 items-center justify-center text-zinc-600">
+                <HugeiconsIcon icon={GripVerticalIcon} className="size-3.5" strokeWidth={2} />
+            </span>
+            <span className={cn("flex min-w-0 flex-1 items-center gap-1 px-4", align === "right" && "justify-end")}>
+                <span className="truncate">{label}</span>
+                {sortable && (
+                    <span className="inline-flex shrink-0 opacity-35">
+                        <HugeiconsIcon icon={ArrowUp01Icon} className="size-4" strokeWidth={2.5} />
+                    </span>
+                )}
+            </span>
+        </div>
+    );
+}
+
 // The instant shell for /trade — mirrors the discover board's own first
 // frame (see home/loading.tsx for the standard: every box is what the
 // mounted page paints WHILE ITS QUERIES LOAD, never a generic skeleton).
@@ -36,13 +73,27 @@ export default function TradeLoading() {
                 </div>
             </div>
 
-            <div className="flex items-center gap-3 px-6 py-2 text-15 font-medium leading-tight text-zinc-500">
-                <span className="flex-1">Coin</span>
-                <span className="w-[116px]" />
-                <span className="w-24 text-right">Market cap</span>
-                <span className="w-24 text-right">Price</span>
-                <span className="w-24 text-right">%</span>
-                <span className="w-[232px] text-right">Action</span>
+            {/* The header, mirrored STRUCTURALLY rather than approximated: the
+                real one is [grip][label + sort caret] per column at the
+                DataTable's own widths, and a row of plain right-aligned words
+                at fixed widths landed the labels nowhere near them (owner:
+                "the column labels of the first loading state do not match
+                normal ones at all"). Percentages here are the same ones
+                trade-columns declares — 13% each for the three value columns,
+                116px for the trend, 232px for the action group. */}
+            <div className="flex items-center px-2 text-15 font-medium leading-tight text-zinc-500">
+                <ShellHeader label="Coin" className="flex-1" />
+                {/* Trend: no label, no grip — see meta.noReorder. */}
+                <span className="w-[116px] shrink-0" />
+                <ShellHeader label="Market cap" style={{ width: "13%" }} align="right" sortable />
+                <ShellHeader label="Price" style={{ width: "13%" }} align="right" sortable />
+                <ShellHeader
+                    label={<HugeiconsIcon icon={PercentIcon} className="size-4" strokeWidth={2.5} />}
+                    style={{ width: "13%" }}
+                    align="right"
+                    sortable
+                />
+                <ShellHeader label="Action" style={{ width: "232px" }} align="right" />
             </div>
             {Array.from({ length: 10 }).map((_, index) => (
                 /* Box for box with the MOUNTED board's skeleton (the
@@ -50,19 +101,19 @@ export default function TradeLoading() {
                    two h-3 lines, right-aligned h-3 bars, the buy group's own
                    pill. The two loading states used to differ in line height
                    and shape, which read as the page loading twice. */
-                <div key={index} className="flex h-[76px] items-center gap-3 px-6">
-                    <div className="flex flex-1 items-center gap-3">
+                <div key={index} className="flex h-[76px] items-center px-2">
+                    <div className="flex flex-1 items-center gap-3 px-4">
                         <div className="size-12 shrink-0 rounded-full shimmer-skeleton" />
                         <div className="flex flex-col gap-1.5">
                             <div className="h-3 w-28 rounded-full shimmer-skeleton" />
                             <div className="h-3 w-16 rounded-full shimmer-skeleton" />
                         </div>
                     </div>
-                    <div className="flex w-[116px] items-center"><div className="h-7 w-24 rounded-full shimmer-skeleton" /></div>
-                    <div className="flex w-24 justify-end"><div className="h-3 w-16 rounded-full shimmer-skeleton" /></div>
-                    <div className="flex w-24 justify-end"><div className="h-3 w-16 rounded-full shimmer-skeleton" /></div>
-                    <div className="flex w-24 justify-end"><div className="h-3 w-12 rounded-full shimmer-skeleton" /></div>
-                    <div className="flex w-[232px] justify-end"><div className="h-11 w-[185px] rounded-2xl shimmer-skeleton" /></div>
+                    <div className="flex w-[116px] shrink-0 items-center px-4"><div className="h-7 w-24 rounded-full shimmer-skeleton" /></div>
+                    <div className="flex justify-end px-4" style={{ width: "13%" }}><div className="h-3 w-16 rounded-full shimmer-skeleton" /></div>
+                    <div className="flex justify-end px-4" style={{ width: "13%" }}><div className="h-3 w-16 rounded-full shimmer-skeleton" /></div>
+                    <div className="flex justify-end px-4" style={{ width: "13%" }}><div className="h-3 w-12 rounded-full shimmer-skeleton" /></div>
+                    <div className="flex w-[232px] shrink-0 justify-end px-4"><div className="h-11 w-[185px] rounded-2xl shimmer-skeleton" /></div>
                 </div>
             ))}
         </div>

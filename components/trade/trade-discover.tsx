@@ -17,7 +17,7 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { useQuickBuy } from "@/hooks/use-quick-buy";
 import { CHAIN_OPTIONS, type TradeChain } from "./chains";
 import { collapseCopycats } from "./collapse-copycats";
-import { buildTradeColumns, TIMEFRAMES, type Timeframe } from "./trade-columns";
+import { buildTradeColumns, changeFor, TIMEFRAMES, type Timeframe } from "./trade-columns";
 import type { TokenStatus, TradeToken } from "./types";
 
 // Discover: the /trade landing (per the Axiom reference, in watchparty's
@@ -44,7 +44,7 @@ const TABS: { key: Tab; label: string }[] = [
 // Ids of the sortable columns, plus `newest`, which the New tab uses and no
 // column offers. Every other member matches a column id in `trade-columns` —
 // the header IS the sort control now that the sort dropdown is hidden.
-type SortKey = "volume" | "marketCap" | "price" | "txCount" | "newest";
+type SortKey = "volume" | "marketCap" | "price" | "txCount" | "newest" | "change";
 
 // Each tab's natural ordering; the sort dropdown can override it afterwards.
 const TAB_SORT: Record<Tab, SortKey> = {
@@ -194,15 +194,25 @@ export function TradeDiscover() {
             price: (a, b) => b.priceUsd - a.priceUsd,
             txCount: (a, b) => b.txCount - a.txCount,
             newest: (a, b) => (b.createdAtMs ?? 0) - (a.createdAtMs ?? 0),
+            // Reads the SAME field the cell prints — changeFor follows the
+            // timeframe pills, so sorting by % sorts by the number on screen
+            // rather than by 24h whatever the pill says.
+            change: (a, b) => changeFor(b, timeframe) - changeFor(a, timeframe),
         };
+        // A header id with no comparator used to throw INSIDE Array.sort —
+        // `by[sort]` came back undefined and the board died with "r[M] is not
+        // a function" on the whole (app) segment (owner, 8/21: pressing the %
+        // column's sort arrow, which is the column that had just been added
+        // without its entry above). A missing key now leaves the order alone.
+        const compare = by[sort] ?? (() => 0);
         return collapseCopycats(base.sort((a, b) => dir * (
             // Live tab: most-watched streams first; Surge: hottest 5m move
             // first, 5m volume as tiebreaker; market sort breaks remaining ties.
-            tab === "live" ? b.liveViewerCount - a.liveViewerCount || by[sort](a, b)
+            tab === "live" ? b.liveViewerCount - a.liveViewerCount || compare(a, b)
             : tab === "surge" ? (b.changePercent5m ?? 0) - (a.changePercent5m ?? 0) || (b.volume5m ?? 0) - (a.volume5m ?? 0)
-            : by[sort](a, b)
+            : compare(a, b)
         )));
-    }, [data, all, externalRows, onSolana, tab, sort, sortDesc, hideRisky]);
+    }, [data, all, externalRows, onSolana, tab, sort, sortDesc, hideRisky, timeframe]);
 
     const selectTab = (t: Tab) => {
         setTab(t);
