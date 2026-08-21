@@ -1,7 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { YTPlayIcon, YTPauseIcon } from "@/components/icons";
+import { YTPlayIcon, YTPauseIcon, YTPreviousIcon, YTNextIcon } from "@/components/icons";
+
+// Half the scrubber handle at its largest — w-3 (12px) scaled 1.4 on hover, so
+// 8.4px, rounded up. It's the inset that keeps the handle out of the card's
+// overflow clip at either end of the track.
+const HANDLE_R = 9;
 
 interface MiniPlayerOverlayProps {
     /** Live stream: no scrubber/seek or timestamps, LIVE badge instead. */
@@ -18,6 +23,11 @@ interface MiniPlayerOverlayProps {
     onScrubHover?: (time: number) => void;
     onClose?: () => void;
     onExpand?: () => void;
+    /** Omit both to hide the transport buttons entirely (no queue to walk). */
+    onPrevious?: () => void;
+    onNext?: () => void;
+    hasPrevious?: boolean;
+    hasNext?: boolean;
 }
 
 export function MiniPlayerOverlay({
@@ -34,6 +44,10 @@ export function MiniPlayerOverlay({
     onScrubHover,
     onClose,
     onExpand,
+    onPrevious,
+    onNext,
+    hasPrevious = false,
+    hasNext = false,
 }: MiniPlayerOverlayProps) {
     const progress = duration ? (currentTime / duration) * 100 : 0;
     const bufferedPct = bufferedFraction * 100;
@@ -77,16 +91,48 @@ export function MiniPlayerOverlay({
                 </button>
             </div>
 
-            {/* Center: play/pause — hover only. Outer area is pointer-events-none so it stays
-                draggable; only the icon itself captures pointer events. */}
-            <div className="absolute inset-x-0 top-0 bottom-10 flex items-center justify-center z-[5] opacity-0 group-hover/mini:opacity-100 transition-opacity duration-200 pointer-events-none">
+            {/* Center: previous · play/pause · next — hover only. Outer area is
+                pointer-events-none so it stays draggable; only the buttons capture
+                pointer events.
+
+                The two transport buttons render only when there IS a queue to walk
+                (a live stream has none), and each disables at its end of it rather
+                than disappearing — a control that vanishes mid-hover moves the play
+                button under the cursor. */}
+            <div className="absolute inset-x-0 top-0 bottom-10 flex items-center justify-center gap-2 z-[5] opacity-0 group-hover/mini:opacity-100 transition-opacity duration-200 pointer-events-none">
+                {onPrevious && (
+                    <button
+                        type="button"
+                        aria-label="Previous video"
+                        disabled={!hasPrevious}
+                        onPointerDown={e => e.stopPropagation()}
+                        onClick={onPrevious}
+                        className="pointer-events-auto text-white cursor-pointer p-2.5 rounded-full hover:bg-white/10 transition-colors disabled:cursor-default disabled:opacity-35 disabled:hover:bg-transparent"
+                    >
+                        <YTPreviousIcon className="size-7" />
+                    </button>
+                )}
                 <button
+                    type="button"
+                    aria-label={isPlaying ? "Pause" : "Play"}
                     onPointerDown={e => e.stopPropagation()}
                     onClick={onTogglePlay}
                     className="pointer-events-auto text-white cursor-pointer p-3 rounded-full hover:bg-white/10 transition-colors"
                 >
                     {isPlaying ? <YTPauseIcon className="size-12" /> : <YTPlayIcon className="size-12" />}
                 </button>
+                {onNext && (
+                    <button
+                        type="button"
+                        aria-label="Next video"
+                        disabled={!hasNext}
+                        onPointerDown={e => e.stopPropagation()}
+                        onClick={onNext}
+                        className="pointer-events-auto text-white cursor-pointer p-2.5 rounded-full hover:bg-white/10 transition-colors disabled:cursor-default disabled:opacity-35 disabled:hover:bg-transparent"
+                    >
+                        <YTNextIcon className="size-7" />
+                    </button>
+                )}
             </div>
 
             {/* Live: badge instead of time/scrubber (no seeking a live stream) */}
@@ -175,7 +221,7 @@ export function MiniPlayerOverlay({
                         <div className="absolute inset-0 bg-white/30" />
                         <div className="absolute inset-y-0 left-0 bg-white/50" style={{ width: `${bufferedPct}%` }} />
                         <div
-                            className="absolute inset-y-0 left-0 bg-[#f00]"
+                            className="absolute inset-y-0 left-0 bg-twitter2"
                             style={{
                                 width: `${progress}%`,
                                 transition: isScrubbing ? "none" : "width 0.25s linear",
@@ -183,11 +229,15 @@ export function MiniPlayerOverlay({
                         />
                     </div>
 
-                    {/* Circle handle — always visible, smooth left + scale transition */}
+                    {/* Circle handle — always visible, smooth left + scale transition.
+                        The card clips its content (rounded corners on the video), so a
+                        handle centred on 0% or 100% loses its outer half to the overflow.
+                        clamp() keeps it a full radius inside the track at both ends —
+                        HANDLE_R is the 1.4x hover size, since that's the widest it gets. */}
                     <div
-                        className="absolute w-3 h-3 bg-[#f00] rounded-full shadow pointer-events-none"
+                        className="absolute w-3 h-3 bg-twitter2 rounded-full shadow pointer-events-none"
                         style={{
-                            left: `${progress}%`,
+                            left: `clamp(${HANDLE_R}px, ${progress}%, calc(100% - ${HANDLE_R}px))`,
                             top: "50%",
                             transform: `translate(-50%, -50%) scale(${scrubHover !== null ? 1.4 : 1})`,
                             transition: isScrubbing

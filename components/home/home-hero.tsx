@@ -62,8 +62,26 @@ export function HomeHero({
             author: active.user.username,
             startTime: currentTime,
             watchUrl: pathname,
+            // The hero's own queue, so the mini player's transport walks the
+            // same list in the same order the rail is showing — the feed is
+            // keyed to the selected tab, so "next" means what it means here.
+            // Anything without a source is dropped: it can't be stepped to.
+            //
+            // watchUrl is the video's OWN page, not `pathname`. Once the
+            // transport has stepped somewhere, expanding has to land on what is
+            // playing; /home would land on whatever the hero happens to hold.
+            queue: videos
+                .filter((v) => v.videoUrl)
+                .map((v) => ({
+                    postId: v.id,
+                    videoUrl: v.videoUrl!,
+                    thumbnailUrl: v.thumbnailUrl,
+                    title: v.title,
+                    author: v.user.username,
+                    watchUrl: `/video/${v.id}`,
+                })),
         });
-    }, [active, enterMiniPlayer, pathname]);
+    }, [active, videos, enterMiniPlayer, pathname]);
 
     if (isLoading || !active) return <PlayerLoadingOverlay />;
 

@@ -103,6 +103,18 @@ export function HomeActionDock() {
         }
     }, []);
 
+    // Publish the dock's footprint on <html> so viewport-pinned UI can clear it
+    // — globals.css turns this into --dock-width, and owns the xl gate because
+    // only a media query knows the dock is `hidden` below it. Cleared on
+    // unmount: the dock renders on home/feed/coin/token only, and a stale
+    // attribute would push the mini player off the edge of every other page.
+    useEffect(() => {
+        document.documentElement.dataset.dock = collapsed ? "collapsed" : "expanded";
+        return () => {
+            delete document.documentElement.dataset.dock;
+        };
+    }, [collapsed]);
+
     const set = (next: boolean) => {
         setCollapsed(next);
         try {

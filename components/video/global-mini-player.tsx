@@ -12,8 +12,14 @@ import { loadIvsPlayer } from "@/lib/ivs/player-loader";
 const EDGE = 16;
 
 export function GlobalMiniPlayer() {
-    const { miniPlayerData, exitMiniPlayer, noteProgress } = useMiniPlayer();
+    const { miniPlayerData, exitMiniPlayer, playPrevious, playNext, noteProgress } = useMiniPlayer();
     const router = useRouter();
+
+    // Where this video sits in the rail it came from. A live stream carries no
+    // queue, so the transport buttons don't render at all there.
+    const queue = miniPlayerData?.queue;
+    const queueIndex = queue?.findIndex((v) => v.postId === miniPlayerData?.postId) ?? -1;
+    const hasQueue = !!queue?.length && queueIndex >= 0;
 
     // Live streams come in as IVS .m3u8 playback URLs — a bare <video> can't
     // play HLS outside Safari, so those attach through the IVS player instead.
@@ -162,7 +168,11 @@ export function GlobalMiniPlayer() {
         setCurrentTime(miniPlayerData.startTime);
         setDuration(0);
         setBuffered(0);
-        setDragPos(null);
+        // NOT setDragPos(null) — this effect now also runs when the transport
+        // steps to the next video in the queue, and snapping a card the user
+        // dragged somewhere back to the corner mid-queue is not a load. The
+        // position resets on its own anyway: closing the player unmounts this
+        // component, so a fresh open starts docked.
 
         if (isLive) {
             // IVS HLS: attach through the IVS player (shared script with the
@@ -257,7 +267,10 @@ export function GlobalMiniPlayer() {
                 width: `min(400px, calc(100vw - ${EDGE * 2}px))`,
                 ...(dragPos
                     ? { left: dragPos.x, top: dragPos.y }
-                    : { bottom: EDGE, right: EDGE }),
+                    // --dock-width is the right-edge action dock's footprint
+                    // (0 where it isn't rendered, or below xl). Docked resting
+                    // position sits BESIDE it rather than over its buttons.
+                    : { bottom: EDGE, right: `calc(${EDGE}px + var(--dock-width, 0px))` }),
             }}
         >
             {/* Video */}
@@ -284,7 +297,12 @@ export function GlobalMiniPlayer() {
                         const v = videoRef.current;
                         if (v?.buffered.length) setBuffered(v.buffered.end(v.buffered.length - 1));
                     }}
-                    onEnded={() => setIsPlaying(false)}
+                    onEnded={() => {
+                        setIsPlaying(false);
+                        // Roll into the rail, same as the home hero does when its
+                        // video plays out. Stops at the end rather than wrapping.
+                        if (hasQueue && queueIndex < (queue?.length ?? 0) - 1) playNext();
+                    }}
                 />
                 <MiniPlayerOverlay
                     isLive={isLive}
@@ -300,6 +318,10 @@ export function GlobalMiniPlayer() {
                     onScrubHover={seekThumb}
                     onClose={exitMiniPlayer}
                     onExpand={handleExpand}
+                    onPrevious={hasQueue ? playPrevious : undefined}
+                    onNext={hasQueue ? playNext : undefined}
+                    hasPrevious={hasQueue && queueIndex > 0}
+                    hasNext={hasQueue && queueIndex < (queue?.length ?? 0) - 1}
                 />
             </div>
 

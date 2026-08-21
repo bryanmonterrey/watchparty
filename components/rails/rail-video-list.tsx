@@ -22,14 +22,20 @@ import { stableHoverColor } from "@/lib/stable-hover-color";
 //              rather than quietly showing the same list as another tab.
 
 const SKELETON_COUNT = 6;
-const LIMIT = 20;
+/**
+ * Exported because the video page ALSO reads this list — as the mini player's
+ * queue — and the two must issue the identical query input or TanStack keys
+ * them separately and the page pays for a second round trip that returns the
+ * same twenty rows.
+ */
+export const RAIL_VIDEO_LIMIT = 20;
 
 export function RailVideoList({ tab, excludePostId }: { tab: string; excludePostId?: string }) {
     const isLiveTab = tab === RAIL_TAB_ONLINE;
     const wantsVideos = !isLiveTab && tab !== "Upcoming";
 
     const { data: videoData, isLoading: videosLoading } = trpc.content.getPublicVideos.useQuery(
-        { excludePostId, limit: LIMIT },
+        { excludePostId, limit: RAIL_VIDEO_LIMIT },
         { enabled: wantsVideos, staleTime: 60_000 },
     );
 

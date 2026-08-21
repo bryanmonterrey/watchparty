@@ -11,6 +11,7 @@ import { ADS_ENABLED } from "@/lib/ads/config";
 import { PlayerLoadingScreen } from "./player-loading";
 import { VideoMetadata } from "./video-metadata";
 import { UpNextSidebar } from "./up-next-sidebar";
+import { RAIL_VIDEO_LIMIT } from "@/components/rails/rail-video-list";
 
 // ssr:false, and it is load-bearing for the DEPLOY, not just for speed.
 //
@@ -51,7 +52,17 @@ export function VideoWatchPage({ postId, creatorUsername }: VideoWatchPageProps)
         return `${window.location.origin}/api/ad/vast?uid=${encodeURIComponent(session?.user?.id ?? "")}`;
     }, [session?.user?.id]);
 
+    // The up-next rail, for the mini player's transport to walk. Same input as
+    // RailVideoList's default tab, so TanStack serves both from one cache entry
+    // rather than a second round trip. Only the snapshot is used — nothing here
+    // renders it.
+    const { data: railData } = trpc.content.getPublicVideos.useQuery(
+        { excludePostId: postId, limit: RAIL_VIDEO_LIMIT },
+        { staleTime: 60_000 },
+    );
+
     const handleEnterMiniPlayer = useCallback((currentTime: number) => {
+        const rail = railData?.videos ?? [];
         enterMiniPlayer({
             postId,
             videoUrl: video?.videoUrl ?? "",
@@ -60,8 +71,32 @@ export function VideoWatchPage({ postId, creatorUsername }: VideoWatchPageProps)
             author: video?.author?.name,
             startTime: currentTime,
             watchUrl: pathname,
+            // This video FIRST, then the rail. The rail query excludes the
+            // video being watched, so without prepending it the playing item
+            // wouldn't be in its own queue and neither button would resolve
+            // an index.
+            queue: [
+                {
+                    postId,
+                    videoUrl: video?.videoUrl ?? "",
+                    thumbnailUrl: video?.thumbnailUrl,
+                    title: video?.title,
+                    author: video?.author?.name,
+                    watchUrl: pathname,
+                },
+                ...rail
+                    .filter((v) => v.videoUrl)
+                    .map((v) => ({
+                        postId: v.id,
+                        videoUrl: v.videoUrl!,
+                        thumbnailUrl: v.thumbnailUrl,
+                        title: v.title,
+                        author: v.author?.name,
+                        watchUrl: `/video/${v.id}`,
+                    })),
+            ],
         });
-    }, [postId, video, pathname, enterMiniPlayer]);
+    }, [postId, video, railData, pathname, enterMiniPlayer]);
 
     if (!video && !isLoading) {
         return (

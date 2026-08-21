@@ -2,20 +2,52 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from "react";
 
-export interface MiniPlayerData {
+/** One entry in the rail the mini player is walking. */
+export interface MiniPlayerQueueItem {
     postId: string;
     videoUrl: string;
     thumbnailUrl?: string | null;
     title?: string | null;
     author?: string | null;
-    startTime: number;
     watchUrl: string;
+}
+
+export interface MiniPlayerData extends MiniPlayerQueueItem {
+    startTime: number;
+    /**
+     * The rail this video was picked from, so the transport buttons have
+     * somewhere to go. Carried IN the data rather than fetched on demand
+     * because the player also runs in (legal)/(directory)/(developer), which
+     * have no tRPC provider — a query there would throw. It's a snapshot: the
+     * queue is whatever the rail held at the moment the player was opened.
+     */
+    queue?: MiniPlayerQueueItem[];
+}
+
+/**
+ * Ceiling on the stored rail. The home feed accumulates up to MAX_FEED_VIDEOS
+ * (300), and all of it would be re-serialised into sessionStorage on every
+ * progress write. The window keeps far more than anyone skips through while
+ * holding the blob at a few KB.
+ */
+const MAX_QUEUE = 60;
+const QUEUE_LOOKBACK = 15;
+
+/** A bounded window of `rail` around `postId`, biased forward. */
+function windowQueue(rail: MiniPlayerQueueItem[], postId: string): MiniPlayerQueueItem[] {
+    if (rail.length <= MAX_QUEUE) return rail;
+    const i = rail.findIndex((v) => v.postId === postId);
+    const start = Math.max(0, Math.min(i < 0 ? 0 : i - QUEUE_LOOKBACK, rail.length - MAX_QUEUE));
+    return rail.slice(start, start + MAX_QUEUE);
 }
 
 interface MiniPlayerContextValue {
     miniPlayerData: MiniPlayerData | null;
     enterMiniPlayer: (data: MiniPlayerData) => void;
     exitMiniPlayer: () => void;
+    /** Step through `queue`. No-ops at either end — the queue does not wrap. */
+    playPrevious: () => void;
+    playNext: () => void;
     /**
      * Keep the saved resume point fresh. Deliberately NOT state — the player
      * calls this several times a second, and every (app) consumer of this
@@ -80,10 +112,33 @@ export function MiniPlayerProvider({ children }: { children: React.ReactNode }) 
     }, []);
 
     const enterMiniPlayer = useCallback((data: MiniPlayerData) => {
-        dataRef.current = data;
-        writeStored(data);
-        setMiniPlayerData(data);
+        const next = data.queue?.length
+            ? { ...data, queue: windowQueue(data.queue, data.postId) }
+            : data;
+        dataRef.current = next;
+        writeStored(next);
+        setMiniPlayerData(next);
     }, []);
+
+    // The index is DERIVED from postId rather than stored alongside it: a
+    // stored index and a stored item are two facts that can disagree, and the
+    // one that goes stale is the one nothing checks.
+    const step = useCallback((delta: 1 | -1) => {
+        const current = dataRef.current;
+        const queue = current?.queue;
+        if (!current || !queue?.length) return;
+        const i = queue.findIndex((v) => v.postId === current.postId);
+        if (i < 0) return;
+        const target = queue[i + delta];
+        if (!target) return; // either end — the buttons are disabled there anyway
+        const next: MiniPlayerData = { ...target, startTime: 0, queue };
+        dataRef.current = next;
+        writeStored(next);
+        setMiniPlayerData(next);
+    }, []);
+
+    const playPrevious = useCallback(() => step(-1), [step]);
+    const playNext = useCallback(() => step(1), [step]);
 
     const exitMiniPlayer = useCallback(() => {
         dataRef.current = null;
@@ -120,8 +175,8 @@ export function MiniPlayerProvider({ children }: { children: React.ReactNode }) 
     // Memoised so the only thing that re-renders a consumer is the player
     // opening or closing — never a progress tick, which never touches state.
     const value = useMemo(
-        () => ({ miniPlayerData, enterMiniPlayer, exitMiniPlayer, noteProgress }),
-        [miniPlayerData, enterMiniPlayer, exitMiniPlayer, noteProgress],
+        () => ({ miniPlayerData, enterMiniPlayer, exitMiniPlayer, playPrevious, playNext, noteProgress }),
+        [miniPlayerData, enterMiniPlayer, exitMiniPlayer, playPrevious, playNext, noteProgress],
     );
 
     return <MiniPlayerContext.Provider value={value}>{children}</MiniPlayerContext.Provider>;

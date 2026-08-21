@@ -305,6 +305,17 @@
      and the fixed header read this, or the header's controls would sit at the
      screen edges while the content sat centred. */
   --app-max-width: 1536px;
+  /* How much horizontal room the right-edge action dock (HomeActionDock) is
+     taking, so anything pinned to the viewport's right edge can sit BESIDE it
+     rather than on top of it — the mini player is the first such thing.
+     0 by default: the dock renders on some pages only (home, /feed, coin,
+     token), and it is `hidden … xl:block`, so below xl it occupies nothing
+     even where it is mounted. The dock stamps data-dock on <html> while it is
+     mounted; the widths live here, next to the media query that gates them,
+     rather than being pushed from JS that cannot see the breakpoint.
+     Values are the aside's own box: expanded pl-2 (8) + size-15 (60) + pr-1
+     (4) = 72; collapsed w-9 = 36. */
+  --dock-width: 0px;
   /* rgb(5, 5, 5) — kept identical to .dark's --background above, so bg-canvas
      and bg-background are interchangeable and never show a seam where they
      meet. Written as rgb rather than hex so the channels are editable in place
@@ -1600,4 +1611,14 @@ input[type="range"].volume-slider::-webkit-slider-thumb {
 
 @media (prefers-reduced-motion: reduce) {
   .t-learn-chevron, .t-learn-arm { transition: none !important; }
+}
+
+/* The right-edge action dock's footprint, published as a length so anything
+   pinned to the viewport edge (the mini player) can clear it. See the
+   --dock-width note above for why the widths live here and not in JS:
+   HomeActionDock is `hidden … xl:block`, so below xl it is mounted but takes
+   no room, and only a media query can say that. 80rem is Tailwind's xl. */
+@media (min-width: 80rem) {
+  :root[data-dock="expanded"] { --dock-width: 72px; }
+  :root[data-dock="collapsed"] { --dock-width: 36px; }
 }

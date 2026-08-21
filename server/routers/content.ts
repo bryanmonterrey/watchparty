@@ -665,6 +665,12 @@ export const contentRouter = router({
                 .select({
                     id: posts.id,
                     title: posts.title,
+                    // Selected so the rail's rows are PLAYABLE, not just
+                    // linkable: the mini player carries a snapshot of this list
+                    // as its queue and needs a source to step to. Already
+                    // guaranteed non-null by the where clause below, and no
+                    // less public than the watch page that renders it.
+                    videoUrl: posts.videoUrl,
                     thumbnailUrl: posts.thumbnailUrl,
                     duration: posts.duration,
                     views: posts.views,
