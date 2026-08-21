@@ -122,7 +122,7 @@ export function DataTableHeader<TData extends RowData>({
                                     }
                                     transition={SPRING_PRESS}
                                 >
-                                    {reorderable && !header.isPlaceholder ? (
+                                    {reorderable && !header.isPlaceholder && !meta?.noReorder ? (
                                         <button
                                             type="button"
                                             aria-label={`Reorder the ${column.id} column`}

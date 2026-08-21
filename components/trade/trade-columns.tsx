@@ -330,16 +330,15 @@ export function buildTradeColumns({
            draws "no series" and "no movement" differently on purpose. */
         helper.display({
             id: "spark",
-            /* Labelled, because the header carries a reorder grip whether or
-               not there is text beside it — and a bare pair of dots over an
-               empty column reads as a rendering fault (owner). "Trend" rather
-               than "24h": the series reaches back a week when that is all the
-               tape has, so a time claim here would be the one dishonest word
-               on the board. */
-            header: "Trend",
+            /* No label and no grip: the line speaks for itself, and the
+               header's reorder dots are suppressed with it (meta.noReorder) —
+               otherwise the grip renders anyway and an empty column wears a
+               bare pair of dots. Owner call, 8/21. */
+            header: "",
             enableSorting: false,
             meta: {
                 width: "116px",
+                noReorder: true,
                 skeleton: (i, count) => (
                     <span style={staggerPulse(i, count)} className="block h-7 w-24 rounded-full shimmer-skeleton" />
                 ),

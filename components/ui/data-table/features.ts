@@ -22,6 +22,16 @@ import {
 export type DataTableColumnMeta = {
     /** Cell + header text alignment. */
     align?: "left" | "center" | "right";
+    /**
+     * Keep this column's header out of the reorder affordance.
+     *
+     * The grip renders for every column on a `reorderable` table, label or
+     * not — so a deliberately unlabelled column (the /trade board's trend
+     * line) shows a bare pair of dots with nothing beside them, which reads
+     * as a rendering fault rather than a handle. This hides the grip; the
+     * column simply is not draggable.
+     */
+    noReorder?: boolean;
     /** CSS length used until the user resizes the column. Omit to share space. */
     width?: string;
     /** Hide below this breakpoint — a raw class, e.g. "max-lg:hidden". */
