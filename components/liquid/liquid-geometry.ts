@@ -17,6 +17,52 @@ const CANVAS_PAD = 72;
 /* The lit stretch of border at rest — the seam engine drives the real one. */
 export const SEAM_RADIUS = 20;
 
+/* Breathing room between the panel and whatever edge it is avoiding. */
+const EDGE_MARGIN = 8;
+
+/* The box the panel is allowed to occupy, in viewport coordinates.
+
+   The viewport is only half of it. This popover does NOT portal, so an
+   ancestor that scrolls CLIPS it — a rail row's menu is cut off by
+   rail-card's `overflow-y-auto` long before it reaches the window's edge, and
+   no amount of z-index escapes an overflow clip. So the safe box is the
+   viewport intersected with every clipping ancestor's rect, and flipping is
+   decided against that.
+
+   The ancestor list is cached on the refs bag: measure() runs on mount, on
+   every ResizeObserver fire and before every open and grab, and walking the
+   tree with getComputedStyle each time is exactly the per-popover layout cost
+   that made /feed unusable once already. The chain a popover hangs in does
+   not change during its life. */
+function safeBox(refs: LiquidRefs, triggerEl: HTMLElement) {
+    if (!refs.clipAncestors) {
+        const found: HTMLElement[] = [];
+        let node = triggerEl.parentElement;
+        while (node && node !== document.body) {
+            const { overflowX, overflowY } = getComputedStyle(node);
+            if (overflowX !== "visible" || overflowY !== "visible") {
+                found.push(node);
+            }
+            node = node.parentElement;
+        }
+        refs.clipAncestors = found;
+    }
+
+    let left = EDGE_MARGIN;
+    let top = EDGE_MARGIN;
+    let right = window.innerWidth - EDGE_MARGIN;
+    let bottom = window.innerHeight - EDGE_MARGIN;
+
+    for (const node of refs.clipAncestors) {
+        const box = node.getBoundingClientRect();
+        left = Math.max(left, box.left);
+        top = Math.max(top, box.top);
+        right = Math.min(right, box.right);
+        bottom = Math.min(bottom, box.bottom);
+    }
+    return { left, top, right, bottom };
+}
+
 export interface GeomParams {
     width: number;
     align: "start" | "center" | "end";
@@ -48,6 +94,10 @@ export interface Geom {
     originY: number;
     restScale: number;
     chainR: number;
+    /* The side the panel ACTUALLY took, after collision. The caller's `side`
+       is a preference; this is the answer, and the open choreography reads it
+       so the row stagger runs from the edge the panel grew out of. */
+    side: "top" | "bottom";
 }
 
 export function measureLiquid(refs: LiquidRefs, params: GeomParams): Geom | null {
@@ -61,13 +111,49 @@ export function measureLiquid(refs: LiquidRefs, params: GeomParams): Geom | null
     const th = triggerEl.offsetHeight || 32;
     const panelW = panelEl.offsetWidth || width;
     const panelH = panelEl.offsetHeight || 0;
-    const panelLeft =
+    /* ── Placement, collision-aware ───────────────────────────────────
+       Everything here is trigger-local (0,0 is the trigger's top-left), and
+       the trigger's own viewport rect is what converts between the two. */
+    const wantedLeft =
         align === "start"
             ? alignOffset
             : align === "center"
               ? (tw - panelW) / 2 + alignOffset
               : tw - panelW - alignOffset;
-    const panelTop = side === "bottom" ? th + gap : -(gap + panelH);
+
+    const anchor = triggerEl.getBoundingClientRect();
+    const safe = safeBox(refs, triggerEl);
+
+    /* FLIP. The preferred side wins unless it does not fit and the other one
+       does — never flip into a worse spot, and never flip a panel that fits.
+       panelH is 0 before the rows have laid out, which reads as "fits"; that
+       first measure is a mount, and the pre-open measure runs again with a
+       real height. */
+    const roomBelow = safe.bottom - (anchor.bottom + gap);
+    const roomAbove = anchor.top - gap - safe.top;
+    const fitsBelow = panelH <= roomBelow;
+    const fitsAbove = panelH <= roomAbove;
+    const resolvedSide: "top" | "bottom" =
+        side === "bottom"
+            ? fitsBelow || !fitsAbove
+                ? "bottom"
+                : "top"
+            : fitsAbove || !fitsBelow
+              ? "top"
+              : "bottom";
+
+    /* SHIFT. Slide along the align axis to stay inside the box rather than
+       flipping — a menu that jumps its alignment reads as a different menu.
+       Clamped low-edge-last so a panel wider than the box pins to its left
+       edge instead of its right, which is where the rows start. */
+    let panelLeft = wantedLeft;
+    const viewportLeft = anchor.left + panelLeft;
+    const overRight = viewportLeft + panelW - safe.right;
+    if (overRight > 0) panelLeft -= overRight;
+    const underLeft = safe.left - (anchor.left + panelLeft);
+    if (underLeft > 0) panelLeft += underLeft;
+
+    const panelTop = resolvedSide === "bottom" ? th + gap : -(gap + panelH);
 
     const canvasLeft = Math.min(0, panelLeft) - CANVAS_PAD;
     const canvasTop = Math.min(0, panelTop) - CANVAS_PAD;
@@ -115,6 +201,7 @@ export function measureLiquid(refs: LiquidRefs, params: GeomParams): Geom | null
         originY,
         restScale,
         chainR: Math.max(8, Math.round(Math.min(tw, th) * 0.34)),
+        side: resolvedSide,
     };
 
     /* ── Write the picture ───────────────────────────────────────────── */

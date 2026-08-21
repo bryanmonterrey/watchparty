@@ -511,7 +511,7 @@ export function LiquidPopover({
            close, so they only reset when actually away. */
         const bits = innerBits();
         if (Number(gsap.getProperty(bits[0] ?? null, "opacity")) < 0.05) {
-            tl.set(bits, { autoAlpha: 0, y: side === "top" ? 12 : -12 }, 0);
+            tl.set(bits, { autoAlpha: 0, y: (geomRef.current?.side ?? side) === "top" ? 12 : -12 }, 0);
         }
         tl.to(
             bits,
@@ -520,7 +520,10 @@ export function LiquidPopover({
                 y: 0,
                 duration: 0.19,
                 ease: BACK_OUT,
-                stagger: { each: 0.03, from: side === "top" ? "end" : "start" },
+                /* The RESOLVED side, not the prop: a menu that collided and
+                   flipped grew out of the opposite edge, and the stagger has
+                   to start there or the rows unroll toward the trigger. */
+                stagger: { each: 0.03, from: (geomRef.current?.side ?? side) === "top" ? "end" : "start" },
             },
             0.2,
         );
@@ -579,14 +582,14 @@ export function LiquidPopover({
             tl.to(trio, { scaleY: 0.35, rotation: -3, duration: 0.08, ease: MORPH }, 0.015);
             tl.to(
                 innerBits(),
-                { autoAlpha: 0, y: side === "top" ? 4 : -4, duration: 0.05, ease: "power1.in", stagger: 0.005 },
+                { autoAlpha: 0, y: (geomRef.current?.side ?? side) === "top" ? 4 : -4, duration: 0.05, ease: "power1.in", stagger: 0.005 },
                 0,
             );
             tl.to(
                 trio,
                 {
                     scale: geomRef.current?.restScale ?? 0.08,
-                    y: side === "top" ? 6 : -6,
+                    y: (geomRef.current?.side ?? side) === "top" ? 6 : -6,
                     duration: 0.06,
                     ease: "power2.in",
                 },

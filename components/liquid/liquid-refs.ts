@@ -41,6 +41,10 @@ export interface LiquidRefs {
     seamGradients: (SVGRadialGradientElement | null)[];
     seamPaints: (SVGRectElement | null)[];
     seamStops: (SVGStopElement | null)[][];
+    /* Ancestors that CLIP this popover (overflow != visible), cached on first
+       measure — see safeBox() in liquid-geometry. null means "not walked
+       yet"; an empty array is a real answer. */
+    clipAncestors: HTMLElement[] | null;
 }
 
 export function createLiquidRefs(): LiquidRefs {
@@ -73,5 +77,6 @@ export function createLiquidRefs(): LiquidRefs {
         seamGradients: [],
         seamPaints: [],
         seamStops: [],
+        clipAncestors: null,
     };
 }
