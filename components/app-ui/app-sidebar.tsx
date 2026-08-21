@@ -160,11 +160,31 @@ export function AppSidebar() {
     const pathname = usePathname()
     const router = useRouter()
     const leaveTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+    // Whether the pointer is over the rail right now. Needed because the More
+    // menu suspends the collapse (below): when it closes we have to know
+    // whether the cursor ever left, and mouseleave has already been and gone.
+    const pointerInside = React.useRef(false)
 
     // Cleanup on unmount
     React.useEffect(() => () => {
         if (leaveTimeout.current) clearTimeout(leaveTimeout.current)
     }, [])
+    // NAVIGATION ENDS THE HOVER. The rail expands on `hovered` OR `open`, and
+    // the nav items reset only `open` — so after a click-through the rail was
+    // still expanded on a hover the pointer had already abandoned, and nothing
+    // could clear it but a deliberate hover-in-then-out. mouseleave cannot do
+    // it: that event needs pointer MOVEMENT, and clicking a link involves
+    // none. Keyed on pathname so every route change clears it, whichever of
+    // the handlers below (or a link, or the router) caused it.
+    React.useEffect(() => {
+        if (leaveTimeout.current) {
+            clearTimeout(leaveTimeout.current)
+            leaveTimeout.current = null
+        }
+        pointerInside.current = false
+        setHovered(false)
+    }, [pathname, setHovered])
+
     // In a store, not local state: the mobile header needs to open this same
     // panel, and its bell used to link to `/notifications` — a route that does
     // not exist. See lib/notifications/overlay-store.ts.
@@ -233,10 +253,19 @@ export function AppSidebar() {
                         clearTimeout(leaveTimeout.current)
                         leaveTimeout.current = null
                     }
+                    pointerInside.current = true
                     if (!isMobile) setHovered(true)
                 }}
                 onMouseLeave={() => {
-                    if (!isMobile) {
+                    pointerInside.current = false
+                    // THE MORE MENU PINS THE RAIL OPEN. Its panel is not
+                    // portaled — it is anchored inside this rail and travels
+                    // with it — so collapsing on hover-out drags an open menu
+                    // halfway off the viewport. Dismissal is the menu's job
+                    // instead: click-outside (the engine's own document
+                    // pointerdown handler) or Escape, and the collapse resumes
+                    // from onOpenChange below.
+                    if (!isMobile && !moreOpen) {
                         leaveTimeout.current = setTimeout(() => {
                             setHovered(false)
                             leaveTimeout.current = null
@@ -411,7 +440,19 @@ export function AppSidebar() {
                             <GooDropdown
                                 className="w-full"
                                 open={moreOpen}
-                                onOpenChange={setMoreOpen}
+                                onOpenChange={(next) => {
+                                    setMoreOpen(next)
+                                    // Closing hands the collapse back: if the
+                                    // pointer left while the menu held the rail
+                                    // open, run the hover-out that was skipped.
+                                    if (!next && !isMobile && !pointerInside.current) {
+                                        if (leaveTimeout.current) clearTimeout(leaveTimeout.current)
+                                        leaveTimeout.current = setTimeout(() => {
+                                            setHovered(false)
+                                            leaveTimeout.current = null
+                                        }, 150)
+                                    }
+                                }}
                                 side="top"
                                 align="start"
                                 // The panel STARTS at the More button's center:
