@@ -69,7 +69,15 @@ function XIcon({ className }: { className?: string }) {
 // Plain tile — the bonding-progress ring is gone by request, in every state.
 function TokenAvatar({ token }: { token: TradeToken }) {
     return (
-        <div className="size-12 shrink-0 overflow-hidden rounded-[14px] bg-zinc-800">
+        /* Round, and with NOTHING behind it. The tile used to be a
+           rounded-[14px] box on bg-zinc-800, and most coin logos are circular
+           PNGs — so their transparent corners exposed the grey square and the
+           row read as a circle sitting on a card (owner, 8/21). Every other
+           board in the app already draws coins round and bare: the trending
+           table's size-9 rounded-full, the coin page's size-full rounded-full.
+           overflow-hidden stays, so a SQUARE logo is cropped to the same
+           circle rather than poking out of it. */
+        <div className="size-12 shrink-0 overflow-hidden rounded-full">
             <CoinImage src={token.imageUrl} alt={token.symbol} coin={`${token.symbol}:${token.tokenAddress || token.id}`} className="size-full" />
         </div>
     );
@@ -235,7 +243,7 @@ function BuyCell({
             <span className="flex items-center pl-3.5 pr-2.5" aria-hidden>
                 <HugeiconsIcon icon={Dollar01Icon} className="size-4" strokeWidth={2.5} />
             </span>
-            {BUY_AMOUNTS_USD.map((usd) => (
+            {BUY_AMOUNTS_USD.map((usd, index) => (
                 <span key={usd} className="flex h-full items-center">
                     {/* Short divider: text-height, not pill-height. */}
                     <span aria-hidden className="h-4 w-px shrink-0 bg-twitter2/25" />
@@ -244,9 +252,25 @@ function BuyCell({
                         onClick={handleBuy(usd)}
                         disabled={buying}
                         aria-label={`Buy $${usd} of ${token.symbol ?? "this coin"}`}
-                        className="flex h-full cursor-pointer items-center px-3.5 text-[15px] font-bold tabular-nums transition-colors hover:bg-twitter2/20 disabled:cursor-default"
+                        className="group/seg relative flex h-full cursor-pointer items-center px-3.5 text-[15px] font-bold tabular-nums disabled:cursor-default"
                     >
-                        {pending === usd ? "…" : usd}
+                        {/* The hover fill is its own shape rather than a flat
+                            background: rounded on the INNER edges, and square
+                            where the segment meets the group's end — that edge
+                            is already rounded by the pill's own clip, so
+                            rounding it twice pulls the fill in off the rim.
+                            border-radius, not <Squircle>: same carve-out as the
+                            board's row wash — a 20% tint under the pointer, on
+                            25 rows × 3 segments, is not worth a clip-path
+                            each. */}
+                        <span
+                            aria-hidden
+                            className={cn(
+                                "pointer-events-none absolute inset-0 rounded-2xl bg-twitter2/20 opacity-0 transition-opacity duration-150 group-hover/seg:opacity-100",
+                                index === BUY_AMOUNTS_USD.length - 1 && "rounded-r-none",
+                            )}
+                        />
+                        <span className="relative">{pending === usd ? "…" : usd}</span>
                     </button>
                 </span>
             ))}
