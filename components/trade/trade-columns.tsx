@@ -172,7 +172,7 @@ function CoinCell({ token }: { token: TradeToken }) {
    PILL, so rounded-full and NO <Squircle> — both the documented pill rule and
    the reason the board's hover wash lost its clip-path: 31 rows of these
    would put the mounts straight back. */
-const BUY_AMOUNTS_USD = [25, 50, 100] as const;
+const BUY_AMOUNTS_USD = [10, 25, 50] as const;
 
 /** Dollar-denominated quick buy, paid in SOL. EVM rows open the coin page. */
 function BuyCell({
@@ -337,11 +337,12 @@ export function buildTradeColumns({
             id: "action",
             header: "Action",
             enableSorting: false,
-            /* 232px = the group's 194 plus the cell's own 16px padding on each
-               side. A 200px column looked like it fit (194 < 200) but its
-               CONTENT box is only 168, so the group spilled past the cell,
-               past the table, and into the strip beside the sticky header —
-               which is what showed through while scrolling. */
+            /* Wide enough for the group PLUS the cell's own 16px padding on each
+               side — the content box is width - 32, which is the thing a
+               200px column got wrong when the group was 194 (it spilled past
+               the cell, past the table, and into the strip beside the sticky
+               header, which is what showed through while scrolling). Three
+               two-digit amounts measure ~185, so this keeps real slack. */
             meta: { align: "right", width: "232px" },
             cell: ({ row }) => (
                 <BuyCell

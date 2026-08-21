@@ -55,7 +55,7 @@ export default function TradeLoading() {
                     <div className="flex w-28 justify-end"><div className="h-3.5 w-16 rounded-full shimmer-skeleton" /></div>
                     <div className="flex w-24 justify-end"><div className="h-3.5 w-12 rounded-full shimmer-skeleton" /></div>
                     {/* The buy group's own footprint — one pill, not a stub. */}
-                    <div className="flex w-[232px] justify-end"><div className="h-11 w-[194px] rounded-full shimmer-skeleton" /></div>
+                    <div className="flex w-[232px] justify-end"><div className="h-11 w-[185px] rounded-full shimmer-skeleton" /></div>
                 </div>
             ))}
         </div>
