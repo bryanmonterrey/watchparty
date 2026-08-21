@@ -17,8 +17,23 @@ function LazyMiniPlayer() {
     return <GlobalMiniPlayer />;
 }
 
-// Mounted once in (app)/layout.tsx — the provider survives route changes, so
-// a mini player opened on a watch page keeps playing on every other page.
+// Mounted in (app)/layout.tsx and, so the player survives the walk out of the
+// app, in (studio), (legal), (directory) and (developer) too.
+//
+// WITHIN a group the provider instance is the same across route changes, so the
+// <video> element is never remounted and playback is genuinely continuous.
+// BETWEEN groups each layout mounts its own provider, so the crossing is a
+// remount and the handoff is the sessionStorage rehydrate in
+// mini-player-context — same video, resumed at its saved timestamp, but it
+// re-buffers and (no user gesture) comes back paused.
+//
+// Deliberately NOT in (auth) or (marketing): the login and landing pages stay
+// bare, and the root layout stays bare too (the speed rule).
+//
+// Cross-SUBDOMAIN navigation can't be covered by any of this. studio. and
+// console. are separate origins with their own sessionStorage, so a mini player
+// only crosses into the studio via watchparty.xyz/studio, not
+// studio.watchparty.xyz.
 export function MiniPlayerShell({ children }: { children: React.ReactNode }) {
     return (
         <MiniPlayerProvider>

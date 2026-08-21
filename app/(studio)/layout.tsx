@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "@/lib/auth/get-session";
 import { ReactQueryProvider } from "@/components/react-query-provider";
 import { StudioShell } from "@/components/studio/studio-shell";
+import { MiniPlayerShell } from "@/components/app-ui/mini-player-shell";
 
 // The creator studio, served at studio.watchparty.xyz (host-rewritten to
 // /studio in middleware). Every page here is creator-only, so the group
@@ -17,7 +18,14 @@ export default async function StudioLayout({ children }: { children: React.React
 
   return (
     <ReactQueryProvider>
-      <StudioShell>{children}</StudioShell>
+      {/* A mini player opened in (app) has to survive the walk over to the
+          studio. Each route group mounts its own provider, so the handoff is
+          the sessionStorage rehydrate in mini-player-context. Costs a context
+          here and nothing else — the player chunk stays lazy and the shell
+          renders null until there's actually a video in it. */}
+      <MiniPlayerShell>
+        <StudioShell>{children}</StudioShell>
+      </MiniPlayerShell>
     </ReactQueryProvider>
   );
 }

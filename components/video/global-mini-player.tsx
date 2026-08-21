@@ -4,10 +4,15 @@ import { useRef, useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { MiniPlayerOverlay } from "./mini-player-overlay";
 import { useMiniPlayer } from "@/contexts/mini-player-context";
+import { useAudioOwner } from "@/lib/audio-bus";
 import { loadIvsPlayer } from "@/lib/ivs/player-loader";
 
+// Gutter between the card and the viewport edges, in px. Also the amount the
+// drag clamp keeps on screen.
+const EDGE = 16;
+
 export function GlobalMiniPlayer() {
-    const { miniPlayerData, exitMiniPlayer } = useMiniPlayer();
+    const { miniPlayerData, exitMiniPlayer, noteProgress } = useMiniPlayer();
     const router = useRouter();
 
     // Live streams come in as IVS .m3u8 playback URLs — a bare <video> can't
@@ -81,6 +86,19 @@ export function GlobalMiniPlayer() {
     const dragOffsetRef = useRef({ x: 0, y: 0 });
     const isDraggingRef = useRef(false);
 
+    // Clamped against the card's MEASURED size, not the 400x240 it used to
+    // assume: the width is capped by the viewport now (see the style below), so
+    // a hardcoded 400 let the card hang off the right edge on a narrow window.
+    const clampToViewport = useCallback((x: number, y: number) => {
+        const el = wrapperRef.current;
+        const w = el?.offsetWidth ?? 400;
+        const h = el?.offsetHeight ?? 240;
+        return {
+            x: Math.max(EDGE, Math.min(window.innerWidth - w - EDGE, x)),
+            y: Math.max(EDGE, Math.min(window.innerHeight - h - EDGE, y)),
+        };
+    }, []);
+
     const onDragStart = useCallback((e: React.PointerEvent) => {
         if (!wrapperRef.current) return;
         const rect = wrapperRef.current.getBoundingClientRect();
@@ -92,19 +110,48 @@ export function GlobalMiniPlayer() {
     useEffect(() => {
         const onMove = (e: PointerEvent) => {
             if (!isDraggingRef.current) return;
-            setDragPos({
-                x: Math.max(0, Math.min(window.innerWidth - 400, e.clientX - dragOffsetRef.current.x)),
-                y: Math.max(0, Math.min(window.innerHeight - 240, e.clientY - dragOffsetRef.current.y)),
-            });
+            setDragPos(clampToViewport(e.clientX - dragOffsetRef.current.x, e.clientY - dragOffsetRef.current.y));
         };
         const onUp = () => { isDraggingRef.current = false; };
+        // A dragged card holds absolute coordinates, so shrinking the window
+        // strands it off-screen with no way back. Undragged it stays anchored
+        // bottom-right by CSS and needs nothing.
+        const onResize = () => setDragPos((pos) => (pos ? clampToViewport(pos.x, pos.y) : pos));
         document.addEventListener("pointermove", onMove);
         document.addEventListener("pointerup", onUp);
+        window.addEventListener("resize", onResize);
         return () => {
             document.removeEventListener("pointermove", onMove);
             document.removeEventListener("pointerup", onUp);
+            window.removeEventListener("resize", onResize);
         };
-    }, []);
+    }, [clampToViewport]);
+
+    // ── Audio bus ─────────────────────────────────────────────────────────────
+    // The mini player is an explicit user action, so it takes the page's audio
+    // the moment it opens and takes it back whenever the bus goes free. Without
+    // this it plays OVER whatever the route it landed on autoplays — the home
+    // hero on a different video, a hovered trending-card preview.
+    const { isOwner, hasOwner, claim, release } = useAudioOwner();
+
+    useEffect(() => {
+        claim();
+        return () => release();
+    }, [claim, release]);
+
+    useEffect(() => {
+        if (!hasOwner) claim();
+    }, [hasOwner, claim]);
+
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video) return;
+        // `hasOwner &&`, not a bare `!isOwner`: on the first commit the claim
+        // above hasn't emitted yet, so isOwner is still false, and muting on
+        // that frame only to unmute on the next is the exact sequence WebKit
+        // answers by pausing the video (see the note in use-audio-bus).
+        video.muted = hasOwner && !isOwner;
+    }, [isOwner, hasOwner, miniPlayerData?.postId]);
 
     // ── Load video when data changes ──────────────────────────────────────────
     useEffect(() => {
@@ -139,10 +186,25 @@ export function GlobalMiniPlayer() {
             };
         }
 
+        // The seek has to wait for metadata. Assigning currentTime on an element
+        // that has no duration yet is a no-op, and the load() below would have
+        // reset it anyway — so handing off at a timestamp silently restarted
+        // from zero, which is exactly what a rehydrated player depends on.
+        const startAt = miniPlayerData.startTime;
+        const onMeta = () => {
+            if (startAt <= 0 || !Number.isFinite(video.duration)) return;
+            video.currentTime = Math.min(startAt, Math.max(0, video.duration - 0.25));
+        };
+        video.addEventListener("loadedmetadata", onMeta, { once: true });
+
         video.src = miniPlayerData.videoUrl;
-        video.currentTime = miniPlayerData.startTime;
         video.load();
+        // Rejected when the player was restored from storage rather than opened
+        // by a click — no gesture, so the browser refuses. It stays parked on
+        // the poster with its play button, which is the honest outcome.
         video.play().catch(() => {});
+
+        return () => video.removeEventListener("loadedmetadata", onMeta);
     }, [miniPlayerData?.postId, miniPlayerData?.videoUrl, isLive]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const togglePlay = useCallback(() => {
@@ -189,10 +251,14 @@ export function GlobalMiniPlayer() {
             ref={wrapperRef}
             onPointerDown={onDragStart}
             className="fixed z-[9999] rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/10 cursor-grab active:cursor-grabbing"
-            style={dragPos
-                ? { left: dragPos.x, top: dragPos.y, width: 400 }
-                : { bottom: 16, right: 16, width: 400 }
-            }
+            style={{
+                // Capped by the viewport so a narrow window gets a smaller card
+                // instead of one hanging off the right edge.
+                width: `min(400px, calc(100vw - ${EDGE * 2}px))`,
+                ...(dragPos
+                    ? { left: dragPos.x, top: dragPos.y }
+                    : { bottom: EDGE, right: EDGE }),
+            }}
         >
             {/* Video */}
             <div className="relative w-full aspect-video bg-black">
@@ -204,7 +270,11 @@ export function GlobalMiniPlayer() {
                     onPause={() => setIsPlaying(false)}
                     onTimeUpdate={() => {
                         const v = videoRef.current;
-                        if (v) setCurrentTime(v.currentTime);
+                        if (!v) return;
+                        setCurrentTime(v.currentTime);
+                        // Keeps the persisted resume point fresh. Throttled to
+                        // 1Hz inside the context and never touches state.
+                        noteProgress(v.currentTime);
                     }}
                     onLoadedMetadata={() => {
                         const v = videoRef.current;

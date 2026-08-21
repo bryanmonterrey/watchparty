@@ -107,7 +107,13 @@ export function HomeHero({
             thumbnailUrl={active.thumbnailUrl}
             fill
             autoPlay
-            audioBus
+            // Off while a mini player is open on a DIFFERENT video: the early
+            // return above only stands the hero down when it's the same clip,
+            // and off the bus an autoplayed hero stays muted (autoplay starts
+            // silent; the bus is the only thing that ever unmutes it). So the
+            // hero keeps playing, the mini player keeps the sound, and closing
+            // the mini player hands it straight back.
+            audioBus={!miniPlayerData}
             loop={!hasQueue}
             onEnded={hasQueue ? next : undefined}
             theaterMode={theaterMode}
