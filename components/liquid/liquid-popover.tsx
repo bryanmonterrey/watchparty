@@ -228,12 +228,22 @@ export function LiquidPopover({
     const liquidOn = useCallback(
         (blur: number) => {
             gsap.set(refs.goo, { autoAlpha: 1 });
-            gsap.set(refs.bodies, { autoAlpha: 0 });
+            /* The GLASS stays on through the flight — that is what puts a real
+               backdrop blur in the transition. Only the crisp RIM is held
+               back, so the goo owns the single border on screen and the old
+               "outlined panel inside the blob" artifact cannot return. */
+            gsap.set(refs.panelRim, { autoAlpha: 0 });
             applyGooBlur(blur);
             refs.root?.setAttribute("data-liquid", "");
         },
         [applyGooBlur, refs],
     );
+
+    /* The handoff's other half: the crisp rim comes back over the glass that
+       carried the blur the whole way. */
+    const liquidOff = useCallback(() => {
+        gsap.set(refs.panelRim, { autoAlpha: 1 });
+    }, [refs]);
 
     /* The neon catch, cleared: a row lit by a completed merge lets go the
        moment the picture is no longer the gesture's. */
@@ -332,6 +342,7 @@ export function LiquidPopover({
         innerBits,
         measure,
         liquidOn,
+        liquidOff,
         applyGooBlur,
         clearRowNeon,
         fxScale,
@@ -375,6 +386,7 @@ export function LiquidPopover({
         gsap.set(refs.blobTrigger, { transformOrigin: "50% 50%", autoAlpha: 0 });
         gsap.set(refs.goo, { autoAlpha: 0 });
         gsap.set(refs.bodies, { autoAlpha: 1 });
+        gsap.set(refs.panelRim, { autoAlpha: 1 });
 
         seamRef.current?.start();
 
@@ -417,6 +429,7 @@ export function LiquidPopover({
             gsap.set(getTriggerBits(), { scale: 1, x: 0, y: 0 });
             gsap.set(refs.goo, { autoAlpha: 0 });
             gsap.set(refs.bodies, { autoAlpha: 1 });
+            gsap.set(refs.panelRim, { autoAlpha: 1 });
             clearRowNeon();
             refs.root?.removeAttribute("data-liquid");
             refs.root?.removeAttribute("data-grab");
@@ -518,11 +531,11 @@ export function LiquidPopover({
            faces briefly stack (roughly double SURFACE_ALPHA, settling to one
            across the fade) rather than being the identical pixels this used to
            hand off — the backdrop blur arriving is the visible part. */
-        tl.set(refs.bodies, { autoAlpha: 1 }, 0.47);
+        tl.call(liquidOff, undefined, 0.47);
         tl.to(refs.goo, { autoAlpha: 0, duration: 0.16, ease: "power1.out" }, 0.47);
         applyGooBlur(GOO_BLUR_REST, tl, 0.64);
         tl.call(() => refs.root?.removeAttribute("data-liquid"), undefined, 0.63);
-    }, [applyGooBlur, clearRowNeon, fxScale, getPanelTrio, getTriggerBits, hatch, innerBits, liquidOn, measure, refs, setOpen, setStaticState, side, stretch]);
+    }, [applyGooBlur, clearRowNeon, fxScale, getPanelTrio, getTriggerBits, hatch, innerBits, liquidOff, liquidOn, measure, refs, setOpen, setStaticState, side, stretch]);
 
     const closeMenu = useCallback(
         (fromTrigger: boolean) => {
@@ -603,12 +616,12 @@ export function LiquidPopover({
                 0.14,
             );
 
-            tl.set(refs.bodies, { autoAlpha: 1 }, 0.22);
+            tl.call(liquidOff, undefined, 0.22);
             tl.to(refs.goo, { autoAlpha: 0, duration: 0.1, ease: "power1.out" }, 0.22);
             applyGooBlur(GOO_BLUR_REST, tl, 0.33);
             tl.call(() => refs.root?.removeAttribute("data-liquid"), undefined, 0.32);
         },
-        [applyGooBlur, clearRowNeon, fxScale, getPanelTrio, getTriggerBits, innerBits, liquidOn, refs, setOpen, setStaticState, side, stretch],
+        [applyGooBlur, clearRowNeon, fxScale, getPanelTrio, getTriggerBits, innerBits, liquidOff, liquidOn, refs, setOpen, setStaticState, side, stretch],
     );
 
     openMenuRef.current = openMenu;

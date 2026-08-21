@@ -39,6 +39,7 @@ export interface PopoverHostCtx {
     innerBits(): HTMLElement[];
     measure(): Geom | null;
     liquidOn(blur: number): void;
+    liquidOff(): void;
     applyGooBlur(blur: number, tl?: gsap.core.Timeline, at?: number): void;
     clearRowNeon(): void;
     fxScale(): number;
@@ -113,11 +114,12 @@ export function createPopoverStretchHost(ctx: { current: PopoverHostCtx }): Stre
         handoff: (tl, at) => {
             const c = ctx.current;
             gooSfx.play("release", { frame: "dark" });
-            /* The crisp bodies SNAP on underneath the goo and only the goo
-               fades. Both faces are glass now, so the beat is a short settle
-               (two faces stacked, resolving to one with a real backdrop blur)
-               rather than the identical-pixel handoff it once was. */
-            tl.set(c.refs.bodies, { autoAlpha: 1 }, at);
+            /* The crisp RIM snaps on under the goo and the glass's blur
+               settles back from its flight value; only the goo fades. The
+               glass itself was never hidden — it carried the blur through the
+               gesture — so this beat is a short settle, not the identical-pixel
+               handoff it once was. */
+            tl.call(c.liquidOff, undefined, at);
             tl.to(c.refs.goo, { autoAlpha: 0, duration: 0.15, ease: "power1.out" }, at);
             c.applyGooBlur(GOO_BLUR_REST, tl, at + 0.16);
             tl.call(

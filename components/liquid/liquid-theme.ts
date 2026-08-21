@@ -43,6 +43,19 @@ export const ACCENT = "#358efc";
 export const SURFACE_ALPHA = 0.03;
 export const BACKDROP_BLUR = "blur(12px)";
 
+/* ONE blur, rest and flight alike (owner call: md, not lg). The glass is
+   visible THROUGH the pour now — only the crisp rim is held back, so the goo
+   owns the single border on screen — which is what puts a real backdrop blur
+   in the transition at all. A heavier flight value was tried and dropped;
+   if one is ever wanted again, it is a second constant written by liquidOn()
+   and restored by liquidOff() in liquid-popover.tsx.
+
+   ⚠️ That live backdrop-filter is re-sampled every frame of the animation,
+   under a transform. It is the cheapest way to get blur into the transition —
+   no third rasterization of the goo's filter chain — but it is not free. If a
+   pour hitches on /feed, the off-switch is putting
+   `gsap.set(refs.bodies, { autoAlpha: 0 })` back into liquidOn(). */
+
 /* The face's tint, and the default fill. WHITE, because a wash this faint
    reads as a surface only where it CONTRASTS with its backdrop: this app is
    dark, so the old near-black tint was black-on-black. See GOO_PANEL_FILL. */
