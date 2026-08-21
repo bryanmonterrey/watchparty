@@ -29,12 +29,14 @@ const PopoverContent = React.forwardRef<
         sideOffset={sideOffset}
         className={cn(
           POPOVER_MOTION_CLASS,
-          // Glass, matching the liquid dropdown: the fill at 10% behind a
+          // Glass, matching the liquid dropdown: a white wash behind a
           // backdrop blur, plus the grain (`.surface-noise`, globals.css).
+          // Keep these two in step with SURFACE_ALPHA / RIM_ALPHA in
+          // components/liquid/liquid-theme.ts — same surface, two engines.
           // `isolation` from surface-noise bounds the grain's blend and does
           // NOT disturb this element's own blur — a backdrop root governs its
           // descendants, not itself.
-          "surface-noise z-50 w-72 rounded-md border border-zinc-800 bg-zinc-900/10 backdrop-blur-md p-4 text-zinc-300 shadow-md outline-none",
+          "surface-noise z-50 w-72 rounded-md border border-white/10 bg-white/3 backdrop-blur-md p-4 text-zinc-300 shadow-md outline-none",
           className
         )}
         {...props}

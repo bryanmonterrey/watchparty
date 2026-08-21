@@ -87,12 +87,16 @@ export type GooDropdownProps = {
 export const GOO_TRIGGER_PILL =
   'flex h-11 cursor-pointer items-center gap-2 rounded-full bg-soft-gray-10 px-4 text-base font-bold text-zinc-400 transition-colors hover:text-flexwhite'
 
-/** Standard panel fill — the ORIGINAL GooDropdown black, back by owner call
- * (2026-08-20, same day): the liquid engine stays — motion, seam, neon — but
- * the surface reverts from the demo's #212326 stage grey to the panel colour
- * every dropdown wore before the engine swap. The rim needs no edit:
- * solidRim() sees a non-demo fill and derives ~6.5% white over the face. */
-export const GOO_PANEL_FILL = '#111111'
+/** Standard panel fill — WHITE, carried at SURFACE_ALPHA behind the backdrop
+ * blur. Owner call 2026-08-21, and the reason is the one thing a glass panel
+ * cannot fake: a wash this faint only reads as a surface if it CONTRASTS with
+ * what is behind it. The app is dark, so the old #111111 was black-on-black —
+ * invisible as a panel, and worse in motion, where the goo has tint but no
+ * blur to lean on. White lifts on every background.
+ *
+ * Still an opaque hex on purpose: the engine applies the alpha (glassFill),
+ * and the rim is the theme's white hairline, not derived from this. */
+export const GOO_PANEL_FILL = '#ffffff'
 
 export function gooMenuItem({ icon, label, onClick, href, right, variant = 'default', closeOnSelect = true, key }: {
   icon?: React.ReactNode

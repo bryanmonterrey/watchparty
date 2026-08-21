@@ -21,9 +21,9 @@ export const LIQUID_SURFACE = "#212326";
 export const LIQUID_RIM = "#2f3235";
 export const ACCENT = "#358efc";
 
-/* GLASS (owner call 2026-08-21). The face is the fill at 10% behind a 12px
-   backdrop blur — Tailwind's `backdrop-blur-md`, in px because the panel is
-   painted from measured geometry, not classes.
+/* GLASS (owner call 2026-08-21). The face is the fill at SURFACE_ALPHA behind
+   a 12px backdrop blur — Tailwind's `backdrop-blur-md`, in px because the
+   panel is painted from measured geometry, not classes.
 
    This is why the face is an HTML div and no longer the SVG path's own fill:
    `backdrop-filter` needs a real box, and nothing samples a backdrop through
@@ -40,8 +40,13 @@ export const ACCENT = "#358efc";
    and WebKit has historically mis-sampled a backdrop under one. The knobs, in
    order: drop `will-change-transform` from that box, then move the glass out
    of it and position it from geometry directly. */
-export const SURFACE_ALPHA = 0.1;
+export const SURFACE_ALPHA = 0.03;
 export const BACKDROP_BLUR = "blur(12px)";
+
+/* The face's tint, and the default fill. WHITE, because a wash this faint
+   reads as a surface only where it CONTRASTS with its backdrop: this app is
+   dark, so the old near-black tint was black-on-black. See GOO_PANEL_FILL. */
+export const GLASS_TINT = "#ffffff";
 
 /* The MOVING picture's face alpha — the goo canvas's, applied after the
    threshold (liquid-goo-canvas.tsx explains why the order matters).
@@ -86,11 +91,23 @@ export function neonGlow(hue: string) {
     return `drop-shadow(0 0 3px ${hue}e6) drop-shadow(0 0 8px ${hue}80)`;
 }
 
-/* The rim is a SOLID: the goo draws its border by flooding one flat colour
-   into the sliver between two contours, so a translucent rim would tint
-   whatever the liquid is flying over and double against the crisp border
-   beneath it. The demo surface gets the demo's exact stroke; a custom fill
-   gets the same recipe — ~6.5% white composited over the face. */
+/* THE RIM, now that the face is glass.
+
+   It used to be a SOLID derived from the fill (~6.5% white over it), because
+   the goo floods one flat colour into the sliver between its two contours and
+   an opaque interior sat underneath. Neither half of that holds any more: the
+   interior is a few percent, so a rim mixed from it is a dark line on a light
+   wash, and there is nothing beneath it to double against — the crisp bodies
+   are hidden while the goo flies, and the goo is hidden at rest.
+
+   So it is white at a fixed alpha, carried as colour + opacity rather than an
+   rgba string: the crisp path takes stroke/stroke-opacity and the goo's
+   feFlood takes flood-color/flood-opacity, and those two attribute pairs are
+   the portable spelling on both. */
+export const RIM_PAINT = "#ffffff";
+export const RIM_ALPHA = 0.1;
+
+/** Kept for a fill that goes back to opaque — see git history. */
 export function solidRim(fill: string) {
     const hex = fill.length >= 7 ? fill.slice(0, 7) : LIQUID_SURFACE;
     if (hex.toLowerCase() === LIQUID_SURFACE) {

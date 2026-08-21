@@ -42,12 +42,13 @@ import { LiquidRows, type LiquidPopoverItem } from "./liquid-rows";
 import {
     ACCENT,
     BACKDROP_BLUR,
-    LIQUID_SURFACE,
+    GLASS_TINT,
     PANEL_PAD,
+    RIM_ALPHA,
+    RIM_PAINT,
     ROW_RADIUS,
     glassFill,
     neonGlow,
-    solidRim,
 } from "./liquid-theme";
 import { prefersReducedMotion } from "./motion";
 import { RowHover, type RowHoverTarget } from "./row-hover";
@@ -123,7 +124,7 @@ export function LiquidPopover({
     maxPanelHeight,
     disabled = false,
     panelRadius = 24,
-    fill = LIQUID_SURFACE,
+    fill = GLASS_TINT,
     className,
 }: LiquidPopoverProps) {
     const menuId = useId();
@@ -172,7 +173,6 @@ export function LiquidPopover({
     }, []);
 
     const isControlled = controlledOpen !== undefined;
-    const rim = solidRim(fill);
 
     /* Measured off the live DOM and written straight to the SVG picture: at
        mount, on panel/trigger resize, and right before every open and grab,
@@ -515,9 +515,9 @@ export function LiquidPopover({
         /* Hand back to the crisp picture at full blur — the bodies snap on
            UNDER the goo, the goo alone fades, and the blur resets only once it
            is hidden so the rim never thins on screen. Since the glass, the two
-           faces briefly stack (≈0.19 alpha settling to 0.10 across the fade)
-           rather than being the identical pixels this used to hand off — the
-           backdrop blur arriving is the visible part of that beat. */
+           faces briefly stack (roughly double SURFACE_ALPHA, settling to one
+           across the fade) rather than being the identical pixels this used to
+           hand off — the backdrop blur arriving is the visible part. */
         tl.set(refs.bodies, { autoAlpha: 1 }, 0.47);
         tl.to(refs.goo, { autoAlpha: 0, duration: 0.16, ease: "power1.out" }, 0.47);
         applyGooBlur(GOO_BLUR_REST, tl, 0.64);
@@ -885,7 +885,8 @@ export function LiquidPopover({
                                 refs.panelBodyShape = el;
                             }}
                             fill="none"
-                            stroke={rim}
+                            stroke={RIM_PAINT}
+                            strokeOpacity={RIM_ALPHA}
                             strokeWidth={1}
                         />
                     </svg>
@@ -893,7 +894,7 @@ export function LiquidPopover({
             </div>
 
             {/* Layer 2: the liquid. */}
-            <LiquidGooCanvas refs={refs} ids={ids} fill={fill} rim={rim} />
+            <LiquidGooCanvas refs={refs} ids={ids} fill={fill} />
 
             {/* Layer 3: rows and hit areas above the liquid. */}
             <div
