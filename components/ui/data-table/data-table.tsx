@@ -21,7 +21,6 @@ import {
     type SortingState,
 } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
-import { Squircle } from "@/components/ui/squircle";
 import { dataTableFeatures, type DataTableColumnMeta, type DataTableFeatures } from "./features";
 import { DataTableHeader, type HeaderCellRefs } from "./data-table-header";
 import { DataTableSkeletonRows } from "./data-table-skeleton";
@@ -121,8 +120,21 @@ export interface DataTableProps<TData extends RowData> {
  * column on hover. `<td>` works everywhere.
  *
  * Only the outer corners round, so the tiled slices still read as one pill.
- * The middle cells skip Squircle entirely: a clip-path with no rounding is a
- * wrapper and a paint step for nothing, on every cell of every row.
+ *
+ * PLAIN border-radius, NOT <Squircle> — the one deliberate exception to the
+ * squircle rule, and it is measured. Lisse clips by reading getComputedStyle
+ * in a layout effect and writing a clip-path, so a board of N rows mounts 2N
+ * of them in the SAME commit that swaps the data in, each read forcing a
+ * style recalc against the whole page: /home profiled at 868ms of
+ * getLayoutSize on a 31-row board (77 squircled elements against /feed's 4),
+ * which is the frozen beat the owner saw — "the loader pauses before showing
+ * new data" — while the alerts rail, whose rows are cheap, swapped cleanly.
+ *
+ * The trade is invisible: this wash is a 6% tint that exists only under the
+ * pointer, and at r=12 a circular corner and a continuous one are not
+ * distinguishable at that opacity. Every SURFACE in the board — the rows, the
+ * cards, the controls — keeps its squircle. See CLAUDE.md's pill exception
+ * for the same shape of carve-out.
  */
 function RowHoverWash({
     radius,
@@ -135,32 +147,21 @@ function RowHoverWash({
     roundLeft: boolean;
     roundRight: boolean;
 }) {
-    const wash = (
+    return (
         <span
             aria-hidden
-            style={{ backgroundColor: color }}
+            style={{
+                backgroundColor: color,
+                borderTopLeftRadius: roundLeft ? radius : undefined,
+                borderBottomLeftRadius: roundLeft ? radius : undefined,
+                borderTopRightRadius: roundRight ? radius : undefined,
+                borderBottomRightRadius: roundRight ? radius : undefined,
+            }}
             className={cn(
                 "pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover/row:opacity-10",
                 !color && "bg-white group-hover/row:opacity-[0.06]",
             )}
         />
-    );
-
-    if (!roundLeft && !roundRight) return wash;
-
-    return (
-        <Squircle
-            asChild
-            autoEffects={false}
-            radius={{
-                topLeft: roundLeft ? radius : 0,
-                bottomLeft: roundLeft ? radius : 0,
-                topRight: roundRight ? radius : 0,
-                bottomRight: roundRight ? radius : 0,
-            }}
-        >
-            {wash}
-        </Squircle>
     );
 }
 
