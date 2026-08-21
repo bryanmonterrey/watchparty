@@ -220,7 +220,14 @@ export function TradeDiscover() {
     };
 
     return (
-        <div className="flex h-full flex-col">
+        // --board-stick is where the board's column labels pin: directly under
+        // the sticky control bar above them. MEASURED, and the two halves are
+        // the bar's own two boxes — the h-(--header-height) spacer (hidden
+        // below md, which is why the base value omits it) plus the 4rem tab
+        // row (py-2/pb-3 around a 44px pill). Same hook and same reasoning as
+        // home's category tabs; keep it in sync with the bar if that row's
+        // padding ever changes.
+        <div className="flex h-full flex-col [--board-stick:4rem] md:[--board-stick:calc(var(--header-height)+4rem)]">
             {/* Glass control bar under the fixed header (same pattern as the
                 memescope board's sticky header). */}
             <div className="sticky top-0 z-40">
@@ -345,7 +352,7 @@ export function TradeDiscover() {
                     {/* bg-canvas, not a raised sidebar-hover card: the board
                         sits straight on the page like the trending table, so
                         the only thing defining a row is its own hover wash. */}
-                    <div className="bg-canvas pt-2">
+                    <div className="bg-canvas">
                         <DataTable
                             data={tokens}
                             columns={columns}
@@ -381,7 +388,14 @@ export function TradeDiscover() {
                             rowHoverRadius={12}
                             rowHoverColor={(t) => stableHoverColor(t.id)}
                             className="px-2"
-                            headerClassName="bg-transparent"
+                            stickyHeader
+                            stickyTop="var(--board-stick,0px)"
+                            // bg-canvas, not transparent: stuck, the rows pass
+                            // UNDER these labels and a transparent strip lets
+                            // them read straight through. The board already
+                            // sits on canvas, so the fill is invisible until
+                            // it is doing that job.
+                            headerClassName="bg-canvas"
                             emptyState={
                                 <div className="flex flex-col items-center justify-center gap-1 py-8">
                                     <p className="text-base font-bold text-zinc-400">{EMPTY_COPY[tab].title}</p>
