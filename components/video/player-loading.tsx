@@ -36,7 +36,12 @@ export function PlayerLoadingOverlay() {
 /** Owns its own 16:9 box — for a player rendering its own loading state. */
 export function PlayerLoadingScreen() {
     return (
-        <div className="flex aspect-video w-full items-center justify-center bg-black">
+        /* relative is LOAD-BEARING: .ytp-spinner is position:absolute at
+           50%/50% (globals.css), so without a positioned box here it centers
+           against the nearest positioned ANCESTOR — in /home's loading shell
+           that was the whole column, and the spinner hovered over the board
+           skeletons instead of the black frame. */
+        <div className="relative flex aspect-video w-full items-center justify-center bg-black">
             <PlayerSpinner />
         </div>
     );

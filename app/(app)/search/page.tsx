@@ -18,7 +18,8 @@ import { LoadMore } from "@/components/interior/load-more";
 // Discovery (Live + categories) shown while the query is empty. Lazy + ssr:false
 // so its feed queries aren't part of the initial search payload; the inline
 // object literal is required (Turbopack statically analyzes dynamic() options).
-const SearchLanding = dynamic(() => import("@/components/search/search-landing").then(m => m.SearchLanding), { ssr: false });
+import { SearchLandingShell } from "@/components/search/search-landing-shell";
+const SearchLanding = dynamic(() => import("@/components/search/search-landing").then(m => m.SearchLanding), { ssr: false, loading: () => <SearchLandingShell /> });
 
 // Port of sidebar's (browse)/search/page.tsx — header-driven search results
 // (people + posts), reading ?q= from the URL. Mobile additions per the design:
