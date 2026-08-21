@@ -127,7 +127,7 @@ function DiscoverSection() {
 }
 
 export function CommunitiesLanding() {
-    const { data: session } = useAuthSession();
+    const { data: session, isPending: sessionPending } = useAuthSession();
     const { data: servers = [], isLoading } = trpc.community.listServers.useQuery(
         undefined,
         { enabled: !!session?.user }
@@ -175,7 +175,13 @@ export function CommunitiesLanding() {
                 </div>
 
                 {/* Pre-hydration / auth-resolving placeholder — identical on server and client */}
-                {!mounted && (
+                {/* Placeholder until BOTH gates clear: hydration AND the
+                    session answer. Gating the sign-in CTA on `mounted` alone
+                    showed "Join a Community / Sign In" to signed-in users for
+                    as long as the session query was in flight (owner: "shows
+                    signed-out state even though I'm logged in"). Pending is
+                    not signed out — hold the neutral grid until we know. */}
+                {(!mounted || sessionPending) && (
                     <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {Array.from({ length: 4 }).map((_, i) => (
                             <div key={i} className="aspect-square flex flex-col p-4 gap-2 items-start justify-end rounded-[32px] border border-baseborder/25" >
@@ -187,7 +193,7 @@ export function CommunitiesLanding() {
                     </div>
                 )}
 
-                {mounted && !session?.user && (
+                {mounted && !sessionPending && !session?.user && (
                     <div className="flex flex-col items-center justify-center py-20 text-center">
                         <div className="size-24 rounded-3xl bg-white/[0.03] border border-flexwhite/10 flex items-center justify-center mb-8 shadow-2xl">
                             <Users2 className="size-12 text-flexwhite/40" />
