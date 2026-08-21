@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { TradeUpIcon } from "@hugeicons/core-free-icons";
+import { Dollar01Icon, TradeUpIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { formatMarketCap } from "@/components/tokens/market-cap-chip";
 import { staggerPulse } from "@/lib/skeleton-stagger";
@@ -250,14 +250,20 @@ function RailCoinStat({
             className="flex shrink-0 cursor-pointer items-center transition-opacity hover:opacity-80 active:scale-95"
         >
             {live ? (
-                <span
-                    className={cn(
-                        "text-sm font-medium tabular-nums",
-                        marketCap == null ? "text-zinc-500" : "text-emerald-400",
-                    )}
-                >
-                    {marketCap == null ? "$—.——" : formatMarketCap(marketCap)}
-                </span>
+                marketCap == null ? (
+                    /* No cached cap yet: a dollar mark and one plain dash —
+                       the icon says "money number coming", the dash says "not
+                       yet", without the chip's wider $—.—— string (owner call:
+                       this slot is narrower than a thumbnail chip). */
+                    <span className="flex items-center gap-0.5 text-sm font-medium text-zinc-500">
+                        <HugeiconsIcon icon={Dollar01Icon} className="size-4" strokeWidth={2.5} />
+                        -
+                    </span>
+                ) : (
+                    <span className="text-sm font-medium tabular-nums text-emerald-400">
+                        {formatMarketCap(marketCap)}
+                    </span>
+                )
             ) : (
                 <HugeiconsIcon icon={TradeUpIcon} className="size-5 text-twitter2" strokeWidth={2.5} />
             )}
