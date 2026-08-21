@@ -67,11 +67,19 @@ export function PanelGrid({ userId }: { userId: string }) {
                 </div>
             ))}
 
+            {/* w-full is load-bearing, not decoration. Squircle renders a
+                measuring wrapper div and THAT is the grid item, so it gets the
+                cell's full width — but a button shrinks to fit rather than
+                filling a block parent, so the tile collapsed to its own label
+                (measured on prod: wrapper 244px, button 59px) and "Add panel"
+                overhung both edges. PanelCard is unaffected because its grid
+                item is a plain div. px-4 then keeps the label off the edges
+                once the tile does fill. */}
             {isOwner && (
                 <Squircle asChild radius={16}>
                     <button
                         onClick={() => { setEditing(null); setEditorOpen(true); }}
-                        className="flex min-h-[120px] cursor-pointer flex-col items-center justify-center gap-2 bg-zinc-900/40 text-zinc-500 transition-colors hover:bg-zinc-900/70 hover:text-white"
+                        className="flex min-h-[120px] w-full cursor-pointer flex-col items-center justify-center gap-2 px-4 bg-zinc-900/40 text-zinc-500 transition-colors hover:bg-zinc-900/70 hover:text-white"
                     >
                         <HugeiconsIcon icon={PlusSignIcon} className="size-6" />
                         <span className="text-xs font-bold">Add panel</span>
