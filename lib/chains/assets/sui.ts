@@ -6,6 +6,7 @@ import { SUI } from "../registry";
 import type { ChainConfig } from "../types";
 import { getNativePrice, getTokenPrices } from "./prices";
 import type { AssetFetchResult, AssetProvider, ChainAsset } from "./types";
+import { fetchWithDeadline } from "./timeout";
 
 export const SUI_NATIVE_COIN_TYPE = "0x2::sui::SUI";
 
@@ -22,7 +23,7 @@ interface SuiCoinMetadata {
 }
 
 async function suiRpc<T>(rpcUrl: string, method: string, params: unknown[]): Promise<T> {
-  const res = await fetch(rpcUrl, {
+  const res = await fetchWithDeadline(rpcUrl, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),

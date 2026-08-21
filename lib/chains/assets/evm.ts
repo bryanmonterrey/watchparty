@@ -10,6 +10,7 @@ import { createPublicClient, erc20Abi, formatUnits, http, type Address } from "v
 import type { ChainConfig, ChainId } from "../types";
 import { getNativePrice, getTokenPrices } from "./prices";
 import type { AssetFetchResult, AssetProvider, ChainAsset } from "./types";
+import { fetchWithDeadline } from "./timeout";
 
 /**
  * Well-known tokens probed when no indexer key is configured.
@@ -96,7 +97,7 @@ export async function getEvmAssetsBatch(
     // Bounded: 100 entries per page, and a wallet past ~500 holdings is
     // overwhelmingly dust. Better a capped list than an unbounded loop.
     for (let page = 0; page < 5; page++) {
-      const res: Response = await fetch(
+      const res: Response = await fetchWithDeadline(
         `https://api.g.alchemy.com/data/v1/${apiKey}/assets/tokens/by-address`,
         {
           method: "POST",
@@ -232,7 +233,7 @@ async function discoverViaAlchemy(
   }
 
   try {
-    const res = await fetch(`https://${network}.g.alchemy.com/v2/${apiKey}`, {
+    const res = await fetchWithDeadline(`https://${network}.g.alchemy.com/v2/${apiKey}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({

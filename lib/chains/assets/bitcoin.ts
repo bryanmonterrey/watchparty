@@ -5,6 +5,7 @@ import { BITCOIN } from "../registry";
 import type { ChainConfig } from "../types";
 import { getNativePrice } from "./prices";
 import type { AssetFetchResult, AssetProvider, ChainAsset } from "./types";
+import { fetchWithDeadline } from "./timeout";
 
 interface AddressStats {
   funded_txo_sum: number;
@@ -22,7 +23,7 @@ export async function getBitcoinBalanceSats(
   address: string,
   apiBase = BITCOIN.rpcUrl!
 ): Promise<bigint> {
-  const res = await fetch(`${apiBase}/address/${address}`, {
+  const res = await fetchWithDeadline(`${apiBase}/address/${address}`, {
     headers: { accept: "application/json" },
   });
   if (!res.ok) throw new Error(`mempool.space returned ${res.status}`);

@@ -5,6 +5,7 @@
 
 import { TTL, redis } from "@/lib/cache";
 import type { ChainId } from "../types";
+import { fetchWithDeadline } from "./timeout";
 
 /** CoinGecko ids for each chain's native coin. */
 const NATIVE_COIN_IDS: Record<ChainId, string> = {
@@ -38,7 +39,7 @@ export interface PriceQuote {
 /** CoinGecko: price + 24h change, but the keyless tier rate-limits hard. */
 async function coingeckoNativePrice(coinId: string): Promise<PriceQuote | null> {
   try {
-    const res = await fetch(
+    const res = await fetchWithDeadline(
       `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}` +
         `&vs_currencies=usd&include_24hr_change=true`,
       { headers: { accept: "application/json" } }
@@ -59,7 +60,7 @@ async function alchemyNativePrice(symbol: string): Promise<PriceQuote | null> {
   if (!apiKey) return null;
 
   try {
-    const res = await fetch(
+    const res = await fetchWithDeadline(
       `https://api.g.alchemy.com/prices/v1/${apiKey}/tokens/by-symbol?symbols=${symbol}`,
       { headers: { accept: "application/json" } }
     );
@@ -184,7 +185,7 @@ export async function getTokenPrices(
   for (let i = 0; i < missing.length; i += 30) {
     const chunk = missing.slice(i, i + 30);
     try {
-      const res = await fetch(
+      const res = await fetchWithDeadline(
         `https://api.dexscreener.com/tokens/v1/${slug}/${chunk.join(",")}`,
         { headers: { accept: "application/json" } }
       );
