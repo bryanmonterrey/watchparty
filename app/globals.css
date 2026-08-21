@@ -1622,3 +1622,43 @@ input[type="range"].volume-slider::-webkit-slider-thumb {
   :root[data-dock="expanded"] { --dock-width: 72px; }
   :root[data-dock="collapsed"] { --dock-width: 36px; }
 }
+
+/* ── The grain ──────────────────────────────────────────────────────────────
+   /public/noise-color.png laid over a floating surface, so a flat fill reads
+   as a material rather than a perfectly clean plane. The liquid popover paints
+   the same tile as an SVG pattern (components/liquid/liquid-theme.ts owns the
+   values); this utility is the CSS half, for the Radix-rendered surfaces.
+
+   Three things are load-bearing:
+   - `overlay`, not a plain alpha composite. The tile is coloured noise on
+     WHITE, so laid on straight it washes a dark panel toward grey; overlay on
+     a dark face is ≈2×base×blend, a faint coloured lift.
+   - `isolation: isolate` — without it the blend's backdrop is whatever the
+     panel floats over, and the grain tints the page through the surface.
+   - `background-size` is the PNG's own 123×122 and it repeats. Scaling a noise
+     tile turns grain into blotches.
+   `border-radius: inherit` means it needs no `overflow-hidden`, and
+   `pointer-events: none` keeps it out of every hit test. */
+@layer utilities {
+  .surface-noise {
+    position: relative;
+    isolation: isolate;
+  }
+  .surface-noise::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background-image: url("/noise-color.png");
+    background-size: 123px 122px;
+    background-repeat: repeat;
+    mix-blend-mode: overlay;
+    opacity: 0.3;
+    pointer-events: none;
+    /* UNDER the content, over the fill — the same order the liquid panel
+       paints in (grain on the face, rows above it). A negative z-index inside
+       the isolated stacking context lands exactly there, and it keeps the
+       texture off the text, which `overlay` would otherwise mottle. */
+    z-index: -1;
+  }
+}

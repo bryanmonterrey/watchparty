@@ -15,6 +15,8 @@ export interface LiquidRefs {
     chain: (SVGCircleElement | null)[];
     panelBody: SVGSVGElement | null;
     panelBodyShape: SVGPathElement | null;
+    /** The grain, cut to the same squircle as the face under it. */
+    panelBodyNoise: SVGPathElement | null;
     panel: HTMLDivElement | null;
     scroller: HTMLDivElement | null;
     trigger: HTMLButtonElement | null;
@@ -45,6 +47,7 @@ export function createLiquidRefs(): LiquidRefs {
         chain: [],
         panelBody: null,
         panelBodyShape: null,
+        panelBodyNoise: null,
         panel: null,
         scroller: null,
         trigger: null,

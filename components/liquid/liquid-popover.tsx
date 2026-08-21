@@ -39,7 +39,18 @@ import { createPopoverSeam, createPopoverStretchHost, type PopoverHostCtx } from
 import { LiquidGooCanvas, SEAM_LAYERS } from "./liquid-goo-canvas";
 import { createLiquidRefs } from "./liquid-refs";
 import { LiquidRows, type LiquidPopoverItem } from "./liquid-rows";
-import { ACCENT, LIQUID_SURFACE, PANEL_PAD, ROW_RADIUS, neonGlow, solidRim } from "./liquid-theme";
+import {
+    ACCENT,
+    LIQUID_SURFACE,
+    NOISE_OPACITY,
+    NOISE_SRC,
+    NOISE_TILE_H,
+    NOISE_TILE_W,
+    PANEL_PAD,
+    ROW_RADIUS,
+    neonGlow,
+    solidRim,
+} from "./liquid-theme";
 import { prefersReducedMotion } from "./motion";
 import { RowHover, type RowHoverTarget } from "./row-hover";
 import type { LiquidSeam, SeamJoint } from "./seam";
@@ -125,6 +136,7 @@ export function LiquidPopover({
         rimOnly: `${gooId}-rim`,
         rimMask: `${gooId}-mask`,
         seamGradient: `${gooId}-seam`,
+        noise: `${gooId}-noise`,
     };
 
     const refs = useRef(createLiquidRefs()).current;
@@ -816,7 +828,13 @@ export function LiquidPopover({
                 ref={(el) => {
                     refs.bodies = el;
                 }}
-                className="pointer-events-none absolute inset-0"
+                /* `isolate` is the grain's: the noise path blends in `overlay`,
+                   and without an isolated group its backdrop is whatever the
+                   menu floats over — the texture would tint the page through
+                   the panel. On the DIV, not the <svg>, because an HTML box is
+                   the one place every engine honours `isolation` (and the svg's
+                   inline style belongs to gsap's autoAlpha). */
+                className="pointer-events-none absolute inset-0 isolate"
                 aria-hidden="true"
             >
                 <svg
@@ -832,6 +850,25 @@ export function LiquidPopover({
                     style={{ opacity: 0, visibility: "hidden" }}
                     focusable="false"
                 >
+                    {/* The grain's tile. userSpaceOnUse + the PNG's own pixel
+                        size: the pattern is laid at 1:1 and repeated, so the
+                        noise stays noise instead of stretching with the
+                        panel's width. */}
+                    <defs>
+                        <pattern
+                            id={ids.noise}
+                            patternUnits="userSpaceOnUse"
+                            width={NOISE_TILE_W}
+                            height={NOISE_TILE_H}
+                        >
+                            <image
+                                href={NOISE_SRC}
+                                width={NOISE_TILE_W}
+                                height={NOISE_TILE_H}
+                                preserveAspectRatio="none"
+                            />
+                        </pattern>
+                    </defs>
                     <path
                         ref={(el) => {
                             refs.panelBodyShape = el;
@@ -839,6 +876,19 @@ export function LiquidPopover({
                         fill={fill}
                         stroke={rim}
                         strokeWidth={1}
+                    />
+                    {/* The grain, over the face and under the rows. No stroke:
+                        the border is the face's, and blending the tile into it
+                        would fray the one crisp line the resting picture has.
+                        `isolate` on the <svg> keeps the blend's backdrop to
+                        the face — without it an `overlay` composites against
+                        whatever the menu is flying over. */}
+                    <path
+                        ref={(el) => {
+                            refs.panelBodyNoise = el;
+                        }}
+                        fill={`url(#${ids.noise})`}
+                        style={{ mixBlendMode: "overlay", opacity: NOISE_OPACITY }}
                     />
                 </svg>
             </div>

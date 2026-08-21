@@ -21,6 +21,25 @@ export const LIQUID_SURFACE = "#212326";
 export const LIQUID_RIM = "#2f3235";
 export const ACCENT = "#358efc";
 
+/* THE GRAIN — one tile from /public laid over every popover face, so the flat
+   fill reads as a material instead of a perfectly clean plane.
+
+   The tile is coloured noise on white, which is why it goes on in `overlay`
+   and not straight: over a near-black face overlay is ≈2×base×blend, i.e. a
+   faint coloured lift, where a plain alpha composite would just wash the
+   surface toward white. It is laid at its NATIVE size and repeated — scaling a
+   noise tile is what turns grain into visible blotches.
+
+   One place, both engines: the SVG pattern on the liquid panel
+   (liquid-popover.tsx) and the `.surface-noise` utility in globals.css, which
+   is what the Radix popover/dialog surfaces wear. Change the alpha here and in
+   the utility together — they are the same treatment on two rendering models. */
+export const NOISE_SRC = "/noise-color.png";
+/** The PNG's own pixel size (123×122); repeated, never scaled. */
+export const NOISE_TILE_W = 123;
+export const NOISE_TILE_H = 122;
+export const NOISE_OPACITY = 0.3;
+
 export function mixHex(one: string, two: string, amount: number) {
     const parse = (hex: string) => [1, 3, 5].map((at) => parseInt(hex.slice(at, at + 2), 16));
     const [r1, g1, b1] = parse(one);

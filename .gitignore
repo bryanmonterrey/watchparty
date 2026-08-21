@@ -54,6 +54,10 @@ next-env.d.ts
 # PNGs, so without this negation the blanket *.png rule silently drops them from
 # the commit and every one of them 404s on the deploy.
 !public/emoji/**/*.png
+# public/noise-color.png is the grain laid over every popover surface (the SVG
+# pattern in components/liquid/ and the .surface-noise utility in globals.css).
+# Without this negation it 404s on the deploy and the panels go back to flat.
+!public/noise-color.png
 # public/thumbnails/ is committed — category cards serve from it in production
 .expo/
 

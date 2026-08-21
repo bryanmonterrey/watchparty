@@ -173,10 +173,12 @@ export function measureLiquid(refs: LiquidRefs, params: GeomParams): Geom | null
         body.style.left = `${panelLeft}px`;
         body.style.top = `${panelTop}px`;
     }
-    refs.panelBodyShape?.setAttribute(
-        "d",
-        squirclePath(0.5, 0.5, panelW - 1, panelH - 1, panelRadius),
-    );
+    /* The face and the grain over it are the same squircle — written from one
+       string so the two can never drift by a subpixel and show a rim of bare
+       fill along the edge. */
+    const panelShape = squirclePath(0.5, 0.5, panelW - 1, panelH - 1, panelRadius);
+    refs.panelBodyShape?.setAttribute("d", panelShape);
+    refs.panelBodyNoise?.setAttribute("d", panelShape);
     if (refs.panel) {
         refs.panel.style.left = `${panelLeft}px`;
         refs.panel.style.top = `${panelTop}px`;

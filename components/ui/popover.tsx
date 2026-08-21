@@ -29,7 +29,8 @@ const PopoverContent = React.forwardRef<
         sideOffset={sideOffset}
         className={cn(
           POPOVER_MOTION_CLASS,
-          "z-50 w-72 rounded-md border border-zinc-800 bg-zinc-900 p-4 text-zinc-300 shadow-md outline-none",
+          // surface-noise: the grain, app-wide for this surface (globals.css).
+          "surface-noise z-50 w-72 rounded-md border border-zinc-800 bg-zinc-900 p-4 text-zinc-300 shadow-md outline-none",
           className
         )}
         {...props}
