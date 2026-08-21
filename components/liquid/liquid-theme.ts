@@ -64,13 +64,19 @@ export const GLASS_TINT = "#ffffff";
 /* The MOVING picture's face alpha — the goo canvas's, applied after the
    threshold (liquid-goo-canvas.tsx explains why the order matters).
 
-   Same value as the resting glass, so the pour and the panel it becomes are
-   one material. The one thing motion cannot have is the BLUR: an SVG filter
-   samples its own source graphic, never the page behind it, so the flying
-   liquid is tint-and-rim only. Raise this alone if a pour reads too faint
-   against a busy background — it is the only lever that does not touch the
+   A QUARTER UNDER the resting glass (owner call). It used to be the same
+   value, on the reasoning that the pour and the panel it becomes should be
+   one material — but the glass now stays visible through the flight (that is
+   what puts blur in the transition), so over the panel the two faces STACK
+   and the pour was reading denser than the thing it settles into. Same tint,
+   same material; this only takes the doubled region back down.
+
+   The one thing motion cannot have is the BLUR: an SVG filter samples its own
+   source graphic, never the page behind it, so the flying liquid is tint-and-
+   rim only. Change this alone if the pour reads wrong against a busy
+   background — it is the only lever here that does not touch the
    metaball. */
-export const GOO_FACE_ALPHA = SURFACE_ALPHA;
+export const GOO_FACE_ALPHA = SURFACE_ALPHA * 0.75;
 
 /** The face paint: an opaque brand hex carried in at SURFACE_ALPHA. */
 export function glassFill(fill: string, alpha = SURFACE_ALPHA) {
@@ -110,8 +116,9 @@ export function neonGlow(hue: string) {
    the goo floods one flat colour into the sliver between its two contours and
    an opaque interior sat underneath. Neither half of that holds any more: the
    interior is a few percent, so a rim mixed from it is a dark line on a light
-   wash, and there is nothing beneath it to double against — the crisp bodies
-   are hidden while the goo flies, and the goo is hidden at rest.
+   wash, and there is nothing beneath it to double against — the crisp STROKE
+   is held back while the goo flies (only the glass rides along), and the goo
+   is hidden at rest, so exactly one border is ever on screen.
 
    So it is white at a fixed alpha, carried as colour + opacity rather than an
    rgba string: the crisp path takes stroke/stroke-opacity and the goo's
