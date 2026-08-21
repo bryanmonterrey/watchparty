@@ -16,7 +16,7 @@ export function CommunityServerList() {
     const { onOpen } = useCommunityModal();
     const router = useRouter();
     const pathname = usePathname();
-    const { data: servers = [] } = trpc.community.listServers.useQuery();
+    const { data: servers = [], isLoading: serversLoading } = trpc.community.listServers.useQuery();
     const utils = trpc.useUtils();
     const reorderRail = trpc.community.reorderRail.useMutation({
         onSuccess: () => utils.community.listServers.invalidate(),
@@ -75,6 +75,17 @@ export function CommunityServerList() {
             {/* Server icons + create */}
             <ScrollArea className="flex-1 w-full [&_[data-slot=scroll-area-viewport]]:[scrollbar-width:none] [&_[data-slot=scroll-area-viewport]::-webkit-scrollbar]:hidden">
                 <div className="flex flex-col items-center gap-2">
+                    {/* While the server list is in flight the rail used to
+                        show only the home tile and the create button, and the
+                        icons POPPED in — three tiles at the real icon geometry
+                        (size-12 circle incl. its 2px border) hold the space,
+                        flat fills per the skeleton standard. */}
+                    {serversLoading &&
+                        Array.from({ length: 3 }).map((_, i) => (
+                            <div key={i} className="flex w-full items-center justify-center">
+                                <div className="size-12 rounded-full shimmer-skeleton" />
+                            </div>
+                        ))}
                     <Reorder.Group
                         axis="y"
                         values={ordered.map((s) => s.id)}

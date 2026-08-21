@@ -176,6 +176,9 @@ export function HomeRailVideos() {
                                 verifiedTier={v.user.verifiedTier}
                                 title={v.title}
                                 views={v.views}
+                                tokenStatus={v.tokenStatus}
+                                tokenSlug={v.tokenAddress ?? v.tokenId}
+                                marketCapUsd={v.marketCapUsd}
                                 menu={<RailRowMenu postId={v.id} userId={v.user.id} />}
                                 isActive={v.id === active?.id}
                                 hoverColor={stableHoverColor(v.id)}

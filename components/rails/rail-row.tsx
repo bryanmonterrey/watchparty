@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { TradeUpIcon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
+import { formatMarketCap } from "@/components/tokens/market-cap-chip";
 import { staggerPulse } from "@/lib/skeleton-stagger";
 import { Squircle } from "@/components/ui/squircle";
 import { VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components/icons";
@@ -36,6 +40,12 @@ interface RailRowProps {
     title?: string | null;
     /** Sits after the badge on the identity line. Omit to leave it off. */
     views?: number | null;
+    /** "live" once the row's coin has launched; anything else is a draft. */
+    tokenStatus?: string | null;
+    /** Coin page slug — mint address once live, else the token row id. The
+     *  coin stat renders only when this exists. */
+    tokenSlug?: string | null;
+    marketCapUsd?: number | null;
     /** Row-level menu, rendered on its own line at the end. */
     menu?: React.ReactNode;
     /** Home's picker: the row that's currently the hero. */
@@ -55,6 +65,9 @@ export function RailRow({
     verifiedTier,
     title,
     views,
+    tokenStatus,
+    tokenSlug,
+    marketCapUsd,
     menu,
     isActive,
     hoverColor,
@@ -111,7 +124,7 @@ export function RailRow({
     //
     // The extras line stays UNDER it; only its controls are lifted (z-10
     // there), so the empty space beside them still selects the row.
-    const hasExtras = !!menu || views != null;
+    const hasExtras = !!menu || views != null || !!tokenSlug;
     const target = cn(RAIL_ROW, "cursor-pointer p-0", "after:absolute after:inset-0 after:content-['']");
 
     return (
@@ -189,6 +202,15 @@ export function RailRow({
                             onClick={(e) => e.stopPropagation()}
                             className="relative z-10 flex w-fit items-center gap-1.5"
                         >
+                            {/* The row's coin, left of the engagement stats:
+                                a draft shows the Launch action's arrow (the
+                                same TradeUpIcon the post card's ticker pill
+                                wears — colour carries status, twitter2 =
+                                launchable); once live it shows the market cap
+                                in the chip's emerald. Both route to the coin
+                                page, same as everywhere else a coin mark
+                                appears. */}
+                            <RailCoinStat tokenStatus={tokenStatus} tokenSlug={tokenSlug} marketCap={marketCapUsd} />
                             <ViewsStat
                                 views={views}
                                 className="text-sm font-medium text-flexwhite/50"
@@ -201,6 +223,45 @@ export function RailRow({
 
             </div>
         </Squircle>
+    );
+}
+
+function RailCoinStat({
+    tokenStatus,
+    tokenSlug,
+    marketCap,
+}: {
+    tokenStatus?: string | null;
+    tokenSlug?: string | null;
+    marketCap?: number | null;
+}) {
+    const router = useRouter();
+    if (!tokenSlug) return null;
+    const live = tokenStatus === "live";
+    return (
+        <button
+            type="button"
+            aria-label={live ? "Coin market cap — open coin page" : "Launch this coin"}
+            onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                router.push(`/coin/${tokenSlug}`);
+            }}
+            className="flex shrink-0 cursor-pointer items-center transition-opacity hover:opacity-80 active:scale-95"
+        >
+            {live ? (
+                <span
+                    className={cn(
+                        "text-sm font-medium tabular-nums",
+                        marketCap == null ? "text-zinc-500" : "text-emerald-400",
+                    )}
+                >
+                    {marketCap == null ? "$—.——" : formatMarketCap(marketCap)}
+                </span>
+            ) : (
+                <HugeiconsIcon icon={TradeUpIcon} className="size-5 text-twitter2" strokeWidth={2.5} />
+            )}
+        </button>
     );
 }
 

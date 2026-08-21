@@ -25,6 +25,9 @@ export interface HomeFeedVideo {
     isLive?: boolean | null;
     /** Launched token (if any) — drives the market-cap chip. */
     ticker?: string | null;
+    /** "live" once the coin has launched; anything else is a draft — drives
+     *  the rail row's launch-arrow ↔ market-cap swap. */
+    tokenStatus?: string | null;
     /**
      * The coin's image, from the TOKEN row (tokens.imageUrl).
      *
