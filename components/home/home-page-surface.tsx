@@ -115,40 +115,54 @@ export function HomePageSurface() {
                 those bars need while stuck is applied only once they ARE stuck
                 (see useStuck), so unstuck they stay transparent and the hero's
                 ambient glow reads through them. */}
-            {/* THE FEED'S GEOMETRY, to the pixel — same ml-7, same 628px column,
-                same 28px gap, same w-96 rail. /home and /feed sit under the same
+            {/* THE FEED'S GEOMETRY at rest — same ml-7, same 628px column, same
+                28px gap, same w-96 rail. /home and /feed sit under the same
                 alerts rail and users move between them constantly, so the centre
-                column has to stay on the same vertical when they do.
+                column's LEFT EDGE has to stay on the same vertical when they do.
+                ml-7 off the rail is what guarantees that; the column's width is
+                free to differ.
 
-                NOT flex-1, for the reason the feed layout documents: growing, it
-                swallows every spare pixel and pushes the rail out to the far
-                right while the column itself never moves (it's anchored to the
-                start), so the slack all shows up as a gap between the two. Sized
-                to the column instead, with the slack handed to the rail's
-                mr-auto below.
+                AT xl THE COLUMN TAKES THE ROW'S SLACK (flex-1, no cap). Below
+                that it stays capped, because below xl there is no right rail and
+                no dock — nothing for the slack to prise apart — and a centre
+                column running the full width of a 1100px window is not the feed.
 
-                The hero and everything under it size off <main>, so this narrows
-                them together — which is the point; they now match the feed's
-                column rather than running as wide as the window allows.
+                Above xl there IS something to prise apart, and the cap was what
+                did the prising: the row's spare pixels have to go somewhere, and
+                with a fixed-width column they went to the rail's mr-auto, which
+                slid the rail left and left a hole between it and the dock. Past
+                --app-max-width (1536px) that hole is ~100px and permanent, since
+                the block stops growing but the columns inside it don't add up to
+                it. The column absorbs it now and the rail stays welded to the
+                dock — see the aside below, which no longer has mr-auto.
 
-                COLLAPSING THE ALERTS RAIL RAISES THE CAP, by exactly what the
-                rail gives up: w-72 (288px) -> w-11 (44px) is 244px, and
-                628 + 244 = 872. That keeps the right rail planted — the column
-                absorbs the reclaimed space instead of the whole row sliding left
-                into it, which is what a fixed cap did (the rail's own comment
-                warns about this; it assumed home's centre was still flex-1).
+                The hero and everything under it are w-full with no cap of their
+                own, so they widen WITH the column rather than leaving the same
+                gap one level further in.
 
-                A cap swap rather than flex-1, so the column is the feed's 628px
-                at rest and only ever grows by the exact amount on offer. */}
-            <main className="@container/home relative flex w-full ml-7 min-w-0 max-w-[628px] flex-col md:mt-[var(--header-height)] group-has-[[data-rail-collapsed=true]]/rails:max-w-[872px]">
+                The collapsed-alerts-rail cap swap (w-72 288px -> w-11 44px is
+                244px reclaimed, 628 + 244 = 872) is now scoped max-xl:. At xl
+                flex-1 absorbs the reclaimed width on its own, and leaving the
+                rule unscoped would have QUIETLY BEATEN the xl rule — a
+                group-has-[…] selector carries higher specificity than a plain
+                responsive class, so it wins regardless of source order. Scoping
+                it to a disjoint media query is what keeps the two from
+                competing at all. */}
+            <main className="@container/home relative flex w-full ml-7 min-w-0 max-w-[628px] flex-col md:mt-[var(--header-height)] max-xl:group-has-[[data-rail-collapsed=true]]/rails:max-w-[872px] xl:max-w-none xl:flex-1">
                 <HomeCenterColumn />
             </main>
 
             {/* ml-7 is the gap from the centre column — measured off the column's
                 edge rather than left to whatever width happened to be spare,
-                which is what the old xl:pr-3 padding did. mr-auto is what makes
-                it hold: the row's slack goes to the rail's RIGHT, so a wider
-                window pushes the dock out instead of prising these two apart. */}
+                which is what the old xl:pr-3 padding did.
+
+                NO mr-auto. It used to hand the row's slack to the space on this
+                rail's RIGHT, which is the same as saying the rail floats and the
+                dock is what stays put: at --app-max-width the rail sat ~100px
+                clear of the dock with a hole between them, and the wider the
+                window the further left it drifted. The centre column takes the
+                slack now (xl:flex-1 above), so this aside and the dock are
+                always adjacent and the rail is the thing that stays put. */}
             {/* SCROLLS LIKE THE FEED'S THIRD COLUMN — same `sticky bottom-0`
                 + `self-end` the feed layout uses, and for the reason it
                 documents: the column scrolls up with the page, then pins once
@@ -163,7 +177,7 @@ export function HomePageSurface() {
                 what was wrong a moment ago — an inner `sticky top-0` at
                 h-[100svh] covered the viewport and, being positioned, painted
                 over the news card, so the card could never be reached. */}
-            <aside className="sticky bottom-0 ml-7 mr-auto hidden w-96 shrink-0 self-end xl:block">
+            <aside className="sticky bottom-0 ml-7 hidden w-96 shrink-0 self-end xl:block">
                 {/* Tabs are no longer a sibling here — they're the card's header,
                     inside HomeRailVideos' RailShell, so the rail reads as one
                     outlined box the way the alerts rail does. */}
@@ -203,9 +217,9 @@ export function HomePageSurface() {
                 </div>
             </aside>
 
-            {/* 4th column, same as the feed's. The slack now sits to its left
-                (the rail's mr-auto), so widening the window moves the dock out
-                rather than stretching the centre column. */}
+            {/* 4th column, same as the feed's. It sits flush against the rail
+                now — the slack is upstream in the centre column, so widening the
+                window stretches that and leaves these two where they are. */}
             <HomeActionDock />
 
             <ClipsOverlay />
