@@ -269,7 +269,7 @@ function BuyCell({
                         <span
                             aria-hidden
                             className={cn(
-                                "pointer-events-none absolute inset-0 rounded-xl bg-twitter2/20 opacity-0 transition-opacity duration-150 group-hover/seg:opacity-100",
+                                "pointer-events-none absolute inset-0 rounded-md bg-twitter2/20 opacity-0 transition-opacity duration-150 group-hover/seg:opacity-100",
                                 index === BUY_AMOUNTS_USD.length - 1 && "rounded-r-none",
                             )}
                         />
@@ -303,6 +303,24 @@ export function buildTradeColumns({
             id: "coin",
             header: "Coin",
             enableSorting: false,
+            meta: {
+                /* The row's own anatomy, blanked: the size-12 avatar and the
+                   two text lines. DataTable's default is ONE h-3 bar per
+                   cell, which made the mounted board's loading state a
+                   visibly different shape from the route shell's (owner:
+                   "two diff loading states, the skeletons are diff
+                   heights"). Both are these boxes now, and the lines are h-3
+                   — the smaller of the two, per the same call. */
+                skeleton: (i, count) => (
+                    <span className="flex items-center gap-3">
+                        <span style={staggerPulse(i, count)} className="size-12 shrink-0 rounded-full shimmer-skeleton" />
+                        <span className="flex flex-col gap-1.5">
+                            <span style={staggerPulse(i, count)} className="block h-3 w-28 rounded-full shimmer-skeleton" />
+                            <span style={staggerPulse(i, count)} className="block h-3 w-16 rounded-full shimmer-skeleton" />
+                        </span>
+                    </span>
+                ),
+            },
             cell: ({ row }) => <CoinCell token={row.original} />,
         }),
         /* The 24h trend, between the coin and its numbers — the shape a row
@@ -333,7 +351,9 @@ export function buildTradeColumns({
             id: "marketCap",
             header: "Market cap",
             sortDescFirst: true,
-            meta: { width: "18%" },
+            meta: { width: "13%", skeleton: (i: number, c: number) => (
+                <span style={staggerPulse(i, c)} className="ml-auto block h-3 w-16 rounded-full shimmer-skeleton" />
+            ) },
             /* The value alone. Its sub-line used to carry the % change, and
                when that moved to its own column the slot briefly held the
                words "Market cap" — a label repeating the header two rows up
@@ -350,7 +370,9 @@ export function buildTradeColumns({
             id: "price",
             header: "Price",
             sortDescFirst: true,
-            meta: { width: "16%" },
+            meta: { width: "13%", skeleton: (i: number, c: number) => (
+                <span style={staggerPulse(i, c)} className="ml-auto block h-3 w-16 rounded-full shimmer-skeleton" />
+            ) },
             /* Same rule as market cap: the header already says "Price". */
             cell: ({ row }) => (
                 <p className="text-[15px] font-semibold tabular-nums text-zinc-200">
@@ -366,7 +388,9 @@ export function buildTradeColumns({
             id: "change",
             header: "Change",
             sortDescFirst: true,
-            meta: { width: "13%" },
+            meta: { width: "13%", skeleton: (i: number, c: number) => (
+                <span style={staggerPulse(i, c)} className="ml-auto block h-3 w-12 rounded-full shimmer-skeleton" />
+            ) },
             cell: ({ row }) => {
                 const change = changeFor(row.original, timeframe);
                 const up = change >= 0;
@@ -396,7 +420,16 @@ export function buildTradeColumns({
                the cell, past the table, and into the strip beside the sticky
                header, which is what showed through while scrolling). Three
                two-digit amounts measure ~185, so this keeps real slack. */
-            meta: { align: "right", width: "232px" },
+            meta: {
+                align: "right",
+                width: "232px",
+                /* The group's own footprint, not a stub bar — h-11 at the
+                   rounding it actually wears, so nothing resizes when the
+                   board lands. */
+                skeleton: (i, c) => (
+                    <span style={staggerPulse(i, c)} className="ml-auto block h-11 w-[185px] rounded-2xl shimmer-skeleton" />
+                ),
+            },
             cell: ({ row }) => (
                 <BuyCell
                     token={row.original}
