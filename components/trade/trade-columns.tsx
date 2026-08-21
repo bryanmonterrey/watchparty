@@ -323,35 +323,6 @@ export function buildTradeColumns({
             },
             cell: ({ row }) => <CoinCell token={row.original} />,
         }),
-        /* The 24h trend, between the coin and its numbers — the shape a row
-           is scanned for before any single figure. Bars come from our own
-           trade tape (server/routers/trade/spark), so a pool the tape has
-           never seen renders an em-dash rather than a flat line: CoinSparkline
-           draws "no series" and "no movement" differently on purpose. */
-        helper.display({
-            id: "spark",
-            /* No label and no grip: the line speaks for itself, and the
-               header's reorder dots are suppressed with it (meta.noReorder) —
-               otherwise the grip renders anyway and an empty column wears a
-               bare pair of dots. Owner call, 8/21. */
-            header: "",
-            enableSorting: false,
-            meta: {
-                width: "116px",
-                noReorder: true,
-                skeleton: (i, count) => (
-                    <span style={staggerPulse(i, count)} className="block h-7 w-24 rounded-full shimmer-skeleton" />
-                ),
-            },
-            cell: ({ row }) => (
-                <CoinSparkline
-                    points={row.original.spark ?? []}
-                    width={96}
-                    height={28}
-                    label={`${row.original.symbol} 24h trend`}
-                />
-            ),
-        }),
         helper.accessor("marketCap", {
             id: "marketCap",
             header: "Market cap",
@@ -419,6 +390,36 @@ export function buildTradeColumns({
                     </>
                 );
             },
+        }),
+        /* The 24h trend, sitting between the numbers and the buy group (owner
+           call): the shape a row is scanned for, right where the eye lands
+           before acting on it. Bars come from our own
+           trade tape (server/routers/trade/spark), so a pool the tape has
+           never seen renders an em-dash rather than a flat line: CoinSparkline
+           draws "no series" and "no movement" differently on purpose. */
+        helper.display({
+            id: "spark",
+            /* No label and no grip: the line speaks for itself, and the
+               header's reorder dots are suppressed with it (meta.noReorder) —
+               otherwise the grip renders anyway and an empty column wears a
+               bare pair of dots. Owner call, 8/21. */
+            header: "",
+            enableSorting: false,
+            meta: {
+                width: "116px",
+                noReorder: true,
+                skeleton: (i, count) => (
+                    <span style={staggerPulse(i, count)} className="block h-7 w-24 rounded-full shimmer-skeleton" />
+                ),
+            },
+            cell: ({ row }) => (
+                <CoinSparkline
+                    points={row.original.spark ?? []}
+                    width={96}
+                    height={28}
+                    label={`${row.original.symbol} 24h trend`}
+                />
+            ),
         }),
         helper.display({
             id: "action",

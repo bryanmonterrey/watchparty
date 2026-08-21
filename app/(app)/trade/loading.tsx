@@ -44,7 +44,7 @@ function ShellHeader({
 //     rest zinc-400. Same classes, just not clickable yet.
 //   · controls — the timeframe pills and chain select stand in as blanks
 //     at their real sizes.
-//   · board — column labels (Coin / trend / Market cap / Price / Change /
+//   · board — column labels (Coin / Market cap / Price / % / trend /
 //     Action)
 //     over rows of the table's anatomy: coin avatar, ticker/name bars,
 //     right-aligned value bars, and the buy group's pill footprint.
@@ -83,8 +83,6 @@ export default function TradeLoading() {
                 116px for the trend, 232px for the action group. */}
             <div className="flex items-center px-2 text-15 font-medium leading-tight text-zinc-500">
                 <ShellHeader label="Coin" className="flex-1" />
-                {/* Trend: no label, no grip — see meta.noReorder. */}
-                <span className="w-[116px] shrink-0" />
                 <ShellHeader label="Market cap" style={{ width: "13%" }} align="right" sortable />
                 <ShellHeader label="Price" style={{ width: "13%" }} align="right" sortable />
                 <ShellHeader
@@ -93,6 +91,8 @@ export default function TradeLoading() {
                     align="right"
                     sortable
                 />
+                {/* Trend: no label, no grip — see meta.noReorder. */}
+                <span className="w-[116px] shrink-0" />
                 <ShellHeader label="Action" style={{ width: "232px" }} align="right" />
             </div>
             {Array.from({ length: 10 }).map((_, index) => (
@@ -109,10 +109,10 @@ export default function TradeLoading() {
                             <div className="h-3 w-16 rounded-full shimmer-skeleton" />
                         </div>
                     </div>
-                    <div className="flex w-[116px] shrink-0 items-center px-4"><div className="h-7 w-24 rounded-full shimmer-skeleton" /></div>
                     <div className="flex justify-end px-4" style={{ width: "13%" }}><div className="h-3 w-16 rounded-full shimmer-skeleton" /></div>
                     <div className="flex justify-end px-4" style={{ width: "13%" }}><div className="h-3 w-16 rounded-full shimmer-skeleton" /></div>
                     <div className="flex justify-end px-4" style={{ width: "13%" }}><div className="h-3 w-12 rounded-full shimmer-skeleton" /></div>
+                    <div className="flex w-[116px] shrink-0 items-center px-4"><div className="h-7 w-24 rounded-full shimmer-skeleton" /></div>
                     <div className="flex w-[232px] shrink-0 justify-end px-4"><div className="h-11 w-[185px] rounded-2xl shimmer-skeleton" /></div>
                 </div>
             ))}
