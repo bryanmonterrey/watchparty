@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Copy01Icon, Dollar01Icon, Globe02Icon, Tick02Icon, UserGroup02Icon } from "@hugeicons/core-free-icons";
+import { Copy01Icon, Dollar01Icon, Globe02Icon, PercentIcon, Tick02Icon, UserGroup02Icon } from "@hugeicons/core-free-icons";
 import type { ColumnDef } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
 import { staggerPulse } from "@/lib/skeleton-stagger";
@@ -330,7 +330,13 @@ export function buildTradeColumns({
            draws "no series" and "no movement" differently on purpose. */
         helper.display({
             id: "spark",
-            header: "",
+            /* Labelled, because the header carries a reorder grip whether or
+               not there is text beside it — and a bare pair of dots over an
+               empty column reads as a rendering fault (owner). "Trend" rather
+               than "24h": the series reaches back a week when that is all the
+               tape has, so a time claim here would be the one dishonest word
+               on the board. */
+            header: "Trend",
             enableSorting: false,
             meta: {
                 width: "116px",
@@ -386,7 +392,12 @@ export function buildTradeColumns({
            the top select (changeFor reads the 5m/1h/6h/24h field). */
         helper.accessor((t) => changeFor(t, timeframe), {
             id: "change",
-            header: "Change",
+            /* The mark, not the word (owner call). aria-label keeps the sort
+               button announcing what it sorts — an icon-only header is a
+               button with no accessible name otherwise. */
+            header: () => (
+                <HugeiconsIcon icon={PercentIcon} className="size-4" strokeWidth={2.5} aria-label="Change" />
+            ),
             sortDescFirst: true,
             meta: { width: "13%", skeleton: (i: number, c: number) => (
                 <span style={staggerPulse(i, c)} className="ml-auto block h-3 w-12 rounded-full shimmer-skeleton" />

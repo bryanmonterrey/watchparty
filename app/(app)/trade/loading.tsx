@@ -38,10 +38,10 @@ export default function TradeLoading() {
 
             <div className="flex items-center gap-3 px-6 py-2 text-15 font-medium leading-tight text-zinc-500">
                 <span className="flex-1">Coin</span>
-                <span className="w-[116px]" />
+                <span className="w-[116px]">Trend</span>
                 <span className="w-24 text-right">Market cap</span>
                 <span className="w-24 text-right">Price</span>
-                <span className="w-24 text-right">Change</span>
+                <span className="w-24 text-right">%</span>
                 <span className="w-[232px] text-right">Action</span>
             </div>
             {Array.from({ length: 10 }).map((_, index) => (
