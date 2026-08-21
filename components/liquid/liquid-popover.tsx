@@ -37,19 +37,10 @@ import { setGooBlur } from "./goo";
 import { measureLiquid, setLiquidFilterRegion, type Geom } from "./liquid-geometry";
 import { createPopoverSeam, createPopoverStretchHost, type PopoverHostCtx } from "./liquid-hosts";
 import { LiquidGooCanvas, SEAM_LAYERS } from "./liquid-goo-canvas";
+import { LiquidPanelBody } from "./liquid-panel-body";
 import { createLiquidRefs } from "./liquid-refs";
 import { LiquidRows, type LiquidPopoverItem } from "./liquid-rows";
-import {
-    ACCENT,
-    BACKDROP_BLUR,
-    GLASS_TINT,
-    PANEL_PAD,
-    RIM_ALPHA,
-    RIM_PAINT,
-    ROW_RADIUS,
-    glassFill,
-    neonGlow,
-} from "./liquid-theme";
+import { ACCENT, GLASS_TINT, PANEL_PAD, ROW_RADIUS, neonGlow } from "./liquid-theme";
 import { prefersReducedMotion } from "./motion";
 import { RowHover, type RowHoverTarget } from "./row-hover";
 import type { LiquidSeam, SeamJoint } from "./seam";
@@ -863,78 +854,11 @@ export function LiquidPopover({
                 className="absolute inset-0 overflow-clip group-data-[liquid]/liquid:overflow-visible data-[open]:overflow-visible"
                 data-open={effectiveOpen ? "" : undefined}
             >
-            {/* Layer 1: the crisp panel body — the resting picture: a true
-                Apple squircle with the border as a stroke. No shadow — the
-                dark frame carries none, which is also the house rule. */}
-            <div
-                ref={(el) => {
-                    refs.bodies = el;
-                }}
-                /* Deliberately BARE — no `isolate`, no opacity, no filter. Any
-                   of those makes this a backdrop root and the glass below has
-                   nothing left to blur (see liquid-theme). The grain isolates
-                   itself, inside the glass, instead. */
-                className="pointer-events-none absolute inset-0"
-                aria-hidden="true"
-            >
-                <div
-                    ref={(el) => {
-                        refs.panelBody = el;
-                    }}
-                    className="absolute will-change-transform"
-                    /* Hidden in the MARKUP too — the SSR HTML must arrive
-                       invisible or every menu flashes open, unstyled, for the
-                       beat before hydration (no border, transparent bg: the
-                       "rough" first paint). gsap's autoAlpha writes these same
-                       properties from the mount effect on.
-
-                       Paint lives on the two children, not here: this box is
-                       what gsap transforms, and a transformed ancestor that
-                       also carried the blur would resample the backdrop every
-                       frame of the pour. */
-                    style={{ opacity: 0, visibility: "hidden" }}
-                >
-                    {/* The face: the fill at SURFACE_ALPHA over a 12px blur of
-                        whatever the menu is standing on, cut to the squircle by
-                        clip-path (geometry writes it). `isolate` is the grain's
-                        — it bounds the child's `overlay` blend to this face —
-                        and it is safe HERE precisely because a backdrop root
-                        governs its DESCENDANTS, never the element's own blur. */}
-                    <div
-                        ref={(el) => {
-                            refs.panelGlass = el;
-                        }}
-                        className="absolute inset-0 isolate"
-                        style={{
-                            backgroundColor: glassFill(fill),
-                            backdropFilter: BACKDROP_BLUR,
-                            WebkitBackdropFilter: BACKDROP_BLUR,
-                        }}
-                    >
-                        <div className="grain-layer" />
-                    </div>
-
-                    {/* The rim, stroked — outside the glass so the clip cannot
-                        shave the outer half of the line. */}
-                    <svg
-                        ref={(el) => {
-                            refs.panelRim = el;
-                        }}
-                        className="absolute inset-0 overflow-visible"
-                        focusable="false"
-                    >
-                        <path
-                            ref={(el) => {
-                                refs.panelBodyShape = el;
-                            }}
-                            fill="none"
-                            stroke={RIM_PAINT}
-                            strokeOpacity={RIM_ALPHA}
-                            strokeWidth={1}
-                        />
-                    </svg>
-                </div>
-            </div>
+            {/* Layer 1: the resting panel — glass, grain and the stroked
+                rim. In its own file (liquid-panel-body.tsx): which of its
+                three boxes carries which paint is the whole backdrop-root
+                story, and it is pure markup. */}
+            <LiquidPanelBody refs={refs} fill={fill} />
 
             {/* Layer 2: the liquid. */}
             <LiquidGooCanvas refs={refs} ids={ids} fill={fill} />
