@@ -6,10 +6,12 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Copy01Icon, Dollar01Icon, Globe02Icon, Tick02Icon, UserGroup02Icon } from "@hugeicons/core-free-icons";
 import type { ColumnDef } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
+import { staggerPulse } from "@/lib/skeleton-stagger";
 import { trpc } from "@/lib/trpc/client";
 import { SOL_WSOL } from "@/hooks/use-quick-buy";
 import { createDataTableColumnHelper, type DataTableFeatures } from "@/components/ui/data-table";
 import { CoinImage } from "@/components/coins/coin-image";
+import { CoinSparkline } from "@/components/coins/coin-sparkline";
 import type { TradeToken } from "./types";
 
 // The /trade board's columns. Split out of `trade-discover` because they are
@@ -275,6 +277,30 @@ export function buildTradeColumns({
             header: "Coin",
             enableSorting: false,
             cell: ({ row }) => <CoinCell token={row.original} />,
+        }),
+        /* The 24h trend, between the coin and its numbers — the shape a row
+           is scanned for before any single figure. Bars come from our own
+           trade tape (server/routers/trade/spark), so a pool the tape has
+           never seen renders an em-dash rather than a flat line: CoinSparkline
+           draws "no series" and "no movement" differently on purpose. */
+        helper.display({
+            id: "spark",
+            header: "",
+            enableSorting: false,
+            meta: {
+                width: "116px",
+                skeleton: (i, count) => (
+                    <span style={staggerPulse(i, count)} className="block h-7 w-24 rounded-full shimmer-skeleton" />
+                ),
+            },
+            cell: ({ row }) => (
+                <CoinSparkline
+                    points={row.original.spark ?? []}
+                    width={96}
+                    height={28}
+                    label={`${row.original.symbol} 24h trend`}
+                />
+            ),
         }),
         helper.accessor("marketCap", {
             id: "marketCap",

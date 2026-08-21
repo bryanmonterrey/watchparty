@@ -7,7 +7,8 @@
 //     rest zinc-400. Same classes, just not clickable yet.
 //   · controls — the timeframe pills and chain select stand in as blanks
 //     at their real sizes.
-//   · board — column labels (Coin / Market cap / Price / Change / Action)
+//   · board — column labels (Coin / trend / Market cap / Price / Change /
+//     Action)
 //     over rows of the table's anatomy: coin avatar, ticker/name bars,
 //     right-aligned value bars, and the buy group's pill footprint.
 export default function TradeLoading() {
@@ -37,6 +38,7 @@ export default function TradeLoading() {
 
             <div className="flex items-center gap-3 px-6 py-2 text-15 font-medium leading-tight text-zinc-500">
                 <span className="flex-1">Coin</span>
+                <span className="w-[116px]" />
                 <span className="w-32 text-right">Market cap</span>
                 <span className="w-28 text-right">Price</span>
                 <span className="w-24 text-right">Change</span>
@@ -51,6 +53,7 @@ export default function TradeLoading() {
                             <div className="h-3 w-16 rounded-full shimmer-skeleton" />
                         </div>
                     </div>
+                    <div className="flex w-[116px] items-center"><div className="h-7 w-24 rounded-full shimmer-skeleton" /></div>
                     <div className="flex w-32 justify-end"><div className="h-3.5 w-16 rounded-full shimmer-skeleton" /></div>
                     <div className="flex w-28 justify-end"><div className="h-3.5 w-16 rounded-full shimmer-skeleton" /></div>
                     <div className="flex w-24 justify-end"><div className="h-3.5 w-12 rounded-full shimmer-skeleton" /></div>

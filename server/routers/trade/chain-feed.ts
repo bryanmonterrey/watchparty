@@ -7,6 +7,7 @@ import {
 } from "@/lib/coins/mobula";
 import { dropMeasuredUntradeable } from "@/server/lib/measured-liquidity";
 import { pairToTradeToken, pulseLanesToTradeTokens } from "./pair-row";
+import { sparkByPool } from "./spark";
 
 /**
  * Chain-wide token board — every coin on the chain, DexScreener-style, from
@@ -102,9 +103,17 @@ export async function getChainFeed(chain: string, list: "trending" | "new") {
         // response, the next request filters again, and a coin vanishes the
         // moment it is measured instead of at the next cache fill. Cost: one
         // indexed IN-query per request.
+        const tradeable = await dropMeasuredUntradeable(chain, feed.tokens);
+        // Bars for whatever of these the tape has seen — one read, outside the
+        // cache for the same reason the liquidity filter is (a stale chart is
+        // worse than a missing one, and this way a blip costs one response).
+        const spark = await sparkByPool(tradeable.map((t) => t.poolAddress));
         return {
             enabled: feed.enabled,
-            tokens: await dropMeasuredUntradeable(chain, feed.tokens),
+            tokens: tradeable.map((t) => ({
+                ...t,
+                spark: (t.poolAddress && spark.get(t.poolAddress)) || [],
+            })),
         };
     } catch {
         // Upstream failure (timeout, 429 on the free key's 1 RPS when several

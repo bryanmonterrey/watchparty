@@ -98,12 +98,13 @@ export function TradeDiscover() {
     // `<col>` reserving width — the table would keep a third of the row for
     // three invisible columns.
     const isMd = useMediaQuery("(min-width: 768px)");
-    // Volume and Txns are gone from the board (owner call): market cap, price,
-    // change and the trend line are what a row is scanned for. Change earns a
-    // column of its own — it was a sub-line under market cap — and it holds at
-    // every width, so only price steps down on the narrowest boards.
+    // Volume and Txns are gone from the board (owner call): the trend line,
+    // market cap, price and change are what a row is scanned for. Change
+    // earns a column of its own — it was a sub-line under market cap — and it
+    // holds at every width; the sparkline and price step down together on the
+    // narrowest boards, where 96px of chart costs more than it says.
     const columnVisibility = useMemo(
-        () => ({ price: isMd, change: true }),
+        () => ({ spark: isMd, price: isMd, change: true }),
         [isMd],
     );
 

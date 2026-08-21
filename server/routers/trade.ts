@@ -3,6 +3,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure, protectedProcedure } from "@/server/trpc";
 import { db } from "@/db";
+import { sparkByPool } from "./trade/spark";
 import { tokens } from "@/db/schema/content/token";
 import { follows } from "@/db/schema/content/follow";
 import { streams } from "@/db/schema/content/stream";
@@ -150,10 +151,25 @@ export const tradeRouter = router({
                 .limit(PER_COLUMN),
         ]);
 
-        return {
+        const columns = {
             new: newCol.map(toTradeToken),
             migrating: migratingCol.map(toTradeToken),
             migrated: migratedCol.map(toTradeToken),
+        };
+
+        // One bars read for the whole page, shared with the chain feed — see
+        // ./trade/spark. Rows whose pool the tape has never seen keep an
+        // empty series and render an em-dash.
+        const spark = await sparkByPool(
+            [...columns.new, ...columns.migrating, ...columns.migrated].map((t) => t.poolAddress),
+        );
+        const withSpark = (rows: typeof columns.new) =>
+            rows.map((t) => ({ ...t, spark: (t.poolAddress && spark.get(t.poolAddress)) || [] }));
+
+        return {
+            new: withSpark(columns.new),
+            migrating: withSpark(columns.migrating),
+            migrated: withSpark(columns.migrated),
         };
     }),
 

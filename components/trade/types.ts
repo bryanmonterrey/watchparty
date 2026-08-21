@@ -31,6 +31,10 @@ export interface TradeToken {
   status: TokenStatus;
   tokenAddress?: string | null;
   poolAddress?: string | null;
+  /** 24h hourly closes for the row's mini-chart, oldest first. Empty when the
+   *  trade tape has no bars for this pool — CoinSparkline draws an em-dash,
+   *  which is "no series", not "no movement". */
+  spark?: { t: number; c: number }[];
   /** Creator is streaming on watchparty right now (Discover "Live" tab). */
   creatorIsLive: boolean;
   liveViewerCount: number;
