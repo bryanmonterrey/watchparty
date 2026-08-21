@@ -513,9 +513,11 @@ export function LiquidPopover({
         );
 
         /* Hand back to the crisp picture at full blur — the bodies snap on
-           UNDER the still-opaque goo (identical pixels), the goo alone fades,
-           and the blur resets only once it is hidden so the rim never thins
-           on screen. */
+           UNDER the goo, the goo alone fades, and the blur resets only once it
+           is hidden so the rim never thins on screen. Since the glass, the two
+           faces briefly stack (≈0.19 alpha settling to 0.10 across the fade)
+           rather than being the identical pixels this used to hand off — the
+           backdrop blur arriving is the visible part of that beat. */
         tl.set(refs.bodies, { autoAlpha: 1 }, 0.47);
         tl.to(refs.goo, { autoAlpha: 0, duration: 0.16, ease: "power1.out" }, 0.47);
         applyGooBlur(GOO_BLUR_REST, tl, 0.64);

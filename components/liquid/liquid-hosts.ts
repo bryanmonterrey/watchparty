@@ -113,9 +113,10 @@ export function createPopoverStretchHost(ctx: { current: PopoverHostCtx }): Stre
         handoff: (tl, at) => {
             const c = ctx.current;
             gooSfx.play("release", { frame: "dark" });
-            /* The crisp bodies SNAP on underneath the still-opaque goo — the
-               two pictures are identical, so nothing changes on screen — and
-               only the goo fades. */
+            /* The crisp bodies SNAP on underneath the goo and only the goo
+               fades. Both faces are glass now, so the beat is a short settle
+               (two 10% faces stacked, resolving to one with a real backdrop
+               blur) rather than the identical-pixel handoff it once was. */
             tl.set(c.refs.bodies, { autoAlpha: 1 }, at);
             tl.to(c.refs.goo, { autoAlpha: 0, duration: 0.15, ease: "power1.out" }, at);
             c.applyGooBlur(GOO_BLUR_REST, tl, at + 0.16);

@@ -43,6 +43,17 @@ export const ACCENT = "#358efc";
 export const SURFACE_ALPHA = 0.1;
 export const BACKDROP_BLUR = "blur(12px)";
 
+/* The MOVING picture's face alpha — the goo canvas's, applied after the
+   threshold (liquid-goo-canvas.tsx explains why the order matters).
+
+   Same value as the resting glass, so the pour and the panel it becomes are
+   one material. The one thing motion cannot have is the BLUR: an SVG filter
+   samples its own source graphic, never the page behind it, so the flying
+   liquid is tint-and-rim only. Raise this alone if a pour reads too faint
+   against a busy background — it is the only lever that does not touch the
+   metaball. */
+export const GOO_FACE_ALPHA = SURFACE_ALPHA;
+
 /** The face paint: an opaque brand hex carried in at SURFACE_ALPHA. */
 export function glassFill(fill: string, alpha = SURFACE_ALPHA) {
     const hex = fill.length >= 7 ? fill.slice(0, 7) : LIQUID_SURFACE;

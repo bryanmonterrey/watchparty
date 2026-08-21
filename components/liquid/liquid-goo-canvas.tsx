@@ -11,7 +11,7 @@ import { memo } from "react";
 
 import { GOO_RIM_THRESHOLDS, gooThreshold } from "./goo";
 import type { LiquidRefs } from "./liquid-refs";
-import { SEAM_PAINT } from "./liquid-theme";
+import { GOO_FACE_ALPHA, SEAM_PAINT } from "./liquid-theme";
 import { GRAB_CHAIN } from "./stretch";
 
 const GOO_BLUR_REST = 1;
@@ -91,13 +91,35 @@ function LiquidGooCanvasImpl({
                         values={gooThreshold(GOO_RIM_THRESHOLDS[GOO_BLUR_REST][1])}
                         result="inner"
                     />
+                    {/* THE LIQUID IS GLASS TOO. The alpha is dropped AFTER the
+                        threshold, never before: the metaball is built by
+                        thresholding alpha, so a translucent blob going IN is
+                        erased by its own threshold — the picture disappears
+                        rather than fading.
+
+                        Which forces the rim to become the SLIVER (outer minus
+                        inner) instead of a flood over the whole outer shape.
+                        The old chain could paint rim colour edge-to-edge
+                        because an opaque interior covered all but the border;
+                        with a 10% interior that entire mass would show through
+                        as one rim-coloured blob. */}
+                    <feComposite in="goo" in2="inner" operator="out" result="sliver" />
                     {/* The flood is the SAME solid the crisp border wears, or
                         the two pictures would not match at a handoff. */}
                     <feFlood floodColor={rim} result="rimColor" />
-                    <feComposite in="rimColor" in2="goo" operator="in" result="rimFull" />
+                    <feComposite in="rimColor" in2="sliver" operator="in" result="rimFull" />
+                    {/* The face, carried at the resting panel's alpha. Alpha
+                        only — feColorMatrix works on unpremultiplied channels,
+                        so the blob's colour survives untouched. */}
+                    <feColorMatrix
+                        in="inner"
+                        type="matrix"
+                        values={`1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 ${GOO_FACE_ALPHA} 0`}
+                        result="face"
+                    />
                     <feMerge>
+                        <feMergeNode in="face" />
                         <feMergeNode in="rimFull" />
-                        <feMergeNode in="inner" />
                     </feMerge>
                 </filter>
 
