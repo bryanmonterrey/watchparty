@@ -804,7 +804,34 @@ export function LiquidPopover({
             ref={(el) => {
                 refs.root = el;
             }}
-            className={cn("group/liquid relative inline-flex select-none", className)}
+            /* LIFTED WHILE IN USE. The panel does not portal (the goo, the
+               trigger and the panel must share one coordinate space), so its
+               layers — z-[1] goo, z-[2] rows — compete in whatever stacking
+               context the HOST provides. `relative` with z-index auto makes no
+               context of its own, so those 1 and 2 were being read against the
+               page's own numbers and lost to everything: a feed video's
+               controls sit at z-20, a rail row lifts its meta line to z-10,
+               and a later sibling card paints over an earlier one for free.
+
+               That is the whole of three reported bugs — the repost menu
+               buried under video controls, a rail row's menu invisible behind
+               the rows below it, and the share/dots panels "not blurring",
+               which was never the blur: content painting ABOVE the glass is
+               content the backdrop cannot contain, so there was nothing behind
+               it to sample.
+
+               30 clears page furniture (10/20) and stays under the app's
+               overlays and headers (40/50+), which must keep covering an open
+               menu. Applied only while open or in flight, so a resting popover
+               contributes no stacking context at all — data-liquid covers the
+               close dive too, or the panel would drop behind the page for the
+               length of its exit. */
+            data-open={effectiveOpen ? "" : undefined}
+            className={cn(
+                "group/liquid relative inline-flex select-none",
+                "data-[open]:z-30 data-[liquid]:z-30",
+                className,
+            )}
             onClick={stopPropagation ? (e) => e.stopPropagation() : undefined}
         >
             {/* THE OVERFLOW CLIPPER. The three liquid layers below are
