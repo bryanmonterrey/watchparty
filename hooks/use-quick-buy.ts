@@ -8,7 +8,7 @@ import { useWalletSigning } from "@/hooks/use-wallet-signing";
 import { showSwapToast } from "@/components/wallet/wallet-drawer/views/swap/swap-transaction-toast";
 import { OPEN_WALLET_DRAWER_EVENT } from "@/components/wallet/sol-balance-chip";
 
-const SOL_WSOL = "So11111111111111111111111111111111111111112";
+export const SOL_WSOL = "So11111111111111111111111111111111111111112";
 const AMOUNT_KEY = "trade:quickBuySol";
 export const QUICK_BUY_PRESETS = [0.05, 0.1, 0.5, 1] as const;
 

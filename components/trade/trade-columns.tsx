@@ -6,6 +6,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Copy01Icon, Globe02Icon, Tick02Icon, UserGroup02Icon } from "@hugeicons/core-free-icons";
 import type { ColumnDef } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/lib/trpc/client";
+import { SOL_WSOL } from "@/hooks/use-quick-buy";
 import { SolanaIcon } from "@/components/icons";
 import { createDataTableColumnHelper, type DataTableFeatures } from "@/components/ui/data-table";
 import { CoinImage } from "@/components/coins/coin-image";
@@ -154,40 +156,96 @@ function CoinCell({ token }: { token: TradeToken }) {
     );
 }
 
-/** Preset-amount buy, in place. EVM rows open the coin page instead. */
+/* The row's buy control: the CREATOR COIN button's language (twitter2 on its
+   own tint — an invitation, not a status; see PILL_CREATE in
+   profile/creator-coin-action) split into a segmented group. The resting tint
+   is the creator coin's /10; hover lifts to /20 rather than its /15, per the
+   owner — a board row is scanned at a glance, so the pressed target wants the
+   fuller step. Same colour family either way, and hover still composites
+   LIGHTER than rest (the hover-lighter guard).
+
+   `Buy` is the group's LABEL, not a fourth button: the amounts are the
+   actions, so there is no ambiguity about what an unlabelled press would
+   spend. The dividers are deliberately short — a hairline the height of the
+   text rather than the full pill — so the segments read as one control
+   instead of three buttons jammed together.
+
+   PILL, so rounded-full and NO <Squircle> — both the documented pill rule and
+   the reason the board's hover wash lost its clip-path: 31 rows of these
+   would put the mounts straight back. */
+const BUY_AMOUNTS_USD = [25, 50, 100] as const;
+
+/** Dollar-denominated quick buy, paid in SOL. EVM rows open the coin page. */
 function BuyCell({
     token,
     quickBuy,
     buying,
-    amountSol,
 }: {
     token: TradeToken;
-    quickBuy: (t: TradeToken) => Promise<"done" | "no-wallet" | "no-mint" | "failed">;
+    quickBuy: (t: TradeToken, payWith?: { mint: string; decimals: number; symbol: string; amount: number }) => Promise<"done" | "no-wallet" | "no-mint" | "failed">;
     buying: boolean;
-    amountSol: number;
 }) {
     const router = useRouter();
+    const utils = trpc.useUtils();
+    // Which amount is in flight, so the pressed segment can say so while the
+    // other two simply go quiet.
+    const [pending, setPending] = useState<number | null>(null);
+
     // The swap engine only speaks Solana: external Solana coins buy by mint like
     // any in-house coin, EVM rows just open their coin page.
     if (token.external && token.chain !== "solana") return null;
 
-    const handleBuy = async (e: React.MouseEvent) => {
+    const handleBuy = (usd: number) => async (e: React.MouseEvent) => {
         e.stopPropagation();
-        const result = await quickBuy(token);
-        if (result === "no-mint") {
-            router.push(token.external ? `/coin/${token.chain}/${token.tokenAddress}` : `/${token.tokenAddress || token.id}`);
+        if (buying) return;
+        setPending(usd);
+        try {
+            // Priced at press time rather than held in a live query: the board
+            // is public and this is the only moment the number matters, so a
+            // signed-out visitor never pays for a price they cannot spend.
+            // The procedure is cached server-side, so repeat presses are free.
+            const solPrice = await utils.wallet.getSolPrice.fetch().catch(() => null);
+            const result = await quickBuy(
+                token,
+                solPrice && solPrice > 0
+                    ? { mint: SOL_WSOL, decimals: 9, symbol: "SOL", amount: usd / solPrice }
+                    : undefined,
+            );
+            if (result === "no-mint") {
+                router.push(token.external ? `/coin/${token.chain}/${token.tokenAddress}` : `/${token.tokenAddress || token.id}`);
+            }
+        } finally {
+            setPending(null);
         }
     };
 
     return (
-        <button
-            onClick={handleBuy}
-            disabled={buying}
-            className="ml-auto flex cursor-pointer items-center gap-1.5 rounded-full bg-white/10 px-4 py-2 text-[14px] font-bold text-white transition-colors hover:bg-white/20 active:scale-95 disabled:cursor-default disabled:opacity-50"
+        <div
+            className={cn(
+                "ml-auto flex h-11 w-fit items-center overflow-hidden rounded-full bg-twitter2/10 text-twitter2 transition-opacity",
+                buying && "opacity-60",
+            )}
         >
-            <SolanaIcon className="size-3.5" />
-            {buying ? "Buying…" : `Buy ${amountSol}`}
-        </button>
+            <span className="flex items-center gap-1.5 pl-4 pr-3 text-[15px] font-bold">
+                <SolanaIcon className="size-3.5" />
+                Buy
+            </span>
+            {BUY_AMOUNTS_USD.map((usd) => (
+                <span key={usd} className="flex h-full items-center">
+                    {/* Short divider: text-height, not pill-height. */}
+                    <span aria-hidden className="h-4 w-px shrink-0 bg-twitter2/25" />
+                    <button
+                        type="button"
+                        onClick={handleBuy(usd)}
+                        disabled={buying}
+                        aria-label={`Buy $${usd} of ${token.symbol ?? "this coin"}`}
+                        className="flex h-full cursor-pointer items-center px-3 text-[15px] font-bold tabular-nums transition-colors hover:bg-twitter2/20 disabled:cursor-default"
+                    >
+                        {pending === usd ? "…" : `$${usd}`}
+                    </button>
+                </span>
+            ))}
+        </div>
     );
 }
 
@@ -195,7 +253,7 @@ const helper = createDataTableColumnHelper<TradeToken>();
 
 /**
  * The board's columns. Ids match the board's sort keys — `marketCap`,
- * `volume`, `price`, `txCount` — because the header IS the sort control now
+ * `price`, `change` — because the header IS the sort control now
  * that the sort dropdown is hidden, and `TradeDiscover` reads
  * `sorting[0].id` straight back as its sort key.
  */
@@ -203,12 +261,10 @@ export function buildTradeColumns({
     timeframe,
     quickBuy,
     buyingId,
-    amountSol,
 }: {
     timeframe: Timeframe;
-    quickBuy: (t: TradeToken) => Promise<"done" | "no-wallet" | "no-mint" | "failed">;
+    quickBuy: (t: TradeToken, payWith?: { mint: string; decimals: number; symbol: string; amount: number }) => Promise<"done" | "no-wallet" | "no-mint" | "failed">;
     buyingId: string | null;
-    amountSol: number;
 }): ColumnDef<DataTableFeatures, TradeToken, any>[] {
     return [
         helper.display({
@@ -221,50 +277,21 @@ export function buildTradeColumns({
             id: "marketCap",
             header: "Market cap",
             sortDescFirst: true,
-            meta: { width: "16%" },
-            cell: ({ row }) => {
-                const change = changeFor(row.original, timeframe);
-                const up = change >= 0;
-                return (
-                    <>
-                        <p className="text-[15px] font-bold tabular-nums tracking-tight text-white">
-                            {formatUsd(row.original.marketCap)}
-                        </p>
-                        <p
-                            className={cn(
-                                "mt-0.5 text-[13px] font-semibold tabular-nums",
-                                up ? "text-lantern" : "text-pastelred",
-                            )}
-                        >
-                            {up ? "+" : ""}
-                            {change.toFixed(1)}%
-                        </p>
-                    </>
-                );
-            },
-        }),
-        helper.accessor((t) => volumeFor(t, timeframe), {
-            id: "volume",
-            header: "Volume",
-            sortDescFirst: true,
-            meta: { width: "15%" },
-            cell: ({ row }) => {
-                const vol = volumeFor(row.original, timeframe);
-                return (
-                    <>
-                        <p className="text-[15px] font-semibold tabular-nums text-zinc-200">
-                            {vol > 0 ? formatUsd(vol) : "—"}
-                        </p>
-                        <p className="mt-0.5 text-[12px] font-medium text-zinc-600">{timeframe} vol</p>
-                    </>
-                );
-            },
+            meta: { width: "18%" },
+            cell: ({ row }) => (
+                <>
+                    <p className="text-[15px] font-bold tabular-nums tracking-tight text-white">
+                        {formatUsd(row.original.marketCap)}
+                    </p>
+                    <p className="mt-0.5 text-[12px] font-medium text-zinc-600">Market cap</p>
+                </>
+            ),
         }),
         helper.accessor("priceUsd", {
             id: "price",
             header: "Price",
             sortDescFirst: true,
-            meta: { width: "15%" },
+            meta: { width: "16%" },
             cell: ({ row }) => (
                 <>
                     <p className="text-[15px] font-semibold tabular-nums text-zinc-200">
@@ -274,34 +301,44 @@ export function buildTradeColumns({
                 </>
             ),
         }),
-        helper.accessor("txCount", {
-            id: "txCount",
-            header: "Txns",
+        /* The move off the market-cap cell's sub-line: change is what the
+           board is scanned for, so it gets a column of its own and the
+           timeframe it belongs to as its label — the same value the pills at
+           the top select (changeFor reads the 5m/1h/6h/24h field). */
+        helper.accessor((t) => changeFor(t, timeframe), {
+            id: "change",
+            header: "Change",
             sortDescFirst: true,
-            meta: { width: "12%" },
-            cell: ({ row }) => (
-                <>
-                    <p className="text-[15px] font-semibold tabular-nums text-zinc-200">
-                        {formatCount(row.original.txCount)}
-                    </p>
-                    <p className="mt-0.5 flex items-center gap-1 text-[12px] font-medium text-zinc-600">
-                        <HugeiconsIcon icon={UserGroup02Icon} className="size-[11px]" strokeWidth={2} />
-                        {formatCount(row.original.holderCount)}
-                    </p>
-                </>
-            ),
+            meta: { width: "13%" },
+            cell: ({ row }) => {
+                const change = changeFor(row.original, timeframe);
+                const up = change >= 0;
+                return (
+                    <>
+                        <p
+                            className={cn(
+                                "text-[15px] font-bold tabular-nums tracking-tight",
+                                up ? "text-lantern" : "text-pastelred",
+                            )}
+                        >
+                            {up ? "+" : ""}
+                            {change.toFixed(1)}%
+                        </p>
+                        <p className="mt-0.5 text-[12px] font-medium text-zinc-600">{timeframe}</p>
+                    </>
+                );
+            },
         }),
         helper.display({
             id: "action",
             header: "Action",
             enableSorting: false,
-            meta: { align: "right", width: "140px" },
+            meta: { align: "right", width: "232px" },
             cell: ({ row }) => (
                 <BuyCell
                     token={row.original}
                     quickBuy={quickBuy}
                     buying={buyingId === row.original.id}
-                    amountSol={amountSol}
                 />
             ),
         }),

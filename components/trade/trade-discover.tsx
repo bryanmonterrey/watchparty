@@ -87,9 +87,10 @@ export function TradeDiscover() {
     // request, so this is now a fixed default rather than a control — the state
     // stays a hook so restoring the button is one line, not a refactor.
     const [hideRisky] = useState(true);
-    // `setAmountSol` went with the quick-buy amount pill (also hidden); the
-    // amount itself still labels each row's Buy button.
-    const { quickBuy, buyingId, amountSol } = useQuickBuy();
+    // `setAmountSol` went with the quick-buy amount pill (hidden), and the
+    // stored SOL amount no longer labels anything either: the row's buy group
+    // is dollar-denominated and prices itself at press time.
+    const { quickBuy, buyingId } = useQuickBuy();
     const utils = trpc.useUtils();
 
     // Narrow viewports drop columns through TanStack's visibility state rather
@@ -97,10 +98,13 @@ export function TradeDiscover() {
     // `<col>` reserving width — the table would keep a third of the row for
     // three invisible columns.
     const isMd = useMediaQuery("(min-width: 768px)");
-    const isLg = useMediaQuery("(min-width: 1024px)");
+    // Volume and Txns are gone from the board (owner call): market cap, price,
+    // change and the trend line are what a row is scanned for. Change earns a
+    // column of its own — it was a sub-line under market cap — and it holds at
+    // every width, so only price steps down on the narrowest boards.
     const columnVisibility = useMemo(
-        () => ({ volume: isMd, price: isLg, txCount: isLg }),
-        [isMd, isLg],
+        () => ({ price: isMd, change: true }),
+        [isMd],
     );
 
     const onSolana = chain === "solana";
@@ -209,8 +213,8 @@ export function TradeDiscover() {
     // rebuilt when either changes and are otherwise stable — a fresh array on
     // every render would re-create the table's column instances each time.
     const columns = useMemo(
-        () => buildTradeColumns({ timeframe, quickBuy, buyingId, amountSol }),
-        [timeframe, quickBuy, buyingId, amountSol],
+        () => buildTradeColumns({ timeframe, quickBuy, buyingId }),
+        [timeframe, quickBuy, buyingId],
     );
 
     const selectChain = (c: TradeChain) => {
