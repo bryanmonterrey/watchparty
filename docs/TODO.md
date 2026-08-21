@@ -353,7 +353,23 @@ below is blocked on code; each is one switch on the day the plan changes.
    because a 24 h window drew a dash on nearly every row (13 pools inside 24 h
    vs 265 inside a week). Once the tape is live, 24 h is honest again and the
    line stops mixing last Tuesday into "the trend".
-5. **Re-check what else the free tier is shaping.** The board itself, the coin
+5. **OPEN QUESTION — should the line follow the timeframe pills?** Today it
+   does not, and the board is inconsistent about it: the Change column reads
+   `changeFor(token, timeframe)` and swaps with the 5m/1h/24h pills, while the
+   trend line is always hourly bars over the same window whatever is selected.
+   So "+38% (5m)" can sit beside a line whose shape is mostly last Tuesday.
+   Three ways to answer it, worth deciding rather than drifting:
+   · leave it — the line is context, the number is the measurement (cheapest,
+     and what every other board here does);
+   · re-window the SAME hourly bars per pill (24h → last 24 points, 1h → last
+     one or two) — free, but 5m has no hourly bar to show and would go empty;
+   · store finer resolutions and pick per pill — `coin_candles` is already
+     keyed by resolution and Mobula's `period` supports it
+     (`mobulaPeriod` in lib/coins/mobula.ts), so this is a fetch-and-storage
+     cost per timeframe, not a rewrite. Answer it when the tape is live and
+     bars are plentiful; deciding it on today's 13 covered pools would be
+     deciding it on noise.
+6. **Re-check what else the free tier is shaping.** The board itself, the coin
    page's trades feed and the holders/security calls are all sized around the
    free key's throttling (see the memories `mobula-free-tier-throttle` and
    `mobula-vs-helius-billing`, and `lib/coins/mobula.ts`'s cost notes).
