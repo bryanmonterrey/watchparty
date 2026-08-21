@@ -1,6 +1,6 @@
 # watchparty — running TODO (handoff)
 
-Consolidated state across sessions so work can resume in a fresh chat. Last updated 2026-08-18.
+Consolidated state across sessions so work can resume in a fresh chat. Last updated 2026-08-21.
 
 ## 🚨 Ops maturity (2026-08-07 — "run it like a consumer company")
 
@@ -322,6 +322,41 @@ Reference clone was reviewed 2026-07-21; patterns worth adopting then:
 - **Who-to-follow row morph** — when discover's right rail gets real follow
   suggestions (still mock data today), animate the followed row out
   (motion layoutId or ViewTransition share="morph").
+
+## 💸 When the Mobula GROWTH plan ($400/mo) is bought (2026-08-21)
+
+Deferred deliberately — the owner will upgrade "when I'm making money". Nothing
+below is blocked on code; each is one switch on the day the plan changes.
+
+1. **Turn the live tape on.** `/api/cron/tape-watch` is already dispatched every
+   minute by the cron worker and returns early on purpose: Mobula refuses
+   WebSockets below Growth — verified against their live endpoint 2026-08-12,
+   `{"event":"error","message":"WebSocket usage is allowed only on Growth and
+   Enterprise plans. Your current plan is 'free'."}`. Set `TAPE_WATCH_ENABLED=1`
+   and the DO starts recording the top 50 board mints, re-picked every minute.
+   Do NOT set it before the plan exists: the cron would flip `active: true`
+   every minute, the DO would retry a rejected socket on its 20 s alarm, and
+   the failure is invisible from outside.
+2. **Then the sparklines mostly stop costing credits.** /trade draws a line on
+   every row today by falling back to Mobula's REST OHLCV (5 credits/call,
+   mint-keyed, capped by `SPARK_FETCH_MAX`, written back into `coin_candles` so
+   a coin is paid for once — `server/routers/trade/spark.ts`). With the tape
+   live, our own candles cover the board and the fallback fires only for coins
+   that appear between sweeps. Consider raising `SPARK_FETCH_MAX` then, since
+   the marginal call becomes rare rather than routine.
+3. **Flip /trending's column on.** Same chart, same data, gated on
+   `NEXT_PUBLIC_TRENDING_SPARKLINE=1` (`components/trending/trending-table.tsx`)
+   because coverage was 3 rows in 199 when it was written. Re-measure first:
+   `select count(distinct pool_address) from coin_candles where resolution='60'
+   and ts > extract(epoch from now()) - 86400` — it was **13** on 2026-08-21.
+4. **Revisit the 7-day spark window.** `sparkByPool` reaches back a week
+   because a 24 h window drew a dash on nearly every row (13 pools inside 24 h
+   vs 265 inside a week). Once the tape is live, 24 h is honest again and the
+   line stops mixing last Tuesday into "the trend".
+5. **Re-check what else the free tier is shaping.** The board itself, the coin
+   page's trades feed and the holders/security calls are all sized around the
+   free key's throttling (see the memories `mobula-free-tier-throttle` and
+   `mobula-vs-helius-billing`, and `lib/coins/mobula.ts`'s cost notes).
 
 ## 🏛️ Incorporate + Stripe onramp (2026-08-18 — BLOCKS card funding)
 
