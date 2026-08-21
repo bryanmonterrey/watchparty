@@ -3,12 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Copy01Icon, Globe02Icon, Tick02Icon, UserGroup02Icon } from "@hugeicons/core-free-icons";
+import { Copy01Icon, Dollar01Icon, Globe02Icon, Tick02Icon, UserGroup02Icon } from "@hugeicons/core-free-icons";
 import type { ColumnDef } from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
 import { SOL_WSOL } from "@/hooks/use-quick-buy";
-import { SolanaIcon } from "@/components/icons";
 import { createDataTableColumnHelper, type DataTableFeatures } from "@/components/ui/data-table";
 import { CoinImage } from "@/components/coins/coin-image";
 import type { TradeToken } from "./types";
@@ -226,9 +225,13 @@ function BuyCell({
                 buying && "opacity-60",
             )}
         >
-            <span className="flex items-center gap-1.5 pl-4 pr-3 text-[15px] font-bold">
-                <SolanaIcon className="size-3.5" />
-                Buy
+            {/* The dollar mark IS the label (owner call): it says what the
+                numbers are denominated in, in the width a word would cost —
+                and the group has to fit its cell, which "Buy $25 $50 $100"
+                did not (measured 248px in a 232px column: clipped at $10,
+                and the spill sat outside the row's hover squircle). */}
+            <span className="flex items-center pl-3.5 pr-2.5" aria-hidden>
+                <HugeiconsIcon icon={Dollar01Icon} className="size-4" strokeWidth={2.5} />
             </span>
             {BUY_AMOUNTS_USD.map((usd) => (
                 <span key={usd} className="flex h-full items-center">
@@ -239,9 +242,9 @@ function BuyCell({
                         onClick={handleBuy(usd)}
                         disabled={buying}
                         aria-label={`Buy $${usd} of ${token.symbol ?? "this coin"}`}
-                        className="flex h-full cursor-pointer items-center px-3 text-[15px] font-bold tabular-nums transition-colors hover:bg-twitter2/20 disabled:cursor-default"
+                        className="flex h-full cursor-pointer items-center px-3.5 text-[15px] font-bold tabular-nums transition-colors hover:bg-twitter2/20 disabled:cursor-default"
                     >
-                        {pending === usd ? "…" : `$${usd}`}
+                        {pending === usd ? "…" : usd}
                     </button>
                 </span>
             ))}
@@ -334,7 +337,7 @@ export function buildTradeColumns({
             id: "action",
             header: "Action",
             enableSorting: false,
-            meta: { align: "right", width: "232px" },
+            meta: { align: "right", width: "200px" },
             cell: ({ row }) => (
                 <BuyCell
                     token={row.original}
