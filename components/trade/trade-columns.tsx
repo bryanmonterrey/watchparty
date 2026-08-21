@@ -337,7 +337,12 @@ export function buildTradeColumns({
             id: "action",
             header: "Action",
             enableSorting: false,
-            meta: { align: "right", width: "200px" },
+            /* 232px = the group's 194 plus the cell's own 16px padding on each
+               side. A 200px column looked like it fit (194 < 200) but its
+               CONTENT box is only 168, so the group spilled past the cell,
+               past the table, and into the strip beside the sticky header —
+               which is what showed through while scrolling. */
+            meta: { align: "right", width: "232px" },
             cell: ({ row }) => (
                 <BuyCell
                     token={row.original}

@@ -40,7 +40,7 @@ export default function TradeLoading() {
                 <span className="w-32 text-right">Market cap</span>
                 <span className="w-28 text-right">Price</span>
                 <span className="w-24 text-right">Change</span>
-                <span className="w-[200px] text-right">Action</span>
+                <span className="w-[232px] text-right">Action</span>
             </div>
             {Array.from({ length: 10 }).map((_, index) => (
                 <div key={index} className="flex h-[76px] items-center gap-3 px-6">
@@ -55,7 +55,7 @@ export default function TradeLoading() {
                     <div className="flex w-28 justify-end"><div className="h-3.5 w-16 rounded-full shimmer-skeleton" /></div>
                     <div className="flex w-24 justify-end"><div className="h-3.5 w-12 rounded-full shimmer-skeleton" /></div>
                     {/* The buy group's own footprint — one pill, not a stub. */}
-                    <div className="flex w-[200px] justify-end"><div className="h-11 w-[200px] rounded-full shimmer-skeleton" /></div>
+                    <div className="flex w-[232px] justify-end"><div className="h-11 w-[194px] rounded-full shimmer-skeleton" /></div>
                 </div>
             ))}
         </div>
