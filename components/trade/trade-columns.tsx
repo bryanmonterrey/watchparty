@@ -278,13 +278,16 @@ export function buildTradeColumns({
             header: "Market cap",
             sortDescFirst: true,
             meta: { width: "18%" },
+            /* The value alone. Its sub-line used to carry the % change, and
+               when that moved to its own column the slot briefly held the
+               words "Market cap" — a label repeating the header two rows up
+               rather than telling you anything (owner: "isn't data supposed to
+               be on market cap?"). Nothing true is left to put there, so the
+               number stands on its own. */
             cell: ({ row }) => (
-                <>
-                    <p className="text-[15px] font-bold tabular-nums tracking-tight text-white">
-                        {formatUsd(row.original.marketCap)}
-                    </p>
-                    <p className="mt-0.5 text-[12px] font-medium text-zinc-600">Market cap</p>
-                </>
+                <p className="text-[15px] font-bold tabular-nums tracking-tight text-white">
+                    {formatUsd(row.original.marketCap)}
+                </p>
             ),
         }),
         helper.accessor("priceUsd", {
@@ -292,13 +295,11 @@ export function buildTradeColumns({
             header: "Price",
             sortDescFirst: true,
             meta: { width: "16%" },
+            /* Same rule as market cap: the header already says "Price". */
             cell: ({ row }) => (
-                <>
-                    <p className="text-[15px] font-semibold tabular-nums text-zinc-200">
-                        {formatPrice(row.original.priceUsd)}
-                    </p>
-                    <p className="mt-0.5 text-[12px] font-medium text-zinc-600">Price</p>
-                </>
+                <p className="text-[15px] font-semibold tabular-nums text-zinc-200">
+                    {formatPrice(row.original.priceUsd)}
+                </p>
             ),
         }),
         /* The move off the market-cap cell's sub-line: change is what the

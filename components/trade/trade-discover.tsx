@@ -366,7 +366,19 @@ export function TradeDiscover() {
                             manualSorting
                             columnVisibility={columnVisibility}
                             rowHeight={76}
-                            resizable
+                            // NOT resizable — it and a sticky header cannot
+                            // coexist, and DataTable says so at the wrapper it
+                            // picks: `resizable` lets the table go `w-max`, so
+                            // it ships an `overflow-x-auto` box, and a sticky
+                            // header pins to the nearest SCROLLPORT — which
+                            // becomes that box. stickyTop then means "below
+                            // this div's top edge" instead of "below the
+                            // control bar", which is the labels floating down
+                            // over the first rows (owner, 8/21 — the same
+                            // symptom the trending board hit in 8627b110).
+                            // Column widths here are declared per breakpoint,
+                            // so dragging them was a nicety; pinned labels are
+                            // what the board is read with.
                             reorderable
                             // Loading while EITHER source that feeds this board
                             // is still pending — not just the in-house one.
