@@ -231,7 +231,10 @@ function BuyCell({
     return (
         <div
             className={cn(
-                "ml-auto flex h-11 w-fit items-center overflow-hidden rounded-full bg-twitter2/10 text-twitter2 transition-opacity",
+                // rounded-2xl, not a pill: at h-11 a full round is 22px and
+                // read as a lozenge next to the board's square-ish cells
+                // (owner call). The hover fills inside match it.
+                "ml-auto flex h-11 w-fit items-center overflow-hidden rounded-2xl bg-twitter2/10 text-twitter2 transition-opacity",
                 buying && "opacity-60",
             )}
         >
@@ -266,7 +269,7 @@ function BuyCell({
                         <span
                             aria-hidden
                             className={cn(
-                                "pointer-events-none absolute inset-0 rounded-2xl bg-twitter2/20 opacity-0 transition-opacity duration-150 group-hover/seg:opacity-100",
+                                "pointer-events-none absolute inset-0 rounded-xl bg-twitter2/20 opacity-0 transition-opacity duration-150 group-hover/seg:opacity-100",
                                 index === BUY_AMOUNTS_USD.length - 1 && "rounded-r-none",
                             )}
                         />
