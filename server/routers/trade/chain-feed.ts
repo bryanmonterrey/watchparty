@@ -7,7 +7,7 @@ import {
 } from "@/lib/coins/mobula";
 import { dropMeasuredUntradeable } from "@/server/lib/measured-liquidity";
 import { pairToTradeToken, pulseLanesToTradeTokens } from "./pair-row";
-import { sparkByPool } from "./spark";
+import { sparkForRows, sparkKey } from "./spark";
 
 /**
  * Chain-wide token board — every coin on the chain, DexScreener-style, from
@@ -107,13 +107,10 @@ export async function getChainFeed(chain: string, list: "trending" | "new") {
         // Bars for whatever of these the tape has seen — one read, outside the
         // cache for the same reason the liquidity filter is (a stale chart is
         // worse than a missing one, and this way a blip costs one response).
-        const spark = await sparkByPool(tradeable.map((t) => t.poolAddress));
+        const spark = await sparkForRows(tradeable);
         return {
             enabled: feed.enabled,
-            tokens: tradeable.map((t) => ({
-                ...t,
-                spark: (t.poolAddress && spark.get(t.poolAddress)) || [],
-            })),
+            tokens: tradeable.map((t) => ({ ...t, spark: spark.get(sparkKey(t)) ?? [] })),
         };
     } catch {
         // Upstream failure (timeout, 429 on the free key's 1 RPS when several

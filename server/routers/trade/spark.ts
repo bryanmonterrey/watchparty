@@ -1,7 +1,11 @@
+import { after } from "next/server";
 import { and, asc, eq, gte, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
 import { coinCandles } from "@/db/schema/content/coin-candles";
+import { withCache, TTL } from "@/lib/cache";
+import { fetchMobulaCandles } from "@/lib/coins/mobula";
+import { writeCandles } from "@/lib/coins/candles";
 
 /**
  * 24h sparkline bars for a page of board rows, in ONE query.
@@ -78,5 +82,93 @@ export async function sparkByPool(pools: readonly (string | null | undefined)[])
     } catch (err) {
         console.error("[spark] bars read failed:", err instanceof Error ? err.message : err);
     }
+    return out;
+}
+
+/* ── A line on EVERY row ──────────────────────────────────────────────────
+ *
+ * The tape alone cannot do it: it records the pools we watch, and the board
+ * is whatever Mobula ranks this minute — 13 pools carried a fresh hourly bar
+ * against 3,801 board rows when this was measured. The socket that would fix
+ * that is behind Mobula's Growth plan, so the remaining source is their REST
+ * OHLCV, which is keyed by MINT and works for a coin on a chain we have never
+ * indexed.
+ *
+ * It costs 5 credits a call, so this is written to pay for a coin ONCE:
+ *
+ *   1. read our own candles first — free, and covers every coin already seen;
+ *   2. fetch only the rows still missing, capped per request (SPARK_FETCH_MAX)
+ *      so a cold board cannot fan out into a page of paid calls;
+ *   3. cache the fetch per mint, so parallel viewers of the same board share
+ *      one call rather than multiplying it;
+ *   4. WRITE what comes back into coin_candles, after the response — so the
+ *      next load reads it for free and the tape grows toward the board it is
+ *      actually charting.
+ *
+ * Failure is per row: a coin whose fetch fails keeps its em-dash and the rest
+ * of the board still draws.
+ */
+const FETCH_BUDGET = Number(process.env.SPARK_FETCH_MAX ?? 30);
+/** Enough shape for a 28px chart; the fetch is billed per call, not per bar. */
+const HOURS = 168;
+
+export interface SparkRow {
+    tokenAddress?: string | null;
+    poolAddress?: string | null;
+    /** Chain id for board rows; in-house coins are Solana. */
+    chain?: string;
+}
+
+/** Key a row is looked up by — its pool when we have one, else its mint. */
+export function sparkKey(row: SparkRow) {
+    return row.poolAddress || row.tokenAddress || "";
+}
+
+export async function sparkForRows(rows: readonly SparkRow[]) {
+    const out = await sparkByPool(rows.map((r) => r.poolAddress));
+
+    const missing = rows.filter((r) => {
+        const held = r.poolAddress ? out.get(r.poolAddress) : undefined;
+        return (!held || held.length < 2) && !!r.tokenAddress;
+    });
+    if (missing.length === 0) return out;
+
+    const to = Math.floor(Date.now() / 1000);
+    const from = to - HOURS * 60 * 60;
+
+    const fetched = await Promise.allSettled(
+        missing.slice(0, FETCH_BUDGET).map(async (row) => {
+            const network = row.chain || "solana";
+            const mint = row.tokenAddress!;
+            const bars = await withCache(
+                `spark:ohlcv:${network}:${mint}`,
+                TTL.CHART_OHLCV,
+                () => fetchMobulaCandles(mint, network, "60", from, to, HOURS),
+            );
+            return { row, network, bars: bars ?? [] };
+        }),
+    );
+
+    for (const result of fetched) {
+        if (result.status !== "fulfilled") continue;
+        const { row, network, bars } = result.value;
+        if (bars.length < 2) continue;
+
+        out.set(sparkKey(row), bars.map((b) => ({ t: b.ts, c: b.c })));
+
+        // Off the response: the reader already has its line, and this is the
+        // write that stops the NEXT reader paying for the same coin.
+        if (row.poolAddress) {
+            const pool = row.poolAddress;
+            after(async () => {
+                try {
+                    await writeCandles(network, pool, "60", bars);
+                } catch (err) {
+                    console.error("[spark] candle write failed:", err instanceof Error ? err.message : err);
+                }
+            });
+        }
+    }
+
     return out;
 }
