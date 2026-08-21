@@ -21,24 +21,39 @@ export const LIQUID_SURFACE = "#212326";
 export const LIQUID_RIM = "#2f3235";
 export const ACCENT = "#358efc";
 
-/* THE GRAIN — one tile from /public laid over every popover face, so the flat
-   fill reads as a material instead of a perfectly clean plane.
+/* GLASS (owner call 2026-08-21). The face is the fill at 10% behind a 12px
+   backdrop blur — Tailwind's `backdrop-blur-md`, in px because the panel is
+   painted from measured geometry, not classes.
 
-   The tile is coloured noise on white, which is why it goes on in `overlay`
-   and not straight: over a near-black face overlay is ≈2×base×blend, i.e. a
-   faint coloured lift, where a plain alpha composite would just wash the
-   surface toward white. It is laid at its NATIVE size and repeated — scaling a
-   noise tile is what turns grain into visible blotches.
+   This is why the face is an HTML div and no longer the SVG path's own fill:
+   `backdrop-filter` needs a real box, and nothing samples a backdrop through
+   an SVG `fill`. The path stays for the RIM, which has to be a stroke — a
+   clip-path (the only way to cut a squircle) eats a CSS border.
 
-   One place, both engines: the SVG pattern on the liquid panel
-   (liquid-popover.tsx) and the `.surface-noise` utility in globals.css, which
-   is what the Radix popover/dialog surfaces wear. Change the alpha here and in
-   the utility together — they are the same treatment on two rendering models. */
-export const NOISE_SRC = "/noise-color.png";
-/** The PNG's own pixel size (123×122); repeated, never scaled. */
-export const NOISE_TILE_W = 123;
-export const NOISE_TILE_H = 122;
-export const NOISE_OPACITY = 0.3;
+   ⚠️ No ancestor of the glass may carry `isolation: isolate`, `opacity < 1`
+   or a filter. Each of those is a BACKDROP ROOT, and the backdrop a blur can
+   sample stops there — the panel would blur an empty group and show nothing.
+   That is why the grain blends inside the glass rather than around it.
+
+   ⚠️ If the blur ever renders empty or offset (Safari first), suspect the
+   TRANSFORMED ancestor: gsap leaves a matrix on the panel box even at rest,
+   and WebKit has historically mis-sampled a backdrop under one. The knobs, in
+   order: drop `will-change-transform` from that box, then move the glass out
+   of it and position it from geometry directly. */
+export const SURFACE_ALPHA = 0.1;
+export const BACKDROP_BLUR = "blur(12px)";
+
+/** The face paint: an opaque brand hex carried in at SURFACE_ALPHA. */
+export function glassFill(fill: string, alpha = SURFACE_ALPHA) {
+    const hex = fill.length >= 7 ? fill.slice(0, 7) : LIQUID_SURFACE;
+    const [r, g, b] = [1, 3, 5].map((at) => parseInt(hex.slice(at, at + 2), 16));
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+/* THE GRAIN lives in globals.css — `.grain-layer` (a child of the glass, so
+   its `overlay` blend has the face to blend WITH) and `.surface-noise` (the
+   pseudo-element form, for the Radix surfaces). The tile is /noise-color.png:
+   coloured noise on white, laid at its native 123×122 and repeated. */
 
 export function mixHex(one: string, two: string, amount: number) {
     const parse = (hex: string) => [1, 3, 5].map((at) => parseInt(hex.slice(at, at + 2), 16));

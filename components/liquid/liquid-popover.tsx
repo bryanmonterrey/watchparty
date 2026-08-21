@@ -41,13 +41,11 @@ import { createLiquidRefs } from "./liquid-refs";
 import { LiquidRows, type LiquidPopoverItem } from "./liquid-rows";
 import {
     ACCENT,
+    BACKDROP_BLUR,
     LIQUID_SURFACE,
-    NOISE_OPACITY,
-    NOISE_SRC,
-    NOISE_TILE_H,
-    NOISE_TILE_W,
     PANEL_PAD,
     ROW_RADIUS,
+    glassFill,
     neonGlow,
     solidRim,
 } from "./liquid-theme";
@@ -136,7 +134,6 @@ export function LiquidPopover({
         rimOnly: `${gooId}-rim`,
         rimMask: `${gooId}-mask`,
         seamGradient: `${gooId}-seam`,
-        noise: `${gooId}-noise`,
     };
 
     const refs = useRef(createLiquidRefs()).current;
@@ -828,69 +825,69 @@ export function LiquidPopover({
                 ref={(el) => {
                     refs.bodies = el;
                 }}
-                /* `isolate` is the grain's: the noise path blends in `overlay`,
-                   and without an isolated group its backdrop is whatever the
-                   menu floats over — the texture would tint the page through
-                   the panel. On the DIV, not the <svg>, because an HTML box is
-                   the one place every engine honours `isolation` (and the svg's
-                   inline style belongs to gsap's autoAlpha). */
-                className="pointer-events-none absolute inset-0 isolate"
+                /* Deliberately BARE — no `isolate`, no opacity, no filter. Any
+                   of those makes this a backdrop root and the glass below has
+                   nothing left to blur (see liquid-theme). The grain isolates
+                   itself, inside the glass, instead. */
+                className="pointer-events-none absolute inset-0"
                 aria-hidden="true"
             >
-                <svg
+                <div
                     ref={(el) => {
                         refs.panelBody = el;
                     }}
-                    className="absolute overflow-visible will-change-transform"
+                    className="absolute will-change-transform"
                     /* Hidden in the MARKUP too — the SSR HTML must arrive
                        invisible or every menu flashes open, unstyled, for the
                        beat before hydration (no border, transparent bg: the
                        "rough" first paint). gsap's autoAlpha writes these same
-                       properties from the mount effect on. */
+                       properties from the mount effect on.
+
+                       Paint lives on the two children, not here: this box is
+                       what gsap transforms, and a transformed ancestor that
+                       also carried the blur would resample the backdrop every
+                       frame of the pour. */
                     style={{ opacity: 0, visibility: "hidden" }}
-                    focusable="false"
                 >
-                    {/* The grain's tile. userSpaceOnUse + the PNG's own pixel
-                        size: the pattern is laid at 1:1 and repeated, so the
-                        noise stays noise instead of stretching with the
-                        panel's width. */}
-                    <defs>
-                        <pattern
-                            id={ids.noise}
-                            patternUnits="userSpaceOnUse"
-                            width={NOISE_TILE_W}
-                            height={NOISE_TILE_H}
-                        >
-                            <image
-                                href={NOISE_SRC}
-                                width={NOISE_TILE_W}
-                                height={NOISE_TILE_H}
-                                preserveAspectRatio="none"
-                            />
-                        </pattern>
-                    </defs>
-                    <path
+                    {/* The face: the fill at SURFACE_ALPHA over a 12px blur of
+                        whatever the menu is standing on, cut to the squircle by
+                        clip-path (geometry writes it). `isolate` is the grain's
+                        — it bounds the child's `overlay` blend to this face —
+                        and it is safe HERE precisely because a backdrop root
+                        governs its DESCENDANTS, never the element's own blur. */}
+                    <div
                         ref={(el) => {
-                            refs.panelBodyShape = el;
+                            refs.panelGlass = el;
                         }}
-                        fill={fill}
-                        stroke={rim}
-                        strokeWidth={1}
-                    />
-                    {/* The grain, over the face and under the rows. No stroke:
-                        the border is the face's, and blending the tile into it
-                        would fray the one crisp line the resting picture has.
-                        `isolate` on the <svg> keeps the blend's backdrop to
-                        the face — without it an `overlay` composites against
-                        whatever the menu is flying over. */}
-                    <path
+                        className="absolute inset-0 isolate"
+                        style={{
+                            backgroundColor: glassFill(fill),
+                            backdropFilter: BACKDROP_BLUR,
+                            WebkitBackdropFilter: BACKDROP_BLUR,
+                        }}
+                    >
+                        <div className="grain-layer" />
+                    </div>
+
+                    {/* The rim, stroked — outside the glass so the clip cannot
+                        shave the outer half of the line. */}
+                    <svg
                         ref={(el) => {
-                            refs.panelBodyNoise = el;
+                            refs.panelRim = el;
                         }}
-                        fill={`url(#${ids.noise})`}
-                        style={{ mixBlendMode: "overlay", opacity: NOISE_OPACITY }}
-                    />
-                </svg>
+                        className="absolute inset-0 overflow-visible"
+                        focusable="false"
+                    >
+                        <path
+                            ref={(el) => {
+                                refs.panelBodyShape = el;
+                            }}
+                            fill="none"
+                            stroke={rim}
+                            strokeWidth={1}
+                        />
+                    </svg>
+                </div>
             </div>
 
             {/* Layer 2: the liquid. */}

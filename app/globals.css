@@ -1625,9 +1625,10 @@ input[type="range"].volume-slider::-webkit-slider-thumb {
 
 /* ── The grain ──────────────────────────────────────────────────────────────
    /public/noise-color.png laid over a floating surface, so a flat fill reads
-   as a material rather than a perfectly clean plane. The liquid popover paints
-   the same tile as an SVG pattern (components/liquid/liquid-theme.ts owns the
-   values); this utility is the CSS half, for the Radix-rendered surfaces.
+   as a material rather than a perfectly clean plane. Two forms, one recipe:
+   `.surface-noise` wears it as a pseudo-element (the Radix surfaces), and
+   `.grain-layer` is the same thing as a real child, which is what the liquid
+   popover's glass uses. This block is the only place the values live.
 
    Three things are load-bearing:
    - `overlay`, not a plain alpha composite. The tile is coloured noise on
@@ -1644,7 +1645,11 @@ input[type="range"].volume-slider::-webkit-slider-thumb {
     position: relative;
     isolation: isolate;
   }
-  .surface-noise::after {
+  /* `.grain-layer` is the same treatment as a real element, for a surface that
+     is already clipped (the liquid panel's glass is cut by a clip-path, and a
+     pseudo-element there would need the container to own the shape twice). */
+  .surface-noise::after,
+  .grain-layer {
     content: "";
     position: absolute;
     inset: 0;
@@ -1653,7 +1658,10 @@ input[type="range"].volume-slider::-webkit-slider-thumb {
     background-size: 123px 122px;
     background-repeat: repeat;
     mix-blend-mode: overlay;
-    opacity: 0.3;
+    /* Owner's value. Deliberately at the threshold of visible — the grain is
+       there to keep the face from reading as a perfect plane, not to be seen
+       as texture. Raise it and the tile's own dots start to resolve. */
+    opacity: 0.018;
     pointer-events: none;
     /* UNDER the content, over the fill — the same order the liquid panel
        paints in (grain on the face, rows above it). A negative z-index inside

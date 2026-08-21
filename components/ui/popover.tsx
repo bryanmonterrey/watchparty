@@ -29,8 +29,12 @@ const PopoverContent = React.forwardRef<
         sideOffset={sideOffset}
         className={cn(
           POPOVER_MOTION_CLASS,
-          // surface-noise: the grain, app-wide for this surface (globals.css).
-          "surface-noise z-50 w-72 rounded-md border border-zinc-800 bg-zinc-900 p-4 text-zinc-300 shadow-md outline-none",
+          // Glass, matching the liquid dropdown: the fill at 10% behind a
+          // backdrop blur, plus the grain (`.surface-noise`, globals.css).
+          // `isolation` from surface-noise bounds the grain's blend and does
+          // NOT disturb this element's own blur — a backdrop root governs its
+          // descendants, not itself.
+          "surface-noise z-50 w-72 rounded-md border border-zinc-800 bg-zinc-900/10 backdrop-blur-md p-4 text-zinc-300 shadow-md outline-none",
           className
         )}
         {...props}

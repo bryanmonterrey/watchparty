@@ -165,20 +165,33 @@ export function measureLiquid(refs: LiquidRefs, params: GeomParams): Geom | null
         paint?.setAttribute("width", String(canvasW));
         paint?.setAttribute("height", String(canvasH));
     });
+    /* The box the glass and the rim both live in — an HTML div, sized in px
+       (it is the element gsap transforms, and the one whose border box the
+       backdrop blur samples through). */
     const body = refs.panelBody;
     if (body) {
-        body.setAttribute("width", String(panelW));
-        body.setAttribute("height", String(panelH));
-        body.setAttribute("viewBox", `0 0 ${panelW} ${panelH}`);
+        body.style.width = `${panelW}px`;
+        body.style.height = `${panelH}px`;
         body.style.left = `${panelLeft}px`;
         body.style.top = `${panelTop}px`;
     }
-    /* The face and the grain over it are the same squircle — written from one
-       string so the two can never drift by a subpixel and show a rim of bare
-       fill along the edge. */
-    const panelShape = squirclePath(0.5, 0.5, panelW - 1, panelH - 1, panelRadius);
-    refs.panelBodyShape?.setAttribute("d", panelShape);
-    refs.panelBodyNoise?.setAttribute("d", panelShape);
+    /* The glass is cut to the OUTER contour (0,0 → W,H) while the rim strokes
+       the centreline half a pixel in. Clipping the glass to the stroke's own
+       path instead would leave the outer half-pixel of the border sitting on
+       bare backdrop, which reads as a frayed edge on a translucent panel. */
+    if (refs.panelGlass) {
+        refs.panelGlass.style.clipPath = `path("${squirclePath(0, 0, panelW, panelH, panelRadius)}")`;
+    }
+    const rim = refs.panelRim;
+    if (rim) {
+        rim.setAttribute("width", String(panelW));
+        rim.setAttribute("height", String(panelH));
+        rim.setAttribute("viewBox", `0 0 ${panelW} ${panelH}`);
+    }
+    refs.panelBodyShape?.setAttribute(
+        "d",
+        squirclePath(0.5, 0.5, panelW - 1, panelH - 1, panelRadius),
+    );
     if (refs.panel) {
         refs.panel.style.left = `${panelLeft}px`;
         refs.panel.style.top = `${panelTop}px`;

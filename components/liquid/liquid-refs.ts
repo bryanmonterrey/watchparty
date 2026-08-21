@@ -13,10 +13,16 @@ export interface LiquidRefs {
     blobTrigger: SVGRectElement | null;
     blobPanel: SVGPathElement | null;
     chain: (SVGCircleElement | null)[];
-    panelBody: SVGSVGElement | null;
+    /* The resting panel, in three pieces: the BOX (positioned by geometry,
+       transformed by gsap — it carries no paint), the GLASS inside it (the
+       tinted, backdrop-blurred face, cut to the squircle by clip-path) and
+       the RIM svg beside the glass, which draws the border as a real stroke.
+       The rim is a SIBLING of the glass, never a child: the clip-path would
+       shave the half of a 1px stroke that falls outside the contour. */
+    panelBody: HTMLDivElement | null;
+    panelGlass: HTMLDivElement | null;
+    panelRim: SVGSVGElement | null;
     panelBodyShape: SVGPathElement | null;
-    /** The grain, cut to the same squircle as the face under it. */
-    panelBodyNoise: SVGPathElement | null;
     panel: HTMLDivElement | null;
     scroller: HTMLDivElement | null;
     trigger: HTMLButtonElement | null;
@@ -46,8 +52,9 @@ export function createLiquidRefs(): LiquidRefs {
         blobPanel: null,
         chain: [],
         panelBody: null,
+        panelGlass: null,
+        panelRim: null,
         panelBodyShape: null,
-        panelBodyNoise: null,
         panel: null,
         scroller: null,
         trigger: null,
