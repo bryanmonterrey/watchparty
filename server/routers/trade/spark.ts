@@ -31,10 +31,18 @@ import { coinCandles } from "@/db/schema/content/coin-candles";
  * component's whole reason for distinguishing "no series" from "no movement".
  *
  * The KEY is right, in case this ever looks broken: candles are stored per
- * POOL, and 229 of trending_coins' rows join to them on pool_address. What
- * is thin is the recording — /api/cron/tape-watch, which subscribes Mobula's
- * socket to the top board MINTS (the pool is resolved per trade as it is
- * written), has never been scheduled, so almost nothing fresh arrives.
+ * POOL, and 229 of trending_coins' rows join to them on pool_address.
+ *
+ * What is thin is the RECORDING, and it is a PLAN gate, not a missing cron.
+ * /api/cron/tape-watch — which subscribes Mobula's socket to the top board
+ * MINTS, each trade resolving its own pool as it is written — is dispatched
+ * every minute already, and it returns early: Mobula refuses WebSockets below
+ * the Growth plan ($400/mo), verified against their live endpoint 2026-08-12
+ * and guarded by TAPE_WATCH_ENABLED. So the only writers today are the Helius
+ * webhook's few watched mints and record-mobula-trades on coin pages people
+ * actually open — which is why 13 pools have a fresh hourly bar and 3,801
+ * board rows do not. Nothing here is fixable in this file; it fixes itself
+ * the day a socket is allowed.
  *
  * ## Never throws
  *
