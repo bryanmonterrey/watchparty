@@ -149,14 +149,14 @@ export function ActivityFeed({ isLive, action }: { isLive: boolean; action?: Rea
                                             <span className="text-muted-foreground">{meaning.verb}</span>
                                         </p>
                                         {n.body ? (
-                                            <p className="truncate text-[11px] text-muted-foreground">{n.body}</p>
+                                            <p className="truncate text-11 text-muted-foreground">{n.body}</p>
                                         ) : null}
                                     </div>
                                     <HugeiconsIcon
                                         icon={meaning.icon}
                                         className={`size-3.5 shrink-0 ${meaning.tone}`}
                                     />
-                                    <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
+                                    <span className="shrink-0 text-11 tabular-nums text-muted-foreground">
                                         {ago(n.at)}
                                     </span>
                                 </li>

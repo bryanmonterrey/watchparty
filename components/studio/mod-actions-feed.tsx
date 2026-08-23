@@ -96,12 +96,12 @@ export function ModActionsFeed({ isLive, action }: { isLive: boolean; action?: R
                                         </p>
                                         {/* A ban's reason is the whole point of auditing it. */}
                                         {r.action === "ban" && r.detail ? (
-                                            <p className="truncate text-[11px] text-muted-foreground">
+                                            <p className="truncate text-11 text-muted-foreground">
                                                 “{r.detail}”
                                             </p>
                                         ) : null}
                                     </div>
-                                    <span className="shrink-0 pt-0.5 text-[11px] tabular-nums text-muted-foreground">
+                                    <span className="shrink-0 pt-0.5 text-11 tabular-nums text-muted-foreground">
                                         {ago(r.createdAt)}
                                     </span>
                                 </li>

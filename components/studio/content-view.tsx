@@ -271,7 +271,7 @@ function BroadcastsTab() {
               <p className="text-xs tabular-nums">
                 {fmtCount(b.peakViewers)} <span className="text-muted-foreground">peak</span>
               </p>
-              <p className="text-[11px] tabular-nums text-muted-foreground">
+              <p className="text-11 tabular-nums text-muted-foreground">
                 {fmtCount(b.avgViewers ?? 0)} avg
               </p>
             </div>

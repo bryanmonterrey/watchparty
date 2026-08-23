@@ -134,7 +134,7 @@ export function StreamDiscoveryFields({
                     <label className="flex h-11 w-full cursor-pointer items-center justify-between gap-3 rounded-xl border border-border/60 px-3">
                         <span className="flex flex-col">
                             <span className="text-sm">18+</span>
-                            <span className="text-[11px] text-muted-foreground">Mature content</span>
+                            <span className="text-11 text-muted-foreground">Mature content</span>
                         </span>
                         <Switch checked={isMature} onCheckedChange={onMatureChange} />
                     </label>

@@ -103,7 +103,7 @@ export function CategoryPicker({
             {/* Says whether this stream will actually appear under a category,
                 which is the only reason the picker exists. */}
             {value.trim() && catalog ? (
-                <p className="mt-1 text-[11px] text-muted-foreground">
+                <p className="mt-1 text-11 text-muted-foreground">
                     {exact ? "Listed in this category." : "Custom — viewers won't find this under a category."}
                 </p>
             ) : null}
