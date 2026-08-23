@@ -152,6 +152,38 @@ either can lead, but the cockpit is the higher-identity, lower-new-code win.
 
 ## Status
 
-- S1: **shipped** (`042c69da`, `3eebb93d`).
-- S2–S6: specced above. Subdomain cutover (DNS + worker route for
-  studio.watchparty.xyz → main app) is an ops step, like the console.
+Updated 2026-08-22. **S1–S6 have all shipped** — this section said "S2–S6:
+specced" for ten commits after they landed, which is worse than no status at
+all: it sends the next reader to rebuild what exists.
+
+- **S1** foundation — `042c69da`, `3eebb93d`
+- **S2** cockpit — `64c87764` (layout + live viewers), `94426941` (preview),
+  `6f318ed1` (chat panel, session health, time-live), plus the Activity Feed
+- **S3** content — `1e41f0c8` (drafts/scheduled), `56ebc728` (Library +
+  Producer/Broadcasts), `2ff4b471` + `8d375418` (in-studio upload), `9a1f4c2e`
+- **S4** community — `96e0a4cd` (roles, banned, welcome message)
+- **S5** analytics — `2e9e461a` (real metrics, no fabricated charts)
+- **S6** — `c2453e3e` (Revenue), plus the category typeahead and the persistent
+  Go-live control
+
+### Genuinely open, and why
+
+- **Mod-Actions feed** (S2 panel 7) — BLOCKED, no backend. `moderation.ts` has
+  the verbs (ban/unban/mute/hide) but writes no audit log, so there is nothing
+  to read. Needs a table before it needs UI.
+- **Per-stream summary + time-series** (S5 drill-down) — BLOCKED on metrics we
+  do not store. Peak/average CCV over a broadcast means sampling viewer counts
+  somewhere; `stream_sessions` keeps start/end only.
+- **New subscribers in the Activity Feed** — `subscription.getMySubscribers`
+  has no subscribed-at column, only `currentPeriodEnd`. Placing one on a
+  timeline would mean inventing when it happened. One nullable column unblocks it.
+- **Stream-key reset** (S6) — buildable, unbuilt: `generateConnection` REUSES
+  the existing IVS channel and key by design, so a reset needs its own mutation
+  (DeleteStreamKey + CreateStreamKey).
+- **Tags / language / 18+ flag** (S6) — buildable, needs additive nullable
+  columns on `streams` + the `updateInfo` input. Category is done (typeahead
+  over the real 612-entry catalog).
+- **Saved layouts + pop-out widgets** (S6) — pure UI, no blocker, just unbuilt.
+
+Subdomain cutover (DNS + worker route for studio.watchparty.xyz → main app) is
+still an ops step, like the console.

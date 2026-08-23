@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { GoLiveButton } from "@/components/studio/go-live-button";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import {
   Home01Icon,
@@ -64,7 +65,11 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        <div className="mt-auto">
+        <div className="mt-auto flex flex-col gap-2">
+          {/* Persistent, on every studio page — the cockpit is where you set a
+              broadcast UP, not the only place you should be able to start or
+              end one. */}
+          <GoLiveButton />
           <a
             href="https://watchparty.xyz/home"
             className="flex h-9 items-center gap-3 rounded-lg px-3 text-xs text-muted-foreground transition-colors hover:bg-accent/50"
@@ -95,6 +100,11 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
               </Link>
             );
           })}
+          {/* `ml-auto` + `shrink-0`: the nav row scrolls horizontally, and the
+              one control you may need mid-broadcast must not scroll away. */}
+          <div className="ml-auto shrink-0 pl-2">
+            <GoLiveButton className="!h-8 px-3 text-xs" />
+          </div>
         </div>
         <main className="min-w-0 flex-1">{children}</main>
       </div>

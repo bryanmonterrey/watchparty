@@ -8,13 +8,17 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 import { Button } from "@/components/ui/button";
 import { StreamPreview } from "@/components/studio/stream-preview";
 import { StreamChat } from "@/components/studio/stream-chat";
+import { ActivityFeed } from "@/components/studio/activity-feed";
+import { CategoryPicker } from "@/components/studio/category-picker";
 
 // The studio's stream cockpit (S2). A widget grid, not a form: live stat
 // tiles, the go-live control, Channel Actions (chat modes), ingest, and stream
 // info — the Kick/Twitch Stream-Manager shape, surfacing procedures that
 // already exist (stream.getMine / generateConnection / updateInfo /
-// setLiveStatus / setChatMode / dashboardStats). Chat panel, activity feed,
-// and session-health are the next cockpit slice.
+// setLiveStatus / setChatMode / dashboardStats). Chat, session health,
+// time-live and the Activity Feed have since landed; what the plan still lists
+// as open here is the Mod-Actions feed (no audit-log procedure exists yet) and
+// S6's saved/pop-out layouts.
 
 function CopyField({ label, value, secret }: { label: string; value: string; secret?: boolean }) {
   const [copied, setCopied] = React.useState(false);
@@ -288,13 +292,7 @@ export function StreamManager() {
               </div>
               <div>
                 <p className="mb-1 text-xs text-muted-foreground">Category</p>
-                <input
-                  value={category}
-                  maxLength={50}
-                  onChange={(e) => setCategory(e.target.value)}
-                  placeholder="e.g. Just Chatting, Trading, Music"
-                  className="h-11 w-full rounded-xl border border-border/60 bg-transparent px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                />
+                <CategoryPicker value={category} onChange={setCategory} />
               </div>
               <div className="flex items-center gap-3">
                 <Button
@@ -311,7 +309,13 @@ export function StreamManager() {
           </div>
             </div>
           </div>
-          {userId ? <StreamChat hostUserId={userId} hasChatRoom={!!stream?.chatRoomArn} /> : null}
+          {/* The right rail is the "what is happening right now" column: chat
+              first (a streamer reads it constantly), activity under it. Both
+              poll faster while live — off-air the same cadence is pure cost. */}
+          <div className="flex min-w-0 flex-col gap-4">
+            {userId ? <StreamChat hostUserId={userId} hasChatRoom={!!stream?.chatRoomArn} /> : null}
+            <ActivityFeed isLive={isLive} />
+          </div>
         </div>
         </>
       )}
