@@ -10,7 +10,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { streams } from "@/db/schema/content/stream";
-import { eq, and, inArray, notInArray, isNotNull } from "drizzle-orm";
+import { streamSessions } from "@/db/schema/content/stream-session";
+import { eq, and, inArray, notInArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { dispatchDeveloperEvent } from "@/lib/developer/webhooks";
 import { IvsClient, ListStreamsCommand } from "@aws-sdk/client-ivs";
 
@@ -53,6 +54,25 @@ export async function GET(req: NextRequest) {
             .where(inArray(streams.channelArn, arns));
         for (const row of rows) {
             const count = liveByArn.get(row.channelArn!) ?? 0;
+
+            // FOLD THE SAMPLE into this user's open broadcast, every pass —
+            // unconditionally, unlike the update below, which only fires on
+            // change. An audience that sits at exactly 412 for ten minutes is
+            // ten samples, not one, and skipping the unchanged ones would drag
+            // the average toward whatever number moved most.
+            //
+            // This runs every minute and already holds the count, which is why
+            // per-stream CCV needed no cron of its own. Straight to SQL so
+            // peak/sum/count move in ONE statement — read-modify-write across
+            // two round trips would lose samples whenever a pass overlapped.
+            await db.update(streamSessions)
+                .set({
+                    peakViewers: sql`GREATEST(${streamSessions.peakViewers}, ${count})`,
+                    sampleCount: sql`${streamSessions.sampleCount} + 1`,
+                    viewerSum: sql`${streamSessions.viewerSum} + ${count}`,
+                })
+                .where(and(eq(streamSessions.userId, row.userId), isNull(streamSessions.endedAt)));
+
             if (!row.isLive || row.viewerCount !== count) {
                 await db.update(streams)
                     .set({ isLive: true, viewerCount: count, updatedAt: new Date() })

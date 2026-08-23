@@ -1,4 +1,4 @@
-import { index, pgPolicy, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { bigint, index, integer, pgPolicy, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { user } from "../auth/user";
 
@@ -14,6 +14,21 @@ export const streamSessions = pgTable("stream_sessions", {
     category: text("category"),
     startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
     endedAt: timestamp("ended_at", { withTimezone: true }),
+    // ── Concurrent-viewer aggregates (db/stream-session-ccv.sql) ─────────
+    // Folded in by the ivs-viewers cron, which already runs EVERY MINUTE and
+    // already holds every live channel's viewerCount — so per-stream CCV cost
+    // no new cron, no new endpoint and no samples table. Three running numbers
+    // instead of a row per minute: a table would grow by (live streams ×
+    // minutes) forever to answer two questions.
+    //
+    // avg = viewerSum / sampleCount. Honest about what it is: the mean of
+    // once-a-minute samples, not a time-weighted average — evenly spaced
+    // samples make that difference small, and a spike lasting under a minute
+    // can still be missed entirely, which is why PEAK is stored rather than
+    // derived.
+    peakViewers: integer("peak_viewers").default(0).notNull(),
+    sampleCount: integer("sample_count").default(0).notNull(),
+    viewerSum: bigint("viewer_sum", { mode: "number" }).default(0).notNull(),
 }, (table) => [
     index("idx_stream_sessions_user").on(table.userId, table.startedAt),
     pgPolicy("stream_sessions_own_read", {

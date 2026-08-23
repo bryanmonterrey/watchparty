@@ -28,6 +28,20 @@ export const streams = pgTable("streams", {
     // lost across the reload that routinely separates setup from going live.
     // Re-filtered against the title at go-live. See db/stream-post-columns.sql.
     tags: jsonb("tags").$type<{ network: string; tokenAddress: string; symbol: string; tokenId?: string | null }[]>(),
+    // ── What viewers filter and search by (db/stream-discovery-columns.sql) ──
+    // Discovery tags, NOT the coin tags above. `tags` (jsonb) is the token
+    // picker's; these are Kick/Twitch-style free words ("speedrun", "no mic")
+    // that a browse surface can filter on, and conflating the two would put
+    // token addresses in a tag pill.
+    streamTags: text("stream_tags").array(),
+    // BCP-47-ish, whatever the picker offers ("en", "es"). Nullable means
+    // "not stated", which is different from English and must stay different.
+    language: text("language"),
+    // NOT NULL DEFAULT false, deliberately, where the house rule prefers
+    // nullable: a null here would read as "maybe mature", and every consumer
+    // would have to decide what that means. Safe to add — Postgres 11+ writes
+    // a default in the catalog rather than rewriting the table.
+    isMature: boolean("is_mature").default(false).notNull(),
     thumbnailUrl: text("thumbnailUrl"),
     viewerCount: integer("viewerCount").default(0).notNull(),
     // Who may talk in this channel's chat, and how long they must have followed

@@ -22,6 +22,7 @@ import { evaluateChatGate } from "@/lib/chat/gate";
 import { count as sqlCount, gte } from "drizzle-orm";
 import { rooms } from "@/lib/realtime/protocol";
 import { subscriptions } from "@/db/schema/content/subscription";
+import { logModAction } from "@/server/lib/mod-log";
 
 const region = process.env.AWS_REGION ?? "us-east-1";
 
@@ -467,6 +468,62 @@ export const streamRouter = router({
             return { serverUrl, streamKey: streamKeyValue, playbackUrl: playbackUrl ?? null };
         }),
 
+    /**
+     * Mint a NEW stream key and destroy the old one.
+     *
+     * `generateConnection` cannot do this: it finds the existing channel and
+     * REUSES its key, by design — that is what makes it safe to call on every
+     * Ingest refresh. So a creator who pasted their key into a Discord, or let
+     * a clip show OBS's settings pane, had no way to invalidate it.
+     *
+     * Order matters. Create first, then delete the old one: if the delete
+     * succeeded and the create then failed, the channel would be left with NO
+     * key and the creator could not stream at all until support intervened.
+     * The reverse leaves a brief window with two valid keys, which is strictly
+     * better — and IVS caps a channel's keys, so the delete is not optional.
+     *
+     * Not allowed while live: swapping the key mid-broadcast does not stop the
+     * current session, it just guarantees the reconnect fails. Ending first is
+     * the honest sequence.
+     */
+    resetStreamKey: protectedProcedure.mutation(async ({ ctx }) => {
+        const row = await db.query.streams.findFirst({ where: eq(streams.userId, ctx.user.id) });
+        if (!row?.channelArn) {
+            throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Generate a stream key first." });
+        }
+        if (row.isLive) {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message: "End your stream before resetting the key.",
+            });
+        }
+
+        const { CreateStreamKeyCommand, DeleteStreamKeyCommand, ListStreamKeysCommand } = await ivsSdk();
+        const ivs = await ivsClient();
+
+        const existing = await ivs.send(new ListStreamKeysCommand({ channelArn: row.channelArn }));
+        const created = await ivs.send(new CreateStreamKeyCommand({ channelArn: row.channelArn }));
+        const fresh = created.streamKey?.value;
+        if (!fresh) {
+            throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "IVS returned no stream key." });
+        }
+
+        for (const old of existing.streamKeys ?? []) {
+            if (!old.arn || old.arn === created.streamKey?.arn) continue;
+            // One key's cleanup failing must not lose the new key we already
+            // hold — the row below is what the creator streams with.
+            try {
+                await ivs.send(new DeleteStreamKeyCommand({ arn: old.arn }));
+            } catch {}
+        }
+
+        await db.update(streams)
+            .set({ streamKey: fresh, updatedAt: new Date() })
+            .where(eq(streams.userId, ctx.user.id));
+
+        return { streamKey: fresh };
+    }),
+
     // Update stream metadata
     updateInfo: protectedProcedure
         .input(z.object({
@@ -481,6 +538,15 @@ export const streamRouter = router({
             // leave a title still reading "$TICKER" with no tags behind it.
             // Same validator the composer uses, so the two cannot drift.
             tags: postTagsInput,
+            // ── Discovery metadata (S6) ──────────────────────────────────
+            // Free words, not the coin tags above. Capped at 5 × 25 because
+            // this is a filter facet, not a description — Kick allows a
+            // handful and the browse UI has room for a handful.
+            streamTags: z.array(z.string().trim().min(1).max(25)).max(5).optional(),
+            // Nullable through the API too: clearing the picker must be able
+            // to say "not stated" again, which "" cannot express.
+            language: z.string().max(16).nullable().optional(),
+            isMature: z.boolean().optional(),
         }))
         .mutation(async ({ ctx, input }) => {
             await db.update(streams).set({ ...input, updatedAt: new Date() }).where(eq(streams.userId, ctx.user.id));
@@ -545,15 +611,23 @@ export const streamRouter = router({
                 category: streamSessions.category,
                 startedAt: streamSessions.startedAt,
                 endedAt: streamSessions.endedAt,
+                peakViewers: streamSessions.peakViewers,
+                sampleCount: streamSessions.sampleCount,
+                viewerSum: streamSessions.viewerSum,
             })
             .from(streamSessions)
             .where(eq(streamSessions.userId, ctx.user.id))
             .orderBy(desc(streamSessions.startedAt))
             .limit(50);
-        return rows.map((r) => ({
+        return rows.map(({ sampleCount, viewerSum, ...r }) => ({
             ...r,
             live: r.endedAt === null,
             durationSec: r.endedAt ? Math.max(0, Math.round((r.endedAt.getTime() - r.startedAt.getTime()) / 1000)) : null,
+            // NULL, not 0, when nothing was sampled: every broadcast from
+            // before the aggregates existed has no measurement, and a zero
+            // there would claim an empty room. The UI shows a dash.
+            avgViewers: sampleCount > 0 ? Math.round(viewerSum / sampleCount) : null,
+            peakViewers: sampleCount > 0 ? r.peakViewers : null,
         }));
     }),
 
@@ -640,6 +714,14 @@ export const streamRouter = router({
                 t: "pin",
                 id: messageId,
                 by: ctx.user.name ?? "a moderator",
+            });
+            // A null messageId is an UNPIN — same verb, opposite meaning, and
+            // the log would be a lie if both read "pinned".
+            await logModAction({
+                creatorId,
+                actorId: ctx.user.id,
+                action: "pin_message",
+                detail: messageId ? `pinned ${messageId}` : "cleared the pin",
             });
             return { success: true };
         }),
@@ -737,6 +819,15 @@ export const streamRouter = router({
             await db.update(streams)
                 .set({ chatMode: input.mode, chatFollowerMinutes: input.followerMinutes, updatedAt: new Date() })
                 .where(eq(streams.userId, input.creatorId));
+            // actorId, not creatorId — a moderator can change this, and "who
+            // closed my chat to followers-only" is the question the log exists
+            // to answer.
+            await logModAction({
+                creatorId: input.creatorId,
+                actorId: ctx.user.id,
+                action: "chat_mode",
+                detail: input.followerMinutes > 0 ? `${input.mode} · ${input.followerMinutes}m` : input.mode,
+            });
             return { success: true };
         }),
 

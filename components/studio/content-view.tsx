@@ -262,6 +262,20 @@ function BroadcastsTab() {
               {b.category ? ` · ${b.category}` : ""}
             </p>
           </div>
+          {/* Peak/avg CCV — folded in every minute by the ivs-viewers cron
+              while the broadcast is open (db/stream-session-ccv.sql). A
+              broadcast from before that existed has no samples and shows
+              nothing rather than a zero it never measured. */}
+          {b.peakViewers !== null ? (
+            <div className="shrink-0 text-right">
+              <p className="text-xs tabular-nums">
+                {fmtCount(b.peakViewers)} <span className="text-muted-foreground">peak</span>
+              </p>
+              <p className="text-[11px] tabular-nums text-muted-foreground">
+                {fmtCount(b.avgViewers ?? 0)} avg
+              </p>
+            </div>
+          ) : null}
           {b.durationSec ? (
             <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
               {fmtBroadcastDuration(b.durationSec)}

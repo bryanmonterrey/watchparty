@@ -6,6 +6,7 @@ import { vipMembers, creatorModerators, welcomeMessageConfig, massMessages, medi
 import { follows } from '@/db/schema/content/follow';
 import { eq, and, desc, count } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
+import { logModAction } from "@/server/lib/mod-log";
 
 export const creatorRouter = router({
 
@@ -39,6 +40,7 @@ export const creatorRouter = router({
             const existing = await db.select({ id: vipMembers.id }).from(vipMembers).where(and(eq(vipMembers.creatorId, ctx.user.id), eq(vipMembers.memberId, input.memberId))).limit(1);
             if (existing.length >= 100) throw new Error("VIP limit reached (100)");
             await db.insert(vipMembers).values({ id: nanoid(), creatorId: ctx.user.id, memberId: input.memberId, note: input.note }).onConflictDoNothing();
+            await logModAction({ creatorId: ctx.user.id, actorId: ctx.user.id, targetUserId: input.memberId, action: "vip_add", detail: input.note });
             return { success: true };
         }),
 
@@ -46,6 +48,7 @@ export const creatorRouter = router({
         .input(z.object({ memberId: z.string() }))
         .mutation(async ({ ctx, input }) => {
             await db.delete(vipMembers).where(and(eq(vipMembers.creatorId, ctx.user.id), eq(vipMembers.memberId, input.memberId)));
+            await logModAction({ creatorId: ctx.user.id, actorId: ctx.user.id, targetUserId: input.memberId, action: "vip_remove" });
             return { success: true };
         }),
 
@@ -77,6 +80,7 @@ export const creatorRouter = router({
         .mutation(async ({ ctx, input }) => {
             if (ctx.user.id === input.moderatorId) throw new Error("Cannot add yourself as moderator");
             await db.insert(creatorModerators).values({ id: nanoid(), creatorId: ctx.user.id, moderatorId: input.moderatorId }).onConflictDoNothing();
+            await logModAction({ creatorId: ctx.user.id, actorId: ctx.user.id, targetUserId: input.moderatorId, action: "mod_add" });
             return { success: true };
         }),
 
@@ -84,6 +88,7 @@ export const creatorRouter = router({
         .input(z.object({ moderatorId: z.string() }))
         .mutation(async ({ ctx, input }) => {
             await db.delete(creatorModerators).where(and(eq(creatorModerators.creatorId, ctx.user.id), eq(creatorModerators.moderatorId, input.moderatorId)));
+            await logModAction({ creatorId: ctx.user.id, actorId: ctx.user.id, targetUserId: input.moderatorId, action: "mod_remove" });
             return { success: true };
         }),
 

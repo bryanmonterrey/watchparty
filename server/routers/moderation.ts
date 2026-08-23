@@ -3,8 +3,12 @@ import { protectedProcedure, publicProcedure, router } from '../trpc';
 import { db } from '@/db';
 import { blocks, mutes, hiddenPosts, reports, verificationRequests, creatorBans } from '@/db/schema/content/moderation';
 import { follows } from '@/db/schema/content/follow';
+import { user } from '@/db/schema/auth/user';
 import { and, eq, desc } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { nanoid } from 'nanoid';
+import { logModAction } from "@/server/lib/mod-log";
+import { moderationActions } from "@/db/schema/content/moderation-action";
 
 export const moderationRouter = router({
     // ─── Block ──────────────────────────────────────────────────────────────
@@ -237,6 +241,40 @@ export const moderationRouter = router({
 
     // ─── Creator Bans ─────────────────────────────────────────────────────────
 
+    /**
+     * This channel's moderation audit log (studio S2 panel 7).
+     *
+     * Own channel only — `creatorId` is pinned to the caller rather than taken
+     * as input, so there is no shape of request that reads someone else's log.
+     * Moderators acting here write rows owned by the CHANNEL, which is why one
+     * equality answers "everything that happened in my chat".
+     *
+     * Two left joins because both people are ON DELETE SET NULL: a deleted
+     * account keeps its line in the log and loses its name, and an inner join
+     * would silently drop exactly the rows most worth keeping.
+     */
+    getModActions: protectedProcedure
+        .input(z.object({ limit: z.number().min(1).max(50).default(20) }).optional())
+        .query(async ({ ctx, input }) => {
+            const actor = alias(user, "mod_actor");
+            const target = alias(user, "mod_target");
+            return db
+                .select({
+                    id: moderationActions.id,
+                    action: moderationActions.action,
+                    detail: moderationActions.detail,
+                    createdAt: moderationActions.createdAt,
+                    actor: { name: actor.name, username: actor.username, avatar_url: actor.avatar_url },
+                    target: { name: target.name, username: target.username, avatar_url: target.avatar_url },
+                })
+                .from(moderationActions)
+                .leftJoin(actor, eq(moderationActions.actorId, actor.id))
+                .leftJoin(target, eq(moderationActions.targetUserId, target.id))
+                .where(eq(moderationActions.creatorId, ctx.user.id))
+                .orderBy(desc(moderationActions.createdAt))
+                .limit(input?.limit ?? 20);
+        }),
+
     banUser: protectedProcedure
         .input(z.object({ userId: z.string(), reason: z.string().optional() }))
         .mutation(async ({ ctx, input }) => {
@@ -247,6 +285,7 @@ export const moderationRouter = router({
                 bannedUserId: input.userId,
                 reason: input.reason,
             }).onConflictDoNothing();
+            await logModAction({ creatorId: ctx.user.id, actorId: ctx.user.id, targetUserId: input.userId, action: "ban", detail: input.reason });
             return { success: true };
         }),
 
@@ -256,6 +295,7 @@ export const moderationRouter = router({
             await db.delete(creatorBans).where(
                 and(eq(creatorBans.creatorId, ctx.user.id), eq(creatorBans.bannedUserId, input.userId))
             );
+            await logModAction({ creatorId: ctx.user.id, actorId: ctx.user.id, targetUserId: input.userId, action: "unban" });
             return { success: true };
         }),
 

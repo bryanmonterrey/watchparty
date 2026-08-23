@@ -13,6 +13,7 @@ export * from "./story";
 export * from "./post_unlock";
 export * from "./notification";
 export * from "./moderation";
+export * from "./moderation-action";
 export * from "./creator";
 export * from "./notification_prefs";
 export * from "./stream";

@@ -7,9 +7,9 @@ import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { Button } from "@/components/ui/button";
 import { StreamPreview } from "@/components/studio/stream-preview";
-import { StreamChat } from "@/components/studio/stream-chat";
-import { ActivityFeed } from "@/components/studio/activity-feed";
 import { CategoryPicker } from "@/components/studio/category-picker";
+import { PanelRail } from "@/components/studio/panel-rail";
+import { StreamDiscoveryFields } from "@/components/studio/stream-discovery-fields";
 
 // The studio's stream cockpit (S2). A widget grid, not a form: live stat
 // tiles, the go-live control, Channel Actions (chat modes), ingest, and stream
@@ -147,13 +147,25 @@ export function StreamManager() {
 
   const [title, setTitle] = React.useState("");
   const [category, setCategory] = React.useState("");
+  const [streamTags, setStreamTags] = React.useState<string[]>([]);
+  const [language, setLanguage] = React.useState<string>("");
+  const [isMature, setIsMature] = React.useState(false);
   React.useEffect(() => {
     if (stream) {
       setTitle(stream.title ?? "");
       setCategory(stream.category ?? "");
+      setStreamTags(stream.streamTags ?? []);
+      // "" is the picker's "not stated"; null is the column's. They mean the
+      // same thing and only one of them can live in a <select>.
+      setLanguage(stream.language ?? "");
+      setIsMature(stream.isMature ?? false);
     }
   }, [stream]);
 
+  const resetKey = trpc.stream.resetStreamKey.useMutation({
+    onSuccess: () => void utils.stream.getMine.invalidate(),
+  });
+  const [confirmReset, setConfirmReset] = React.useState(false);
   const generate = trpc.stream.generateConnection.useMutation({
     onSuccess: () => void utils.stream.getMine.invalidate(),
   });
@@ -167,7 +179,12 @@ export function StreamManager() {
   const provisioned = !!stream?.streamKey && !!stream?.serverUrl;
   const isLive = !!stream?.isLive || !!live.data?.isLive;
   const health = healthBadge(live.data?.health);
-  const dirty = title !== (stream?.title ?? "") || category !== (stream?.category ?? "");
+  const dirty =
+    title !== (stream?.title ?? "") ||
+    category !== (stream?.category ?? "") ||
+    language !== (stream?.language ?? "") ||
+    isMature !== (stream?.isMature ?? false) ||
+    streamTags.join("\u0000") !== (stream?.streamTags ?? []).join("\u0000");
   const fmt = (n: number | undefined) => (n === undefined ? "—" : new Intl.NumberFormat().format(n));
 
   return (
@@ -273,6 +290,45 @@ export function StreamManager() {
                 <CopyField label="Stream key" value={stream!.streamKey!} secret />
                 {stream?.playbackUrl ? <CopyField label="Playback URL" value={stream.playbackUrl} /> : null}
               </div>
+
+              {/* A leaked key is the one stream problem you cannot fix by
+                  editing something — until now the only remedy was support.
+                  Two-step because it breaks every encoder already configured:
+                  destructive, and worth one deliberate beat. */}
+              <div className="mt-3 border-t border-border/60 pt-3">
+                {confirmReset ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="w-full text-xs text-muted-foreground">
+                      This invalidates your current key — OBS and anything else
+                      configured with it stops working until you paste the new one.
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      disabled={resetKey.isPending}
+                      onClick={() => {
+                        resetKey.mutate(undefined, { onSuccess: () => setConfirmReset(false) });
+                      }}
+                    >
+                      {resetKey.isPending ? "Resetting…" : "Reset key"}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setConfirmReset(false)}>
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmReset(true)}
+                    className="text-xs text-muted-foreground transition-colors hover:text-destructive"
+                  >
+                    Reset stream key
+                  </button>
+                )}
+                {resetKey.error ? (
+                  <p className="mt-2 text-xs text-destructive">{resetKey.error.message}</p>
+                ) : null}
+              </div>
             </div>
           ) : null}
 
@@ -294,10 +350,29 @@ export function StreamManager() {
                 <p className="mb-1 text-xs text-muted-foreground">Category</p>
                 <CategoryPicker value={category} onChange={setCategory} />
               </div>
+              <StreamDiscoveryFields
+                tags={streamTags}
+                onTagsChange={setStreamTags}
+                language={language}
+                onLanguageChange={setLanguage}
+                isMature={isMature}
+                onMatureChange={setIsMature}
+              />
               <div className="flex items-center gap-3">
                 <Button
                   disabled={!dirty || updateInfo.isPending}
-                  onClick={() => updateInfo.mutate({ title: title.trim(), category: category.trim() })}
+                  onClick={() =>
+                    updateInfo.mutate({
+                      title: title.trim(),
+                      category: category.trim(),
+                      streamTags,
+                      // Back to null, not "": the column distinguishes "not
+                      // stated" from a language, and the API must be able to
+                      // say so.
+                      language: language || null,
+                      isMature,
+                    })
+                  }
                 >
                   {updateInfo.isPending ? "Saving…" : "Save"}
                 </Button>
@@ -312,10 +387,7 @@ export function StreamManager() {
           {/* The right rail is the "what is happening right now" column: chat
               first (a streamer reads it constantly), activity under it. Both
               poll faster while live — off-air the same cadence is pure cost. */}
-          <div className="flex min-w-0 flex-col gap-4">
-            {userId ? <StreamChat hostUserId={userId} hasChatRoom={!!stream?.chatRoomArn} /> : null}
-            <ActivityFeed isLive={isLive} />
-          </div>
+          <PanelRail userId={userId} isLive={isLive} hasChatRoom={!!stream?.chatRoomArn} />
         </div>
         </>
       )}

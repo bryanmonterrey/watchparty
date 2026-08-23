@@ -270,6 +270,12 @@ export const subscriptionRouter = router({
             status: subscriptions.status,
             billingCycle: subscriptions.billingCycle,
             currentPeriodEnd: subscriptions.currentPeriodEnd,
+            // WHEN they subscribed, not when the period rolls over. The
+            // studio's activity feed places subscribers on a timeline beside
+            // follows and trades, and currentPeriodEnd answers a different
+            // question — it moves on every renewal, so ordering by it puts the
+            // longest-committed subscriber on top and calls them the newest.
+            createdAt: subscriptions.createdAt,
             tier: {
                 id: subscriptionTiers.id,
                 name: subscriptionTiers.name,
@@ -285,7 +291,7 @@ export const subscriptionRouter = router({
             .innerJoin(subscriptionTiers, eq(subscriptions.tierId, subscriptionTiers.id))
             .innerJoin(subUser, eq(subscriptions.subscriberId, subUser.id))
             .where(and(eq(subscriptions.creatorId, ctx.user.id), eq(subscriptions.status, "active")))
-            .orderBy(desc(subscriptions.currentPeriodEnd));
+            .orderBy(desc(subscriptions.createdAt));
     }),
 
     isSubscribed: publicProcedure
