@@ -11,11 +11,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { streams } from "@/db/schema/content/stream";
 import { streamSessions } from "@/db/schema/content/stream-session";
-import { eq, and, inArray, notInArray, isNotNull, isNull, sql } from "drizzle-orm";
+import { streamSamples } from "@/db/schema/content/stream-sample";
+import { nanoid } from "nanoid";
+import { eq, and, inArray, notInArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import { dispatchDeveloperEvent } from "@/lib/developer/webhooks";
 import { IvsClient, ListStreamsCommand } from "@aws-sdk/client-ivs";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * How long the per-minute samples live. Thirty days matches how far back the
+ * studio's broadcast list goes; past that a creator is reading totals, not
+ * shapes, and the aggregates carry those forever.
+ */
+const RETENTION_DAYS = 30;
 export const maxDuration = 60;
 
 export async function GET(req: NextRequest) {
@@ -45,6 +54,7 @@ export async function GET(req: NextRequest) {
 
     let updated = 0;
     let healedOffline = 0;
+    let pruned = 0;
 
     if (liveByArn.size > 0) {
         const arns = [...liveByArn.keys()];
@@ -65,13 +75,26 @@ export async function GET(req: NextRequest) {
             // per-stream CCV needed no cron of its own. Straight to SQL so
             // peak/sum/count move in ONE statement — read-modify-write across
             // two round trips would lose samples whenever a pass overlapped.
-            await db.update(streamSessions)
+            const [openSession] = await db.update(streamSessions)
                 .set({
                     peakViewers: sql`GREATEST(${streamSessions.peakViewers}, ${count})`,
                     sampleCount: sql`${streamSessions.sampleCount} + 1`,
                     viewerSum: sql`${streamSessions.viewerSum} + ${count}`,
                 })
-                .where(and(eq(streamSessions.userId, row.userId), isNull(streamSessions.endedAt)));
+                .where(and(eq(streamSessions.userId, row.userId), isNull(streamSessions.endedAt)))
+                .returning({ id: streamSessions.id });
+
+            // And keep the SHAPE, not just the summary — one point per minute,
+            // pruned below. `returning` rather than a second lookup: the update
+            // already found the open session, and asking again would be a
+            // second round trip for a row we just touched.
+            if (openSession) {
+                await db.insert(streamSamples).values({
+                    id: nanoid(),
+                    sessionId: openSession.id,
+                    viewers: count,
+                });
+            }
 
             if (!row.isLive || row.viewerCount !== count) {
                 await db.update(streams)
@@ -106,5 +129,19 @@ export async function GET(req: NextRequest) {
         }
     }
 
-    return NextResponse.json({ liveOnIvs: liveByArn.size, updated, healedOffline });
+    // PRUNE, on the same pass that writes. A retention window enforced by the
+    // only job that ever inserts cannot drift out of sync with the inserts, and
+    // needs no schedule of its own. The aggregates on stream_sessions are NOT
+    // touched: an old broadcast keeps its peak and average and loses only the
+    // minute-by-minute shape.
+    const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
+    // lt(column, date), never a Date interpolated into sql`` — drizzle needs
+    // the column to know it is a timestamptz, and on Workers a raw Date reaches
+    // postgres.js and throws (see CLAUDE.md).
+    const dropped = await db.delete(streamSamples)
+        .where(lt(streamSamples.at, cutoff))
+        .returning({ id: streamSamples.id });
+    pruned = dropped.length;
+
+    return NextResponse.json({ liveOnIvs: liveByArn.size, updated, healedOffline, pruned });
 }

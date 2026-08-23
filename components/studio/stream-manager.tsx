@@ -179,6 +179,10 @@ export function StreamManager() {
   const provisioned = !!stream?.streamKey && !!stream?.serverUrl;
   const isLive = !!stream?.isLive || !!live.data?.isLive;
   const health = healthBadge(live.data?.health);
+  // IVS answering GetStream at all IS the ingest signal — ChannelNotBroadcasting
+  // is how it says "no encoder". Distinct from `isLive`, which is the PUBLISHED
+  // state the rails read.
+  const ingesting = !!live.data?.isLive;
   const dirty =
     title !== (stream?.title ?? "") ||
     category !== (stream?.category ?? "") ||
@@ -241,9 +245,11 @@ export function StreamManager() {
             <p className="mt-1 text-xs text-muted-foreground">
               {isLive
                 ? "Your channel is broadcasting. Ending here marks you offline for viewers."
-                : provisioned
-                  ? "Point your encoder at the ingest, or flip the switch here. The live badge also flips automatically when frames arrive."
-                  : "Generate your ingest server and stream key, then point OBS or your encoder at them."}
+                : !provisioned
+                  ? "Generate your ingest server and stream key, then point OBS or your encoder at them."
+                  : ingesting
+                    ? "We can see your encoder. Going live puts you on the rails and opens your chat."
+                    : "Press Start Streaming in OBS first. Going live before your encoder is sending would put a Live badge on a channel with no video."}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               {!provisioned ? (
@@ -255,12 +261,16 @@ export function StreamManager() {
                   {setLive.isPending ? "Ending…" : "End stream"}
                 </Button>
               ) : (
-                <Button disabled={setLive.isPending} onClick={() => setLive.mutate({ isLive: true })}>
-                  {setLive.isPending ? "Going live…" : "Go live"}
+                <Button
+                  disabled={setLive.isPending || !ingesting}
+                  onClick={() => setLive.mutate({ isLive: true })}
+                >
+                  {setLive.isPending ? "Going live…" : ingesting ? "Go live" : "Waiting for OBS…"}
                 </Button>
               )}
             </div>
             {generate.error ? <p className="mt-2 text-xs text-destructive">{generate.error.message}</p> : null}
+            {setLive.error ? <p className="mt-2 text-xs text-destructive">{setLive.error.message}</p> : null}
           </div>
 
           {/* Channel actions (chat modes) */}

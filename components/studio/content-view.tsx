@@ -7,6 +7,7 @@ import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { Button } from "@/components/ui/button";
 import { UploadDialog } from "@/components/studio/upload-dialog";
+import Link from "next/link";
 
 // Content management (studio S3): the creator's own pipeline. Drafts and
 // Scheduled are the real management surfaces — backed by content.getDrafts /
@@ -244,7 +245,11 @@ function BroadcastsTab() {
   return (
     <div className="flex flex-col divide-y">
       {broadcasts.data.map((b) => (
-        <div key={b.id} className="flex items-center gap-3 py-3">
+        <Link
+          key={b.id}
+          href={`/studio/broadcasts/${b.id}`}
+          className="flex items-center gap-3 py-3 transition-colors hover:bg-accent/30"
+        >
           {b.live ? (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-500">
               <span className="size-1.5 animate-pulse rounded-full bg-red-500" />
@@ -281,7 +286,7 @@ function BroadcastsTab() {
               {fmtBroadcastDuration(b.durationSec)}
             </span>
           ) : null}
-        </div>
+        </Link>
       ))}
     </div>
   );

@@ -3,10 +3,11 @@ import { router, protectedProcedure, publicProcedure } from "../trpc";
 import { db } from "@/db";
 import { streams } from "@/db/schema/content/stream";
 import { user } from "@/db/schema/auth/user";
-import { and, eq, desc, inArray, ne, sql } from "drizzle-orm";
+import { and, asc, eq, desc, inArray, ne, sql } from "drizzle-orm";
 import { dispatchDeveloperEvent } from "@/lib/developer/webhooks";
 import { openStreamSession, closeStreamSession } from "@/lib/stream/sessions";
 import { streamSessions } from "@/db/schema/content/stream-session";
+import { streamSamples } from "@/db/schema/content/stream-sample";
 import { follows } from "@/db/schema/content/follow";
 import { effectiveVerifiedTier } from "@/lib/verified-tier";
 import { TRPCError } from "@trpc/server";
@@ -582,9 +583,49 @@ export const streamRouter = router({
         }),
 
     // Webhook-style: mark live/offline (called from AWS EventBridge or your webhook handler)
+    /**
+     * Publish or unpublish the channel.
+     *
+     * TWO SEPARATE STATES, and conflating them is the bug this guard fixes:
+     *   · INGEST  — is IVS receiving frames? (encoder pressed Start)
+     *   · PUBLISH — `streams.isLive`, what viewers and the browse rails see.
+     *
+     * Going live used to flip PUBLISH with no regard for INGEST, so a creator
+     * who had not started OBS could put a "Live" badge on the rails pointing at
+     * a channel with no video. Every viewer who clicked got a dead player, and
+     * nothing about the studio said why.
+     *
+     * So publishing now REQUIRES an active ingest — the same rule X enforces:
+     * you cannot start the stream until the encoder is already sending. Checked
+     * on the SERVER, not just greyed out in the UI, because the UI's copy of
+     * the ingest state can be a poll interval stale and the mutation is
+     * reachable regardless.
+     *
+     * UNPUBLISHING is never gated. Ending must work when the encoder has
+     * already crashed — that is precisely when it is needed.
+     */
     setLiveStatus: protectedProcedure
         .input(z.object({ isLive: z.boolean() }))
         .mutation(async ({ ctx, input }) => {
+            if (input.isLive) {
+                const [row] = await db.select({ channelArn: streams.channelArn })
+                    .from(streams).where(eq(streams.userId, ctx.user.id)).limit(1);
+                if (!row?.channelArn) {
+                    throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Generate your stream key first." });
+                }
+                const { GetStreamCommand } = await ivsSdk();
+                try {
+                    await (await ivsClient()).send(new GetStreamCommand({ channelArn: row.channelArn }));
+                } catch (err) {
+                    if ((err as { name?: string })?.name === "ChannelNotBroadcasting") {
+                        throw new TRPCError({
+                            code: "PRECONDITION_FAILED",
+                            message: "Start streaming in OBS first — we can't see your encoder yet.",
+                        });
+                    }
+                    throw err;
+                }
+            }
             // The ne() guard makes this a real transition or a no-op, so the
             // developer webhook can't re-fire from same-state calls.
             const rows = await db.update(streams)
@@ -600,6 +641,57 @@ export const streamRouter = router({
                 });
             }
             return { success: true };
+        }),
+
+    /**
+     * One broadcast, in full — the per-stream summary the studio plan wanted
+     * (S5's "Stream Summary drill-down").
+     *
+     * OWNERSHIP IS CHECKED ON THE SESSION, and the samples ride on that check.
+     * `stream_samples` has no user column to scope a policy to — it is keyed on
+     * the session — so its RLS denies the browser outright and this procedure
+     * is the only way in. Fetching samples for a session you do not own is
+     * therefore impossible rather than merely unusual.
+     */
+    broadcastDetail: protectedProcedure
+        .input(z.object({ id: z.string() }))
+        .query(async ({ ctx, input }) => {
+            const [session] = await db
+                .select()
+                .from(streamSessions)
+                .where(and(eq(streamSessions.id, input.id), eq(streamSessions.userId, ctx.user.id)))
+                .limit(1);
+            if (!session) throw new TRPCError({ code: "NOT_FOUND", message: "Broadcast not found" });
+
+            const samples = await db
+                .select({ at: streamSamples.at, viewers: streamSamples.viewers })
+                .from(streamSamples)
+                .where(eq(streamSamples.sessionId, session.id))
+                .orderBy(asc(streamSamples.at));
+
+            const durationSec = session.endedAt
+                ? Math.max(0, Math.round((session.endedAt.getTime() - session.startedAt.getTime()) / 1000))
+                : Math.max(0, Math.round((Date.now() - session.startedAt.getTime()) / 1000));
+
+            return {
+                id: session.id,
+                title: session.title,
+                category: session.category,
+                startedAt: session.startedAt,
+                endedAt: session.endedAt,
+                live: session.endedAt === null,
+                durationSec,
+                // null, not 0, when nothing was sampled — a broadcast from
+                // before the aggregates existed has no measurement, and a zero
+                // would claim an empty room.
+                peakViewers: session.sampleCount > 0 ? session.peakViewers : null,
+                avgViewers: session.sampleCount > 0 ? Math.round(session.viewerSum / session.sampleCount) : null,
+                sampleCount: session.sampleCount,
+                // Empty is a real answer with two different meanings, and the
+                // UI distinguishes them: no samples ever (old broadcast), or
+                // samples pruned past the retention window.
+                samples,
+            };
         }),
 
     /** The studio Producer/Broadcasts list — this creator's past + live sessions. */

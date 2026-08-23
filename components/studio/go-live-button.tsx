@@ -24,6 +24,11 @@ import { Button } from "@/components/ui/button";
 export function GoLiveButton({ className }: { className?: string }) {
     const utils = trpc.useUtils();
     const mine = trpc.stream.getMine.useQuery(undefined, { staleTime: 20_000 });
+    // INGEST state, which is not the same as published state: this is whether
+    // IVS can see the encoder. Polled, because the answer changes the moment
+    // the creator presses Start in OBS and they should not have to reload to
+    // find that out.
+    const live = trpc.stream.liveInfo.useQuery(undefined, { refetchInterval: 15_000, staleTime: 10_000 });
     const setLive = trpc.stream.setLiveStatus.useMutation({
         onSuccess: () => {
             void utils.stream.getMine.invalidate();
@@ -34,6 +39,7 @@ export function GoLiveButton({ className }: { className?: string }) {
     const stream = mine.data;
     const provisioned = !!stream?.serverUrl && !!stream?.streamKey;
     const isLive = !!stream?.isLive;
+    const ingesting = !!live.data?.isLive;
 
     if (mine.isPending) {
         return <div className={`h-9 animate-pulse rounded-lg bg-muted/30 ${className ?? ""}`} />;
@@ -47,6 +53,22 @@ export function GoLiveButton({ className }: { className?: string }) {
             >
                 Set up your stream
             </Link>
+        );
+    }
+
+    // Not disabled-and-silent: a dead button teaches nothing. It stays
+    // clickable-looking until the encoder is seen, and the label says what is
+    // missing. (The server refuses it too — this is the explanation, not the
+    // enforcement.)
+    if (!isLive && !ingesting) {
+        return (
+            <div
+                title="Press Start Streaming in OBS. The button arms itself when we see your encoder."
+                className={`flex h-9 items-center justify-center gap-2 rounded-lg border border-border/60 px-3 text-xs text-muted-foreground ${className ?? ""}`}
+            >
+                <span className="size-1.5 rounded-full bg-muted-foreground/40" />
+                Waiting for OBS
+            </div>
         );
     }
 
