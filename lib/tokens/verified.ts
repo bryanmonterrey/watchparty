@@ -19,8 +19,12 @@ import { getChain } from "@/lib/chains/registry";
 
 /** Curated verified mints, keyed by chain. Add with a review, not by hand in prod. */
 const VERIFIED_MINTS: Partial<Record<string, ReadonlySet<string>>> = {
-  // ansem
-  solana: new Set(["9cRCn9rGT8V2imeM2BaKs13yhMEais3ruM3rPvTGpump"]),
+  solana: new Set([
+    // ansem
+    "9cRCn9rGT8V2imeM2BaKs13yhMEais3ruM3rPvTGpump",
+    // podbot — partner brand coin (added 2026-08-28)
+    "9wPWgKA9rSJj6Djkd4s7Hnm7PQt1QyPRp1kJTMFtpump",
+  ]),
 };
 
 export interface VerifiableToken {
