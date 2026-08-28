@@ -27,14 +27,21 @@ export default function HomeLoading() {
     // already draws the real left rail beside it — a rail spacer here would
     // double-count and shove the centre column 18rem right.
     return (
-        <div className="flex min-h-screen w-full">
-                {/* The collapsed-rail variant is LOAD-BEARING, not optional
-                    mirroring. Arriving from /coin the shared rail is collapsed
-                    (w-11), and the real column widens to 872px in response —
-                    a skeleton pinned at 628px sat narrow against the collapsed
-                    rail, "aligned to the left", then jumped when the page
-                    landed. Same group-has hook, same widths, same swap. */}
-                <main className="relative ml-7 flex w-full min-w-0 max-w-[628px] flex-col md:mt-[var(--header-height)] group-has-[[data-rail-collapsed=true]]/rails:max-w-[872px]">
+        <div className="flex min-h-screen w-full min-w-0">
+                {/* THE COLUMN'S CLASSES ARE THE MOUNTED PAGE'S, VERBATIM — copy
+                    the <main> in home-page-surface.tsx, do not paraphrase it.
+                    The shell and the page are two paints of one column, and
+                    every place their widths were allowed to differ has shown
+                    up as the skeleton visibly resizing:
+                    · the collapsed-rail swap (628 -> 872) has to be here, or
+                      arriving from /coin with the rail collapsed the shell sat
+                      narrow and jumped when the page landed;
+                    · it has to be scoped max-xl:, because at xl the page's
+                      column is flex-1 with NO cap — an unscoped group-has
+                      rule outranks the plain xl: classes on specificity and
+                      would pin the shell at 872 while the page takes the
+                      row's slack, so the skeleton grew again on landing. */}
+                <main className="relative ml-7 flex w-full min-w-0 max-w-[628px] flex-col md:mt-[var(--header-height)] max-xl:group-has-[[data-rail-collapsed=true]]/rails:max-w-[872px] xl:max-w-none xl:flex-1">
                     <div aria-hidden>
                         {/* Hero: the same black 16:9 + spinner the mounted
                             HomeHero shows while the feed query loads. */}
@@ -75,7 +82,15 @@ export default function HomeLoading() {
                         ))}
                     </div>
                 </main>
-                <div className="ml-7 mr-auto hidden w-96 shrink-0 xl:block" aria-hidden />
+                {/* The right-hand columns, at the page's own widths, because
+                    at xl the centre is flex-1 and takes whatever they leave:
+                    the video rail (ml-7 w-96, no mr-auto — the page's aside
+                    has none either) and the action dock, which mounts
+                    EXPANDED by default at pl-2 + size-15 + pr-1 = 72px. Leave
+                    the dock out and the shell's column is 72px wider than the
+                    page's, and shrinks on landing. */}
+                <div className="ml-7 hidden w-96 shrink-0 xl:block" aria-hidden />
+                <div className="hidden w-18 shrink-0 xl:block" aria-hidden />
         </div>
     );
 }

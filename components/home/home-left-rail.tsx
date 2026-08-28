@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { railKeepsWidth } from "./rail-keeps-width";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { cn } from "@/lib/utils";
 import { ArrowRightDoubleIcon } from "@hugeicons/core-free-icons";
@@ -104,12 +105,9 @@ export function HomeLeftRail() {
     //
     // Read from the pathname rather than taken as a prop because the rail is
     // mounted ONCE, by (rails)/layout.tsx, for all the routes — there's no
-    // per-page call site left to pass a flag from. The list must cover every
-    // route that renders FeedFrame: /status is the post page, which shares the
-    // feed's exact columns via feed-frame.tsx — checking only /feed is how the
-    // post page regressed to sliding sideways after posts moved off /feed/post.
-    const keepsWidth =
-        (pathname?.startsWith("/feed") || pathname?.startsWith("/status")) ?? false;
+    // per-page call site left to pass a flag from. The route list lives in
+    // rail-keeps-width.ts so the lazy placeholder can hold the same width.
+    const keepsWidth = railKeepsWidth(pathname);
 
     if (collapsed) {
         return (
