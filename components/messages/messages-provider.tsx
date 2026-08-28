@@ -198,6 +198,22 @@ export function MessagesProvider({ children, conversationId }: MessagesProviderP
         setDecryptedMessages([]);
     }, [conversationId]);
 
+    // OPENING A THREAD READS IT. The per-message receipts in message-list
+    // only fire for messages that have no receipt yet, so a thread you read
+    // long ago never re-marks itself — and the DM badge counts the
+    // conversation-level pointer (conversationParticipants.lastReadAt), not
+    // receipts. This is the call site conversation.markAsRead never had:
+    // without it the owner's badge sat at 2 for threads read months ago.
+    const markConversationRead = trpc.conversation.markAsRead.useMutation({
+        onSuccess: () => utils.conversation.getUnreadCount.invalidate(),
+    });
+    const markConversationReadRef = useRef(markConversationRead.mutate);
+    markConversationReadRef.current = markConversationRead.mutate;
+    useEffect(() => {
+        if (!conversationId || !session?.user?.id) return;
+        markConversationReadRef.current({ conversationId });
+    }, [conversationId, session?.user?.id]);
+
     // Load initial messages
     const decryptAll = async () => {
         const participants = participantsData?.participants;

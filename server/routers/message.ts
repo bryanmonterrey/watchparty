@@ -368,6 +368,25 @@ export const messageRouter = router({
             })
         )
         .mutation(async ({ ctx, input }) => {
+            // Advance the CONVERSATION-level read pointer too. Per-message
+            // receipts are what the other side's "seen" ticks read, but the
+            // unread badge (conversation.getUnreadCount) is keyed on
+            // conversationParticipants.lastReadAt — and until 2026-08-28
+            // nothing wrote it: conversation.markAsRead existed with no
+            // caller, so a thread whose last message was the partner's
+            // counted as unread forever, receipts or not. Every real DM
+            // account carried a permanent badge (the owner's showed 2 for
+            // threads read months earlier).
+            await db
+                .update(conversationParticipants)
+                .set({ lastReadAt: new Date() })
+                .where(
+                    and(
+                        eq(conversationParticipants.conversationId, input.conversationId),
+                        eq(conversationParticipants.userId, ctx.user.id)
+                    )
+                );
+
             if (input.messageIds.length === 0) return { success: true };
 
             const values = input.messageIds.map(msgId => ({

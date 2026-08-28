@@ -83,6 +83,10 @@ export function MessageList({ conversationId }: MessageListProps) {
     };
 
     const markAsRead = trpc.message.markAsRead.useMutation({
+        // The mutation also advances the conversation's read pointer, which
+        // is what the DM badge counts — refetch it so the badge drops now,
+        // not at the next 30s/5min poll.
+        onSuccess: () => utils.conversation.getUnreadCount.invalidate(),
         onError: (err) => {
             console.error('Failed to mark messages as read:', err);
         }

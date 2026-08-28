@@ -59,11 +59,40 @@ export function NotificationsPanel({ open, onClose }: NotificationsPanelProps) {
         onSuccess: () => utils.notification.getUnreadCount.invalidate(),
     })
     const markAllRead = trpc.notification.markAllRead.useMutation({
-        onSuccess: () => {
-            utils.notification.getNotifications.invalidate()
-            utils.notification.getUnreadCount.invalidate()
+        // Optimistic: every badge on the page (sidebar bell, tab title, this
+        // header) reads the same query key, so zeroing it here clears them
+        // all in the same frame the panel opens.
+        onMutate: async () => {
+            await utils.notification.getUnreadCount.cancel()
+            utils.notification.getUnreadCount.setData(undefined, { count: 0 })
         },
+        onSettled: () => utils.notification.getUnreadCount.invalidate(),
     })
+
+    // OPENING THE PANEL READS EVERYTHING — the badge is "you have things to
+    // look at", and looking at them is what opening is. Until 2026-08-28 the
+    // only path was the header's explicit button, so the count sat there
+    // after the panel had been opened and closed (owner report).
+    //
+    // Once per open, and only after the count has landed (>0): that is both
+    // the "nothing to do" guard and the ordering that keeps the unread tint
+    // on the rows for THIS viewing — the list is not invalidated here, only
+    // when the panel closes, so the rows you just opened for still read as
+    // new while you look at them and are plain the next time.
+    const viewerId = notifSession?.user?.id
+    const unreadCount = unreadData?.count ?? 0
+    const clearedThisOpen = React.useRef(false)
+    const markAllReadMutate = markAllRead.mutate
+    React.useEffect(() => {
+        if (!open) {
+            if (clearedThisOpen.current) utils.notification.getNotifications.invalidate()
+            clearedThisOpen.current = false
+            return
+        }
+        if (clearedThisOpen.current || !viewerId || unreadCount === 0) return
+        clearedThisOpen.current = true
+        markAllReadMutate()
+    }, [open, viewerId, unreadCount, markAllReadMutate, utils])
 
     React.useEffect(() => {
         if (!open) return
@@ -111,7 +140,11 @@ export function NotificationsPanel({ open, onClose }: NotificationsPanelProps) {
                     >
                         <NotificationHeader
                             unreadCount={unreadData?.count ?? 0}
-                            onMarkAllRead={() => markAllRead.mutate()}
+                            onMarkAllRead={() =>
+                                markAllRead.mutate(undefined, {
+                                    onSuccess: () => utils.notification.getNotifications.invalidate(),
+                                })
+                            }
                             onClose={onClose}
                         />
 
