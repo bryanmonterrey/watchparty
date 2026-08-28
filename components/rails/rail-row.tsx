@@ -149,6 +149,25 @@ export function RailRow({
                     // at all — not just a positioning context for the hover
                     // tint. cursor-pointer matches that whole-row target.
                     "group/rail-hover relative flex h-fit w-full cursor-pointer flex-col p-2 transition-colors",
+                    // DROP THE SQUIRCLE'S CLIP WHILE A MENU INSIDE IS OPEN.
+                    //
+                    // Squircle (Lisse) shapes this row with an SVG `clip-path`,
+                    // and a clip-path clips EVERY descendant — an absolutely
+                    // positioned popover included. No z-index escapes it, and
+                    // neither does `position: fixed`. So the row's dots menu was
+                    // being cut to the row's own 119px box: the panel rendered,
+                    // fully opaque, in the right place, and all but a sliver of
+                    // it was clipped away. It read as "the popover is under the
+                    // rows", which is why the z-index fix did not touch it.
+                    //
+                    // `!` is required: Lisse writes `el.style.clipPath`, so only
+                    // an important rule can beat the inline style.
+                    //
+                    // The cost is that the row's corners go square for as long
+                    // as the menu is open. That is the right trade against a
+                    // menu you cannot read — and it is barely visible, since the
+                    // corners only shape a subtle hover tint.
+                    "has-[[data-open]]:[clip-path:none]! has-[[data-liquid]]:[clip-path:none]!",
                     // With a palette colour the overlay below carries BOTH
                     // states, so no neutral fill here — one painted on top of
                     // the other would muddy the tint. Rails without one (the

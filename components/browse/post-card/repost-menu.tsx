@@ -2,7 +2,7 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
-import { GooDropdown } from "@/components/ui/goo-dropdown";
+import { GooDropdown, gooMenuItem } from "@/components/ui/goo-dropdown";
 import { RetweetIcon, QuoteIcon } from "@/components/icons";
 
 interface RepostMenuProps {
@@ -32,7 +32,6 @@ export function RepostMenu({
     hideCountAtZero = true,
 }: RepostMenuProps) {
     const active = reposted || open;
-    const rowClass = "gap-3 px-4 rounded-full cursor-pointer text-lg font-medium text-zinc-200 hover:bg-white/5 hover:text-white";
 
     return (
         <GooDropdown
@@ -70,29 +69,11 @@ export function RepostMenu({
                     </span>
                 </>
             }
+            // Standard rows (gooMenuItem), same as the dots and share menus on
+            // this card — not a hand-rolled pill row with its own hover fill.
             items={[
-                {
-                    key: "repost",
-                    onClick: onDoRepost,
-                    className: rowClass,
-                    label: (
-                        <>
-                            <RetweetIcon className="w-5 h-5 text-white transition-colors" />
-                            {reposted ? "Undo repost" : "Repost"}
-                        </>
-                    ),
-                },
-                {
-                    key: "quote",
-                    onClick: onDoQuote,
-                    className: rowClass,
-                    label: (
-                        <>
-                            <QuoteIcon className="w-5 h-5 text-white transition-colors" />
-                            Quote
-                        </>
-                    ),
-                },
+                gooMenuItem({ key: "repost", icon: <RetweetIcon />, label: reposted ? "Undo repost" : "Repost", onClick: onDoRepost }),
+                gooMenuItem({ key: "quote", icon: <QuoteIcon />, label: "Quote", onClick: onDoQuote }),
             ]}
         />
     );

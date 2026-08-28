@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Link, Mail, Upload, BookmarkPlus, Download, Feather, Plus } from "lucide-react";
-import { GooDropdown, type GooDropdownItem } from "@/components/ui/goo-dropdown";
+import { GooDropdown, gooMenuItem, type GooDropdownItem } from "@/components/ui/goo-dropdown";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { LinkForwardIcon } from "@hugeicons/core-free-icons";
 
@@ -20,76 +20,37 @@ export function ShareMenu({ post, bookmarked, handleBookmark }: ShareMenuProps) 
 
     const hasVideo = !!post.videoUrl || !!post.media?.some((m: any) => m.type === "video");
 
-    const rowClass = "gap-3 px-4 rounded-full cursor-pointer text-[17px] font-medium text-white hover:bg-white/5";
-
+    // The rows are the app's standard menu rows — gooMenuItem, the same helper
+    // PostOptionsMenu (the dots menu beside this one) builds from. This used
+    // to hand-roll them with `rounded-full … hover:bg-white/5`, which painted
+    // a pill fill on each row: the engine squircles rows and carries ONE
+    // travelling hover pill for the whole list, so the pill rows read as a
+    // different component from every other popover on the card.
     const items: GooDropdownItem[] = [
-        {
-            key: "copy-link",
-            onClick: copyLink,
-            className: rowClass,
-            label: (
-                <>
-                    <Link className="w-5 h-5 text-white transition-colors" />
-                    <span>Copy link</span>
-                </>
-            ),
-        },
-        {
-            key: "share-via",
-            className: rowClass,
-            label: (
-                <>
-                    <Upload className="w-5 h-5 text-white transition-colors" />
-                    <span>Share post via ...</span>
-                </>
-            ),
-        },
-        {
-            key: "send-chat",
-            className: rowClass,
-            label: (
-                <>
-                    <Mail className="w-5 h-5 text-white transition-colors" />
-                    <span>Send via Chat</span>
-                </>
-            ),
-        },
-        {
+        gooMenuItem({ key: "copy-link", icon: <Link />, label: "Copy link", onClick: copyLink }),
+        gooMenuItem({ key: "share-via", icon: <Upload />, label: "Share post via ..." }),
+        gooMenuItem({ key: "send-chat", icon: <Mail />, label: "Send via Chat" }),
+        gooMenuItem({
             key: "bookmark",
+            icon: <BookmarkPlus />,
+            label: "Bookmark to Folder",
             onClick: () => handleBookmark({ stopPropagation: () => { } } as React.MouseEvent),
-            className: rowClass,
-            label: (
-                <>
-                    <BookmarkPlus className="w-5 h-5 text-white transition-colors" />
-                    <span>Bookmark to Folder</span>
-                </>
-            ),
-        },
+        }),
         ...(hasVideo
             ? [
-                  {
-                      key: "download-video",
-                      className: rowClass,
-                      label: (
-                          <>
-                              <Download className="w-5 h-5 text-white transition-colors" />
-                              <span>Download video</span>
-                          </>
-                      ),
-                  },
-                  {
+                  gooMenuItem({ key: "download-video", icon: <Download />, label: "Download video" }),
+                  gooMenuItem({
                       key: "post-video",
-                      className: rowClass,
-                      label: (
-                          <>
-                              <span className="relative">
-                                  <Feather className="w-5 h-5 text-white transition-colors" />
-                                  <Plus className="w-2.5 h-2.5 text-white absolute -bottom-0.5 -right-0.5 stroke-[3]" />
-                              </span>
-                              <span>Post Video</span>
-                          </>
+                      // The helper sizes every svg in the icon slot to 18px;
+                      // the little plus badge opts back out of that.
+                      icon: (
+                          <span className="relative">
+                              <Feather />
+                              <Plus className="absolute -bottom-0.5 -right-0.5 !size-2.5 stroke-[3]" />
+                          </span>
                       ),
-                  },
+                      label: "Post Video",
+                  }),
               ]
             : []),
     ];
