@@ -99,7 +99,7 @@ export function TradeNav() {
                                     <HugeiconsIcon icon={s.icon} className="size-6" strokeWidth={1.8} />
                                 </span>
                                 <span className="flex min-w-0 flex-col">
-                                    <span className="text-[15px] font-bold text-white">
+                                    <span className="text-[15px] font-medium text-white">
                                         {s.label}
                                     </span>
                                     <span className="truncate text-xs text-zinc-500">{s.description}</span>
@@ -119,7 +119,7 @@ export function TradeNav() {
                                 <WalletIcon className="size-6" />
                             </span>
                             <span className="flex min-w-0 flex-col">
-                                <span className="text-[15px] font-bold text-white">Portfolio</span>
+                                <span className="text-[15px] font-medium text-white">Portfolio</span>
                                 <span className="truncate text-xs text-zinc-500">Your holdings and activity</span>
                             </span>
                         </>

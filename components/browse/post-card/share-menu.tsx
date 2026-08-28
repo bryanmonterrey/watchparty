@@ -20,7 +20,7 @@ export function ShareMenu({ post, bookmarked, handleBookmark }: ShareMenuProps) 
 
     const hasVideo = !!post.videoUrl || !!post.media?.some((m: any) => m.type === "video");
 
-    const rowClass = "gap-3 px-4 rounded-full cursor-pointer text-[17px] font-bold text-white hover:bg-white/5";
+    const rowClass = "gap-3 px-4 rounded-full cursor-pointer text-[17px] font-medium text-white hover:bg-white/5";
 
     const items: GooDropdownItem[] = [
         {
@@ -97,7 +97,17 @@ export function ShareMenu({ post, bookmarked, handleBookmark }: ShareMenuProps) 
     return (
         <GooDropdown
             side="top"
-            align="start"
+            // align END, not start. Share is the LAST button in the action row,
+            // ~25px from the column's right border, and the panel is 256px wide
+            // — anchored to the trigger's left edge it ran off the column to
+            // the right: over the right rail's cards at xl, and over bare canvas
+            // below that. The liquid engine only shifts to stay inside a
+            // clipping ancestor (safeBox), and nothing clips at the column, so
+            // it never came back. Verified in Chrome 2026-08-28: the glass was
+            // blurring — a flat canvas just has nothing to show for it, which
+            // read as "the share popover isn't blurring anything". Hanging left
+            // puts it over the post, where the blur has content.
+            align="end"
             width={256}
             gap={8}
             stopPropagation

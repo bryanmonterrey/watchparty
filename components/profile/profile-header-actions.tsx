@@ -55,7 +55,7 @@ export function MoreMenu({ userId, username, open, onOpenChange, onClose, trigge
     // weight as the built rows, and [&_svg]:size-[18px] overrides the icon
     // sizes MuteButton/BlockButton hardcode, so every row lines up. No
     // rounded-* — the component squircles rows.
-    const rowClass = "gap-3 px-4 h-full w-full text-left text-base font-bold text-zinc-200 hover:bg-white/5 hover:text-white [&_svg]:size-[18px]";
+    const rowClass = "gap-3 px-4 h-full w-full text-left text-base font-medium text-zinc-200 hover:bg-white/5 hover:text-white [&_svg]:size-[18px]";
 
     return (
         <GooDropdown

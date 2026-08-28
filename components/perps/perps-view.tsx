@@ -1044,9 +1044,9 @@ function OrderPanel({
                                         <span className="flex items-center gap-2.5">
                                             {/* eslint-disable-next-line @next/next/no-img-element */}
                                             <img src={USDC_ICON} alt="" className="size-6 shrink-0 rounded-full object-cover" />
-                                            <span className="text-sm font-bold text-white">USDC</span>
+                                            <span className="text-sm font-medium text-white">USDC</span>
                                         </span>
-                                        <span className="text-sm font-semibold tabular-nums text-zinc-400">${fmtUsd(balance)}</span>
+                                        <span className="text-sm font-medium tabular-nums text-zinc-400">${fmtUsd(balance)}</span>
                                     </>
                                 ),
                             },
@@ -1063,9 +1063,9 @@ function OrderPanel({
                                             ) : (
                                                 <span className="size-6 shrink-0 rounded-full bg-white/[0.1]" />
                                             )}
-                                            <span className="truncate text-sm font-bold text-white">{t.symbol}</span>
+                                            <span className="truncate text-sm font-medium text-white">{t.symbol}</span>
                                         </span>
-                                        <span className="shrink-0 text-sm font-semibold tabular-nums text-zinc-400">
+                                        <span className="shrink-0 text-sm font-medium tabular-nums text-zinc-400">
                                             {t.balance.toLocaleString(undefined, { maximumFractionDigits: 4 })}
                                         </span>
                                     </>

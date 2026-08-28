@@ -211,7 +211,7 @@ export function DetailsStep({
                     headerHeight={44}
                     header={
                         <div className="flex h-full flex-col justify-center border-b border-zinc-800 px-3">
-                            <h3 className="font-bold text-white text-sm">Choose audience</h3>
+                            <h3 className="font-medium text-white text-sm">Choose audience</h3>
                         </div>
                     }
                     triggerClassName="flex items-center gap-3 h-12 px-4 rounded-full border border-zinc-700 text-md font-medium text-white hover:bg-white/5 transition-colors w-fit"

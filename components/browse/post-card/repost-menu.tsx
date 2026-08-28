@@ -32,7 +32,7 @@ export function RepostMenu({
     hideCountAtZero = true,
 }: RepostMenuProps) {
     const active = reposted || open;
-    const rowClass = "gap-3 px-4 rounded-full cursor-pointer text-lg font-bold text-zinc-200 hover:bg-white/5 hover:text-white";
+    const rowClass = "gap-3 px-4 rounded-full cursor-pointer text-lg font-medium text-zinc-200 hover:bg-white/5 hover:text-white";
 
     return (
         <GooDropdown

@@ -87,7 +87,7 @@ function LiquidRowsImpl({
                             key={k}
                             ref={setRow}
                             className={cn(
-                                "flex shrink-0 items-center px-3 text-xs font-semibold text-muted-foreground",
+                                "flex shrink-0 items-center px-3 text-xs font-medium text-muted-foreground",
                                 item.className,
                             )}
                             style={{ height: h }}
@@ -100,10 +100,10 @@ function LiquidRowsImpl({
                 }
 
                 /* The BASE row IS the app standard: SQUIRCLED rows, px-4,
-                   text-base font-bold, zinc-200 → white on hover. The hover
+                   text-base font-medium, zinc-200 → white on hover. The hover
                    FILL is the travelling pill's, not the row's. */
                 const rowClass = cn(
-                    "flex w-full shrink-0 items-center px-4 py-2 text-left text-base font-bold text-zinc-200 transition-colors duration-150 hover:text-white focus-visible:outline-none focus-visible:bg-white/5 focus-visible:text-white",
+                    "flex w-full shrink-0 items-center px-4 py-2 text-left text-base font-medium text-zinc-200 transition-colors duration-150 hover:text-white focus-visible:outline-none focus-visible:bg-white/5 focus-visible:text-white",
                     item.className,
                 );
                 const rowProps = {

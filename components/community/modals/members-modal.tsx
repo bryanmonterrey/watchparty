@@ -107,7 +107,7 @@ export function MembersModal() {
                                             {
                                                 key: "kick",
                                                 onClick: () => serverId && kickMember.mutate({ serverId, memberId: m.id }),
-                                                className: "text-[13px] font-semibold text-pastelred hover:bg-pastelred/10",
+                                                className: "text-[13px] font-medium text-pastelred hover:bg-pastelred/10",
                                                 label: <>Kick from server</>,
                                             },
                                         ]}

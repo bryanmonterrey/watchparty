@@ -490,7 +490,7 @@ export function PostComposer() {
                             headerHeight={52}
                             header={
                                 <div className="flex h-full flex-col justify-center border-b border-white/5 px-4">
-                                    <h3 className="font-bold text-white text-[15px]">Choose audience</h3>
+                                    <h3 className="font-medium text-white text-[15px]">Choose audience</h3>
                                 </div>
                             }
                             triggerClassName="flex items-center gap-1.5 px-3 py-1 rounded-full cursor-pointer text-twitter2 text-sm font-medium border border-flexwhite/15 hover:bg-white/10 transition-colors w-fit"
@@ -520,7 +520,7 @@ export function PostComposer() {
                                             <span className={cn("flex h-10 w-10 items-center justify-center rounded-full", opt.bubble)}>
                                                 {opt.icon}
                                             </span>
-                                            <span className="font-bold text-white text-[15px]">{opt.label}</span>
+                                            <span className="font-medium text-white text-[15px]">{opt.label}</span>
                                         </span>
                                         {audience === opt.value && <Check className="w-5 h-5 text-twitter2" />}
                                     </>
@@ -735,7 +735,7 @@ export function PostComposer() {
                             headerHeight={72}
                             header={
                                 <div className="flex h-full flex-col justify-center gap-0.5 border-b border-white/5 px-4">
-                                    <h3 className="font-bold text-white text-[15px]">Who can reply?</h3>
+                                    <h3 className="font-medium text-white text-[15px]">Who can reply?</h3>
                                     <p className="text-postgray text-xs">Choose who can reply to this post.<br />Anyone mentioned can always reply.</p>
                                 </div>
                             }
@@ -763,7 +763,7 @@ export function PostComposer() {
                                             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-bleu text-white">
                                                 {opt.icon}
                                             </span>
-                                            <span className="font-bold text-white text-[15px]">{opt.label}</span>
+                                            <span className="font-medium text-white text-[15px]">{opt.label}</span>
                                         </span>
                                         {replyPrivacy === opt.value && <Check className="w-5 h-5 text-twitter2" />}
                                     </>

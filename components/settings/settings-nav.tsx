@@ -238,7 +238,7 @@ export function SettingsNav() {
                                     <HugeiconsIcon icon={item.icon} className="size-6" strokeWidth={1.8} />
                                 </span>
                                 <span className="flex min-w-0 flex-col">
-                                    <span className="text-[15px] font-bold text-white">{item.label}</span>
+                                    <span className="text-[15px] font-medium text-white">{item.label}</span>
                                     <span className="truncate text-xs text-zinc-500">{item.description}</span>
                                 </span>
                             </>

@@ -670,7 +670,7 @@ export function CreateDialog({ children, open: openProp, onOpenChange, initialTa
                                                 headerHeight={56}
                                                 header={
                                                     <div className="flex h-full flex-col justify-center border-b border-zinc-800 px-4">
-                                                        <h3 className="font-bold text-white text-base">Choose audience</h3>
+                                                        <h3 className="font-medium text-white text-base">Choose audience</h3>
                                                     </div>
                                                 }
                                                 triggerClassName="flex items-center gap-1.5 px-3 py-1 rounded-full cursor-pointer text-twitter2 text-sm font-medium hover:bg-white/15 bg-white/10 transition-colors w-fit"
@@ -700,7 +700,7 @@ export function CreateDialog({ children, open: openProp, onOpenChange, initialTa
                                                                     <span className={cn("flex h-10 w-10 items-center justify-center rounded-full", opt.bubble)}>
                                                                         {opt.icon}
                                                                     </span>
-                                                                    <span className="font-semibold text-white">{opt.label}</span>
+                                                                    <span className="font-medium text-white">{opt.label}</span>
                                                                 </span>
                                                                 {audience === opt.value && <Check className="w-5 h-5 text-bleu" />}
                                                             </>
@@ -713,7 +713,7 @@ export function CreateDialog({ children, open: openProp, onOpenChange, initialTa
                                                                   key: "communities-label",
                                                                   type: "label" as const,
                                                                   height: 36,
-                                                                  className: "text-sm font-bold text-white",
+                                                                  className: "text-sm font-medium text-white",
                                                                   label: "My Communities",
                                                               },
                                                               ...userCommunities.map((community, i) => ({
@@ -728,7 +728,7 @@ export function CreateDialog({ children, open: openProp, onOpenChange, initialTa
                                                                                   <AvatarFallback className="rounded-lg bg-zinc-800" />
                                                                               </Avatar>
                                                                               <span className="flex flex-col">
-                                                                                  <span className="font-semibold text-white">{community.name}</span>
+                                                                                  <span className="font-medium text-white">{community.name}</span>
                                                                                   <span className="text-sm text-zinc-400">{community.membersCount} Members</span>
                                                                               </span>
                                                                           </span>
@@ -881,7 +881,7 @@ export function CreateDialog({ children, open: openProp, onOpenChange, initialTa
                                                     headerHeight={84}
                                                     header={
                                                         <div className="flex h-full flex-col justify-center gap-1 border-b border-zinc-800 px-4">
-                                                            <h3 className="font-bold text-white text-base">Who can reply?</h3>
+                                                            <h3 className="font-medium text-white text-base">Who can reply?</h3>
                                                             <p className="text-zinc-400 text-sm">Choose who can reply to this post.<br />Anyone mentioned can always reply.</p>
                                                         </div>
                                                     }
@@ -909,7 +909,7 @@ export function CreateDialog({ children, open: openProp, onOpenChange, initialTa
                                                                     <span className="flex h-10 w-10 items-center justify-center rounded-full bg-bleu text-white">
                                                                         {opt.icon}
                                                                     </span>
-                                                                    <span className="font-semibold text-white">{opt.label}</span>
+                                                                    <span className="font-medium text-white">{opt.label}</span>
                                                                 </span>
                                                                 {replyPrivacy === opt.value && <Check className="w-5 h-5 text-bleu" />}
                                                             </>

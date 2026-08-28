@@ -133,7 +133,7 @@ export function MemberRow({
                                 {
                                     key: "timeout",
                                     onClick: () => timeoutMember.mutate({ serverId, userId: m.userId, durationSeconds: 3600 }),
-                                    className: "text-sm font-semibold text-pastelred hover:bg-pastelred/10",
+                                    className: "text-sm font-medium text-pastelred hover:bg-pastelred/10",
                                     label: <>Timeout · 1 hour</>,
                                 },
                                 {
@@ -147,13 +147,13 @@ export function MemberRow({
                         {
                             key: "kick",
                             onClick: () => kickMember.mutate({ serverId, memberId: m.id }),
-                            className: "text-sm font-semibold text-pastelred hover:bg-pastelred/10",
+                            className: "text-sm font-medium text-pastelred hover:bg-pastelred/10",
                             label: <>Kick from server</>,
                         },
                         {
                             key: "ban",
                             onClick: () => banMember.mutate({ serverId, memberId: m.id }),
-                            className: "text-sm font-semibold text-pastelred hover:bg-pastelred/10",
+                            className: "text-sm font-medium text-pastelred hover:bg-pastelred/10",
                             label: <>Ban from server</>,
                         },
                     ]}

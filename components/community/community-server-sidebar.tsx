@@ -271,13 +271,13 @@ function CategoryHeader({
                             {
                                 key: "rename",
                                 onClick: () => onOpen("createCategory", { server, category }),
-                                className: "px-3 text-[13px] font-semibold text-zinc-200 hover:bg-zinc-800",
+                                className: "px-3 text-[13px] font-medium text-zinc-200 hover:bg-zinc-800",
                                 label: "Rename category",
                             },
                             {
                                 key: "delete",
                                 onClick: () => deleteCategory.mutate({ serverId: server.id, categoryId: category.id }),
-                                className: "px-3 text-[13px] font-semibold text-pastelred hover:bg-zinc-800 hover:text-pastelred",
+                                className: "px-3 text-[13px] font-medium text-pastelred hover:bg-zinc-800 hover:text-pastelred",
                                 label: "Delete category",
                             },
                         ]}

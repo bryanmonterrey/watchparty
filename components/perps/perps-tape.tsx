@@ -202,7 +202,7 @@ export function PerpsTape({
                                             key: String(m),
                                             onClick: () => setGroupMult(m),
                                             className: cn(
-                                                "rounded-full px-4 cursor-pointer text-sm font-bold tabular-nums hover:bg-white/5",
+                                                "rounded-full px-4 cursor-pointer text-sm font-medium tabular-nums hover:bg-white/5",
                                                 m === groupMult ? "text-white" : "text-zinc-400",
                                             ),
                                             label: <>{fmtStep(step)}</>,

@@ -154,7 +154,7 @@ export function PostOptionsMenu({
             >
                 <X className="w-4 h-4" />
             </button>
-            <span className="text-sm font-bold text-white">{title}</span>
+            <span className="text-sm font-medium text-white">{title}</span>
         </div>
     );
 
@@ -208,8 +208,8 @@ export function PostOptionsMenu({
                 className: "justify-between px-4",
                 label: (
                     <>
-                        <span className="text-sm font-bold text-zinc-400">{label}</span>
-                        <span className="text-sm font-black tabular-nums text-white">{value.toLocaleString()}</span>
+                        <span className="text-sm font-medium text-zinc-400">{label}</span>
+                        <span className="text-sm font-medium tabular-nums text-white">{value.toLocaleString()}</span>
                     </>
                 ),
             }))

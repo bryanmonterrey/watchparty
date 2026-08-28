@@ -69,7 +69,7 @@ export function MessagesNav() {
                                 </AvatarFallback>
                             </Avatar>
                             <span className="flex min-w-0 flex-col">
-                                <span className={cn("truncate text-[15px] font-bold", isActive ? "text-white" : "text-zinc-200")}>{name}</span>
+                                <span className={cn("truncate text-[15px] font-medium", isActive ? "text-white" : "text-zinc-200")}>{name}</span>
                                 {c.lastMessageContent && (
                                     <span className="truncate text-xs text-zinc-500">{c.lastMessageContent}</span>
                                 )}

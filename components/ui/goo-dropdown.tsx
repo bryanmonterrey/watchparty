@@ -119,7 +119,7 @@ export function gooMenuItem({ icon, label, onClick, href, right, variant = 'defa
       // No hover:bg either: the hover FILL is the liquid engine's travelling
       // pill, one highlight for the whole list. Danger keeps its red tint —
       // that hover is semantic, not just "you are here".
-      'gap-3 px-4 py-1.5 cursor-pointer text-lg font-bold group',
+      'gap-3 px-4 py-1.5 cursor-pointer text-lg font-medium group',
       variant === 'danger'
         ? 'text-red-500 hover:bg-red-500/10 hover:text-red-500'
         : 'text-zinc-200 hover:text-white',

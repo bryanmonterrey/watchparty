@@ -122,7 +122,7 @@ export function ServerSettings({ serverId }: { serverId: string }) {
                             onClick: () => setSection(s),
                             className: cn(
                                 "text-[14px] font-medium hover:bg-white/10",
-                                s === active ? "text-white font-semibold" : "text-zinc-300",
+                                s === active ? "text-white" : "text-zinc-300",
                             ),
                             label: <>{sectionLabel(s)}</>,
                         }))}
