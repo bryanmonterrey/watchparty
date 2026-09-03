@@ -7,6 +7,7 @@ import { posts } from "@/db/schema/content";
 import { and, eq, isNotNull } from "drizzle-orm";
 import { VideoWatchPage } from "@/components/video/video-watch-page";
 import { fallbackShareMetadata, shareMetadata } from "@/lib/share/metadata";
+import { compactCount } from "@/lib/utils";
 
 // Videos live at /video/<postId>, off the [slug] tree.
 //
@@ -34,6 +35,15 @@ const getCreator = cache((userId: string) =>
     db.query.user.findFirst({ where: eq(user.id, userId) })
 );
 
+/** 42 → "0:42", 3725 → "1:02:05". */
+function formatClock(seconds: number): string {
+    const s = Math.max(0, Math.round(seconds));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = String(s % 60).padStart(2, "0");
+    return h ? `${h}:${String(m).padStart(2, "0")}:${sec}` : `${m}:${sec}`;
+}
+
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
     const { videoId } = await params;
     const post = await getVideoPost(videoId);
@@ -41,9 +51,23 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
 
     // The thumbnail already carries the meaning, so the card is the compact
     // thumbnail-left shape (the YouTube treatment), not a generated image.
+    //
+    // Description is the caption when there is one. Without it the helper
+    // would fall back to the site tagline, which says nothing about THIS
+    // video — so it becomes "@creator · 0:42 · 1.2K views" instead. The
+    // creator lookup is the same cache()d call the page body makes.
+    const creator = post.content?.trim() ? null : await getCreator(post.userId);
+    const byline = [
+        creator?.username ? `@${creator.username}` : creator?.name,
+        post.duration ? formatClock(post.duration) : null,
+        `${compactCount(post.views)} views`,
+    ]
+        .filter(Boolean)
+        .join(" · ");
+
     return shareMetadata({
         title: post.title ?? "Video",
-        description: post.content,
+        description: post.content?.trim() || byline,
         path: `/video/${videoId}`,
         image: post.thumbnailUrl ?? undefined,
         card: post.thumbnailUrl ? "summary" : "summary_large_image",
