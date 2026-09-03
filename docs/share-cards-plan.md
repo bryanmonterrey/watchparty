@@ -1,0 +1,330 @@
+# Share cards (OG / meta thumbnails) — plan
+
+The image a link turns into when it is pasted on X, Discord, Telegram, iMessage,
+Slack, LinkedIn, WhatsApp. One card per shareable thing, rendered on demand,
+branded like the app.
+
+Written 2026-09-03 from a survey of what exists. Nothing here is built yet
+except the pieces marked **exists**.
+
+---
+
+## 1. Where we are
+
+### What exists
+
+- **`og-worker/`** — a standalone Cloudflare Worker (`watchparty-og`) running
+  `workers-og` (satori + resvg). It renders exactly one card, `/api/og/post`,
+  from four query params (`text`, `name`, `username`, `avatar`). It has no DB,
+  no secrets, deploys from the `deploy-og` job in `deploy.yml`, and answers on
+  the zone route `watchparty.xyz/api/og/*` that was added by hand in the
+  dashboard. **Any new path under `/api/og/` routes there automatically.** It
+  lives outside the Next app on purpose: satori's wasm pushed the main worker
+  over the 10 MiB cap (memory `worker-bundle-size-ceiling`). Do not add an
+  `/api/og` route to the Next app again.
+- **The one card is off-brand.** Black background, white panel, a gray/black
+  drop shadow (banned by `docs/design-principles.md`), satori's default font
+  (not Geist), no wordmark. It is also **not referenced by any page's
+  metadata** — its only caller is the composer, which snapshots it to Storage
+  for a token launch's on-chain metadata (`components/browse/post-composer.tsx`,
+  `components/app-ui/create-dialog.tsx`).
+- **Six pages have `generateMetadata`:** post (`/status/[id]`), profile
+  (`/[username]`), coin (`/coin/[...slug]`), video (`/video/[videoId]`),
+  prediction (`/trade/predictions/[id]`), category. Only **video** sets an
+  `openGraph.images` entry, and it points at the raw thumbnail. The rest set a
+  title and sometimes a description. **No page sets `twitter.card`.**
+- **Root layout has no `metadataBase`, no default image, no `openGraph`, no
+  `twitter` block.** So a link to `watchparty.xyz` today unfurls as bare text.
+- **Crawlers can reach the pages.** `PUBLIC_BROWSING` is on, and none of the
+  shareable routes are in `ALWAYS_PRIVATE_PREFIXES`, so Twitterbot et al. get
+  the server-rendered `<head>`. This is load-bearing and fragile (see §7).
+- **Fonts are on disk.** `app/fonts/` has every Geist weight (~128 KB each) and
+  `GeistPixel-Triangle.ttf` (195 KB). `workers-og` takes a `fonts` array.
+- `NEXT_PUBLIC_APP_URL` exists in `.env.production` (already read by
+  `app/embed/post/[id]/page.tsx`) — the right value for `metadataBase`.
+
+### Pages with **no** metadata at all
+
+`/communities/[serverId]`, `/communities/[serverId]/channels/[channelId]`,
+`/communities/invite/[code]`, every `(marketing)` page, `/home`, `/apps`.
+
+---
+
+## 2. Inventory: every shareable thing
+
+| # | Thing | URL | Data on hand (server) | Card shows |
+|---|---|---|---|---|
+| 1 | **Post** (text) | `/status/[id]` | `posts.content`, author name/username/avatar/verifiedTier, likes/comments/reposts | Author strip, text (≤ ~220 chars, clamped server-side), stat pills |
+| 1b | Post with **image** | same | `posts.media[0]` / `posts.imageUrl` | Image hero on the right ~45%, author + first line on the left |
+| 1c | Post with **video** | same | `posts.thumbnailUrl`, `duration` | Thumbnail hero + play glyph + duration chip |
+| 1d | Post with **token** | same | `posts.ticker`, `tokens.imageUrl/priceUsd/marketCapUsd` | Author strip + `$TICKER` coin chip + mcap |
+| 2 | **Video** | `/video/[videoId]` | `title`, `thumbnailUrl`, `duration`, `views`, creator | Thumbnail hero, title, creator strip, views/duration chips |
+| 3 | **Profile** | `/[username]` | `name`, `username`, `avatar_url`, `banner_url`, `bio`, `verifiedTier`, follower count | Avatar large, name + verified mark, @handle, bio line, followers pill |
+| 3b | Profile, **live** | `/[username]` when `streams.isLive` | `streams.title/category/thumbnailUrl/viewerCount` | Stream thumbnail hero, LIVE pill, title, category, viewers, host strip |
+| 4 | **Coin** | `/coin/[...slug]` | `tokens.*` or `resolveCoin()`: name, symbol, imageUrl, priceUsd, marketCapUsd, 24h change, bondingProgress, chain, creator | Coin image, name + `$SYMBOL`, price, mcap, 24h delta (lantern up / pastelred down), chain badge, bonding bar for drafts/curve |
+| 5 | **Prediction market** | `/trade/predictions/[id]` | `question`, `imageUrl`, outcomes with `poolUsdc`, `closesAt`, `status` | Question, top 2–3 outcomes with implied % bars, pool total, closes-in / RESOLVED chip |
+| 6 | **Community** | `/communities/[serverId]` (channels fall back to this) | `servers.name/description`, icon, member count | Icon, name, description line, members pill |
+| 6b | **Community invite** | `/communities/invite/[code]` | same via `inviteCode` | Same card with an "You're invited to" eyebrow |
+| 7 | **Category** | `/category/[slug]` | static title | Static per-category card (title + brand) |
+| 8 | **Default / brand** | `/`, `/home`, marketing, anything else | none | One static 1200×630 brand image |
+
+Not in scope now: clips and spaces (no routes exist), `/embed/*` (noindex),
+`/apps` (use the default card until the directory has its own identity).
+
+---
+
+## 3. Architecture
+
+### Rendering stays on `og-worker`
+
+Same reasons as before: bundle cap, edge-cached, no DB. The worker becomes a
+**template router**: `/api/og/<template>?<fields>&v=<n>`.
+
+### Data flows in the URL, not through a DB lookup
+
+The page's `generateMetadata` already holds the row (every one uses `cache()`
+to dedupe with the page body). It encodes the fields the card needs into the
+image URL. The worker renders from params only.
+
+Why this and not "worker takes an id and fetches JSON from the app":
+
+- **Immutable per URL.** Values in the URL mean a changed price is a changed
+  URL, so `s-maxage=604800, immutable` stays honest and the edge serves most
+  cards with zero renders.
+- **No second hop** into the app on a path that platform crawlers hit in bursts.
+- **No coupling** — the worker never needs the app up, the DB up, or a secret.
+
+`v` is a template version param. Bump it when a template's design changes so
+crawlers that re-fetch (they do, weekly-ish) get the new render instead of the
+edge's cached old one.
+
+### Two shared helpers in the app
+
+- **`lib/share/og-url.ts`** — `ogImageUrl("post", { ... })` → absolute URL.
+  One typed field set per template. Applies the length caps client-side so the
+  URL stays under ~2 KB and the worker's caps are a second line, not the first.
+- **`lib/share/metadata.ts`** — `shareMetadata({ title, description, image,
+  path, type })` returns the `Metadata` slice every page needs and never gets
+  right by hand: `openGraph` (title/description/url/siteName/type/images with
+  width+height+alt), `twitter` (`summary_large_image`, title, description,
+  images), `alternates.canonical`. Every `generateMetadata` spreads this. It
+  fails open to the brand default on any missing field.
+
+### Images inside cards
+
+Avatars, thumbnails and coin logos are remote. Do **not** hand satori a URL:
+
+- **Pre-fetch in the worker with a deadline** (`AbortSignal.timeout(2500)`)
+  and pass a `data:` URI. No default fetch timeout exists in workerd (memory
+  `upstream-fetch-needs-deadline`) — one hung image host would hang the card
+  for every crawler. On failure, fall back to `/avatar.png` (memory
+  `no-letter-avatar-fallback`) or drop the hero and render the text variant.
+- **Host allowlist** in the same place: our Supabase Storage host, our own
+  domain, the coin-image CDNs `resolveCoin()` returns (Dexscreener, IPFS
+  gateways in use). Anything else is dropped. This is what stops the endpoint
+  being an open image proxy.
+- **Request downsized copies.** Supabase's image transform
+  (`/render/image/public/...?width=240`) for avatars; thumbnails at 1000 wide.
+  Keeps the PNG under the ~300 KB WhatsApp comfort zone and the fetch fast.
+
+### Fonts
+
+Copy `Geist-Medium.ttf`, `Geist-SemiBold.ttf`, `Geist-Bold.ttf`,
+`GeistPixel-Triangle.ttf` into `og-worker/fonts/`, add a wrangler
+`rules: [{ type: "Data", globs: ["**/*.ttf"] }]` and pass them as `fonts` to
+`ImageResponse`. ~580 KB bundled, well inside this worker's budget. Geist has
+no CJK/Arabic glyphs — see §7.
+
+### Backwards compatibility
+
+The composer still fetches `/api/og/post?text&name&username&avatar` to snapshot
+token-launch posts. The new post template accepts a superset of those params,
+so that URL keeps working with the old param names and just renders the new
+design. Switch the composer to `ogImageUrl()` in Phase 4.
+
+---
+
+## 4. Card design (applies to every template)
+
+Fixed-dark surface — a share card is never themed (memory
+`fixed-dark-vs-themed-surfaces`). Rules from `docs/design-principles.md`:
+
+- **Canvas** `rgb(5,5,5)` full-bleed, 1200×630, 64 px padding.
+- **Panel** where a template has one: `#0f0f10`-ish fill, radius 40, hairline
+  border `rgba(138,145,158,0.2)`, 1 px inset highlight `rgba(255,255,255,0.06)`
+  along the top edge. **No gradients. No gray/black drop shadows.** Glow, if
+  any, is brand-tinted.
+- **Type** Geist. Display line 56–64 px SemiBold, body 32–36 px Medium,
+  meta 26 px in `#7F878E` (pastelgray). Wordmark bottom-right in
+  `GeistPixel-Triangle` + `public/logo.svg` inlined as a data URI.
+- **Colour** accent `#358efc` (twitter2) for the verified mark and the type
+  chip; `#00ED89` (lantern) only for a price going up; `#FF746C` (pastelred)
+  for down and for the LIVE pill.
+- **Chips/pills** `rounded-full`, 44 px tall, `rgba(255,255,255,0.06)` fill,
+  hairline border. Stats read "1.2K likes", `compactCount` semantics.
+- **Hero variants** put the image on the right 45% with radius 32, text left.
+  Images are `objectFit: cover`. Never stretch; never a hover-zoom analogue.
+- **Safe area**: keep everything essential inside the centre 1200×600 —
+  X crops to ~1.91:1 in some placements and Discord crops the sides on mobile.
+- **Type chip** top-left of the panel names the thing: Post · Video · Live ·
+  Coin · Market · Community. It is what makes a 200 px-wide preview legible.
+
+Satori constraints to design within: flexbox only (every multi-child node
+needs explicit `display: flex`), no `line-clamp` (clamp text server-side by
+characters and append `…`), no `clip-path` (large radius stands in for the
+squircle), element-object tree not HTML strings (the string parser drops
+`display: flex`; see the comment at the top of `og-worker/src/index.ts`).
+
+---
+
+## 5. Phases
+
+### Phase 0 — every link gets *a* card (half a day)
+
+1. `app/layout.tsx`: `metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL
+   ?? "https://watchparty.xyz")`, `openGraph: { siteName: "watchparty",
+   type: "website", images: [default] }`, `twitter: { card:
+   "summary_large_image" }`.
+2. **Default brand image** as a static file at `app/opengraph-image.png`
+   (Next serves it and writes the tags). Static, not worker-rendered, so the
+   fallback survives the worker being down. `*.png` is gitignored repo-wide —
+   add a `!app/opengraph-image.png` negation (memory `ci-guards-and-png-ignore`).
+3. `lib/share/metadata.ts` helper; switch the six existing `generateMetadata`
+   to it (still with the default image — templates come later).
+4. `scripts/dev/check-share-meta.mjs`: fetches one URL of each type on prod
+   with a `Twitterbot/1.0` UA, asserts `og:title`, `og:image` (absolute),
+   `twitter:card`, and that the image URL answers `200 image/png` under 1 MB.
+   This is the gate; tsc cannot see any of this.
+
+**Done when:** pasting `watchparty.xyz` and a `/status/…` link into Discord
+and X both show the brand image, and the script passes.
+
+### Phase 1 — the worker becomes a card platform (1–2 days)
+
+1. Fonts bundled (above). Emoji: enable `workers-og`'s emoji loader so posts
+   with emoji don't render tofu.
+2. Router: `/api/og/<template>` → template fn; unknown template → 404;
+   `v` param read and echoed in an `x-og-template-version` header (debugging).
+3. Primitives in `og-worker/src/ui.ts`: `frame()`, `panel()`, `avatar()`,
+   `chip()`, `stat()`, `wordmark()`, `hero()`, `clamp(text, n)`.
+4. `og-worker/src/images.ts`: allowlisted, deadline-bounded fetch → data URI,
+   with the Supabase transform rewrite and the `/avatar.png` fallback.
+5. Re-do **post** on the primitives (kills the drop shadow, adds Geist and the
+   wordmark). Old param names keep working.
+6. `og-worker/local-test.mjs` grows into `scripts/dev/render-og-cards.mjs`:
+   renders every template with fixture data through `wrangler dev` to
+   `scratch/og/*.png`, asserts PNG magic bytes and 10 KB < size < 1 MB. Run it
+   before every og-worker push and eyeball the PNGs — it is the only review a
+   card gets.
+
+### Phase 2 — templates, in share-value order (2–3 days)
+
+Post variants (text / image / video / token) → profile + live → coin → video →
+prediction → community + invite → category. Each is one file
+`og-worker/src/templates/<name>.ts`, one fixture in the render script, one
+typed field set in `lib/share/og-url.ts`.
+
+### Phase 3 — wire the pages (1 day)
+
+- Existing six: build the template URL from the row they already hold.
+  Profile picks `live` when `getStreamByUser` says so (it already runs
+  server-side for the page). Coin handles both the `tokens` row and the
+  `resolveCoin()` shape.
+- Add `generateMetadata` to `/communities/[serverId]`, `.../channels/[channelId]`
+  (server card), `/communities/invite/[code]`.
+- Static `metadata` exports on the marketing pages and `/home`.
+- Every `generateMetadata` wraps its query in try/catch and falls back to the
+  brand card — a DB hiccup must never produce a blank unfurl.
+
+### Phase 4 — in-app share UX (1 day)
+
+- `components/browse/post-card/share-menu.tsx`: "Share post via …" is a dead
+  row today. Implement `navigator.share` where available, else a sub-menu: X
+  intent, Telegram, copy link. Same rows on profile, coin, prediction, and
+  community share actions (they share the copy-link pattern already).
+- Optional "Copy image": fetch the card PNG and put it on the clipboard.
+- Switch the composer's token-launch snapshot to `ogImageUrl("post", …)`.
+
+### Phase 5 — verification and ops (half a day, then ongoing)
+
+- Manual matrix once per template: X (post a DM to self), Discord, Telegram,
+  iMessage, Slack, LinkedIn's Post Inspector. Record which crop each applies.
+- `check-share-meta.mjs` in `deploy.yml` after `deploy-container`, non-blocking
+  at first (it hits prod), blocking once it has been green for a week.
+- Cache-bust procedure documented in the worker: bump `v`, deploy, re-share.
+  X caches a card per page URL for ~7 days and offers no purge — say so in
+  the doc so nobody chases a "stale card" bug.
+
+---
+
+## 6. File map (new + touched)
+
+```
+og-worker/
+  fonts/*.ttf                       copied from app/fonts (4 files)
+  src/index.ts                      router only
+  src/ui.ts                         primitives + design tokens
+  src/images.ts                     allowlist + deadline fetch + data URI
+  src/templates/{post,profile,live,coin,video,market,community,category}.ts
+  wrangler.jsonc                    + rules: Data *.ttf
+lib/share/og-url.ts                 ogImageUrl(template, fields)
+lib/share/metadata.ts               shareMetadata(...)
+app/layout.tsx                      metadataBase, openGraph, twitter
+app/opengraph-image.png (+ .gitignore negation)
+app/(app)/**/page.tsx               the six existing + three community pages
+app/(marketing)/**/page.tsx         static metadata
+components/browse/post-card/share-menu.tsx
+components/browse/post-composer.tsx, components/app-ui/create-dialog.tsx
+scripts/dev/check-share-meta.mjs
+scripts/dev/render-og-cards.mjs
+```
+
+---
+
+## 7. Risks and gotchas
+
+- **Crawlers depend on `PUBLIC_BROWSING`.** Flip it off and every crawler is
+  redirected to `/login`, and every card dies with it. Before that flag ever
+  changes, `middleware.ts` needs a crawler allowlist (Twitterbot,
+  facebookexternalhit, Discordbot, TelegramBot, Slackbot-LinkExpanding,
+  LinkedInBot, WhatsApp) that may pass the auth gate on read-only routes.
+  Worth adding in Phase 3 regardless — it costs one regex.
+- **The zone route is dashboard-owned.** `watchparty.xyz/api/og/*` was added
+  by hand because the CI token cannot create routes. If the worker is ever
+  renamed, the route goes with it and every card 404s while deploys stay green.
+- **Bundle discipline.** Nothing from the app may be imported into the worker
+  (no `@/lib/utils`, no React). It has its own lockfile for that reason.
+- **Geist has no CJK / Arabic / Devanagari glyphs.** A post in those scripts
+  renders tofu. Fix when it shows up: add a Noto Sans subset as a fallback font
+  in the `fonts` array (satori falls through by glyph).
+- **Open renderer.** Anyone can craft a URL that draws our-branded text. Caps
+  on every field plus the image-host allowlist are the mitigation; an HMAC
+  would need a secret in a worker that deliberately holds none. Revisit only
+  if it is abused.
+- **PNG weight.** Hero images are what push a card past 300 KB (WhatsApp
+  starts dropping previews around there; X's cap is 5 MB). The downsized
+  fetch handles it; the render script's size assertion catches regressions.
+- **`generateMetadata` runs a DB query.** It already does on six pages; the
+  `cache()` dedupe pattern in those files is mandatory so the page body does
+  not query twice. Prod-only DB errors surface as blank unfurls, not 500s —
+  which is why the fallback-to-brand path matters.
+- **Stale by design.** Platforms cache per page URL. A post edited after it
+  was shared keeps its old card on X for a week. Not a bug.
+- **No tsc coverage.** The worker is a separate tsconfig, the metadata is
+  strings, and crawler behaviour is external. The two scripts are the gate.
+
+---
+
+## 8. Open decisions (defaults chosen; change here, not in code)
+
+- **Square variant?** Telegram and WhatsApp render 1:1 better. Default: no —
+  ship 1200×630 everywhere first, add `?ratio=1` to the router later if the
+  square crops look bad in the Phase 5 matrix.
+- **Follower / like counts on cards.** Default: yes, they are what make a card
+  worth clicking, and the URL-encoded value is a snapshot so staleness is
+  bounded by the crawler's own cache.
+- **Wallet addresses.** Never on a card (memory `no-wallet-address-display`).
+  Coin cards show `$SYMBOL` and the chain badge, not the mint.
+- **Verified mark.** From `user.verifiedTier` — on a card it is a badge, which
+  is exactly what that field is (CLAUDE.md: never *gate* on it; displaying it
+  is fine).
