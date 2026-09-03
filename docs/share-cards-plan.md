@@ -67,6 +67,7 @@ except the pieces marked **exists**.
 | 6b | **Community invite** | `/communities/invite/[code]` | same via `inviteCode` | Same card with an "You're invited to" eyebrow |
 | 7 | **Category** | `/category/[slug]` | static title | Static per-category card (title + brand) |
 | 8 | **Default / brand** | `/`, `/home`, marketing, anything else | none | One static 1200×630 brand image |
+| 9 | **PnL card** (user-generated) | `/pnl/[cardId]` + the image itself | `trades` rows for (user, mint) → cost basis, qty, realized/unrealized (`server/lib/pnl.ts`); price series from `lib/coins/candles.ts`/`sparkline.ts`; coin identity + mcap | pump.fun PnL anatomy (§9): coin strip, price line with buy/sell markers, big signed $ PnL, % pill, "<username>'s position" + date, Acquired / Average entry / Market Cap |
 
 Not in scope now: clips and spaces (no routes exist), `/embed/*` (noindex),
 `/apps` (use the default card until the directory has its own identity).
@@ -393,6 +394,76 @@ app/(app)/dev/share-cards/page.tsx  (exists) X + Discord unfurl preview
   was shared keeps its old card on X for a week. Not a bug.
 - **No tsc coverage.** The worker is a separate tsconfig, the metadata is
   strings, and crawler behaviour is external. The two scripts are the gate.
+
+---
+
+## 9. PnL card (user-generated, the brag image)
+
+Reference: pump.fun's PnL card as posted on X (screenshot 2026-09-03). It is a
+different kind of card from everything above: **not** what a crawler draws
+for a page, but an image a user *makes* from their own position and posts
+as media, with an optional link that unfurls to the same image.
+
+### Anatomy (from the reference, mapped to our rules)
+
+| pump.fun | ours |
+|---|---|
+| Green frame around a dark panel, green glow | Frame hairline + brand-tinted glow (`boxShadow`) in **lantern when up, pastelred when down**; no gradients, no blurred backdrop |
+| Coin avatar, name, ticker top-left | Same, from `tokens` or `resolveCoin()` |
+| Price line across the middle, a "B" marker at the buy, stacked "S +3" sell pills | An SVG `<path>` in the tree (satori renders `svg`/`path`/`circle`); line in lantern with a wider 25%-alpha copy behind it as the glow; markers: **B** chip at first buy, sells grouped into "S +n" chips when they cluster (bucket by x-pixel) |
+| `+$33.41K` huge, `↑ 6407%` in a green pill | 128 px Bold signed USD; % pill in lantern/pastelred with dark text |
+| `8RbueG's position` + date, with the wallet's pfp | **`<username>'s position`** — never the wallet address (memory `no-wallet-address-display`); avatar from the profile; date = last trade |
+| Acquired / Average entry / Market Cap | Same three: cost basis USD; entry **market cap** (avg entry price × supply, supply = mcap ÷ price at render); current mcap |
+| pump.fun wordmark + QR code bottom | Pixel wordmark bottom-left; **QR to `/coin/<mint>?ref=<username>`** bottom-right (a tiny QR encoder as SVG rects; doubles as the referral hook) |
+
+### Numbers, from what exists
+
+- `trades` rows for `(userId, mint)` give buys (`outputMint = mint`) and sells
+  (`inputMint = mint`) with `usdValue` at fill and raw amounts. `server/lib/pnl.ts`
+  already does the avg-cost math per window; the card needs the same math
+  **per mint, all-time**, so factor a `positionForMint(userId, mint)` out of it
+  rather than a second copy. Realized + unrealized (mark = current price) is
+  the headline; % = PnL ÷ cost basis.
+- Sells beyond tracked buys have no basis (the library's existing rule) —
+  a card for such a position shows realized only and says so in a small chip.
+- Price series: `lib/coins/sparkline.ts` / `candles.ts` for the window from
+  first buy to now, **quantized to 64 points in 0–99** and packed into one
+  URL param (~130 chars). Marker positions are indices into that series.
+
+### Two sizes, one template
+
+- **Portrait 1080×1350** for posting as media (what the reference is — the
+  X feed shows it large). Default for download / copy / "Post to X".
+- **1200×630** for the `/pnl/[cardId]` unfurl.
+Same template, a `ratio` param switches the layout.
+
+### Flow
+
+1. "Share PnL" on the coin page's position panel and on
+   `components/profile/profile-pnl-card.tsx` (per-coin rows).
+2. `pnl.createCard` (protected): computes the fields, **persists a snapshot**
+   in a `pnl_cards` table (`id`, `userId`, `mint`, `fields` json, `createdAt`)
+   and returns the id. A brag is a moment: the snapshot is what makes the
+   card immutable after posting and the `/pnl/[id]` link unfurl the same
+   image next month.
+3. Dialog shows the rendered card (`/api/og/pnl?…` built from the snapshot),
+   with **Copy image**, **Download**, **Post to X** (intent with text +
+   `/pnl/[id]`), and Copy link.
+4. `/pnl/[cardId]` page: `generateMetadata` → the 1200×630 render;
+   body shows the portrait card with a "Trade $TICKER" CTA. Public by
+   construction (the user made it to share); `noindex`.
+
+Sharing is the user's explicit act on their own position, so it does not
+depend on the `pnl.setSharing` profile toggle — but a card only ever exposes
+what the user chose to post.
+
+### Where it sits in the phases
+
+- Chart + marker + QR primitives → Phase 1 (`og-worker/src/ui.ts`).
+- `pnl` template → Phase 2, right after coin (it reuses coin's strip and
+  number styles).
+- `pnl_cards` table (additive SQL under `db/`), `pnl.createCard`, the dialog
+  and `/pnl/[id]` → Phase 4.
 
 ---
 
