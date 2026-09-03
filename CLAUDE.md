@@ -68,6 +68,20 @@ subscribe test.
   It remains **UX only** — the browser decides what renders, never what's
   allowed. Anything worth gating needs the server-side gate above as well.
 
+## Referral links are permanent (decided 2026-09-03)
+
+A user's link is `/?ref=<slug|code>`. `user.referral_slug` is claimed **once**
+from the username the first time `referral.getMyCode` runs and is **never
+moved by a rename** — old links in bios keep working, and a freed username
+cannot be re-registered to hijack them. The user can move it deliberately via
+`claimUsernameSlug` (UI warns that shared links stop working). Resolution in
+`applyCode` is **slug → username → code**, the first two case-insensitive
+(6 of 41 live usernames have capitals; exact match made their links dead).
+Applying is limited to 30 days after joining, and never self / mutual / bots.
+Rules are pure in `lib/referral/rules.ts` (`tests/referral-rules.test.ts`);
+the SQL side is proven by `scripts/dev/smoke-referral.ts` against a dev DB.
+Schema: `db/referral-slug.sql`.
+
 ## Commands
 
 Package manager is **bun** (`bun.lock`). Runtime is Next.js 16 (App Router, Turbopack) + React 19.

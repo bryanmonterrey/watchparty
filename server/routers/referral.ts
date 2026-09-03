@@ -1,78 +1,197 @@
 import { z } from "zod";
-import { router, protectedProcedure, publicProcedure } from "../trpc";
+import { router, protectedProcedure } from "../trpc";
 import { db } from "@/db";
 import { referrals, referralEarnings } from "@/db/schema/content";
 import { user } from "@/db/schema/auth";
-import { eq, count, desc, and, isNull, inArray, sql } from "drizzle-orm";
+import { eq, count, desc, and, isNull, inArray, sql, ne, type SQL } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
 import { payoutDestinationFor } from "@/server/lib/user-wallet";
+import {
+    APPLY_REJECTION_MESSAGE,
+    REF_INPUT_MAX,
+    applicantRejection,
+    canClaimUsernameSlug,
+    linkSlugFor,
+    normalizeRefInput,
+    pairRejection,
+    resolveReferrer,
+} from "@/lib/referral/rules";
 
-// Simple alphanumeric referral code generator
+// The rules (what a link is, how it resolves, who may apply one) live in
+// lib/referral/rules.ts and are unit-tested; this file is the DB glue.
+
+// 6 upper-case alphanumerics — the legacy link form and the fallback for
+// accounts without a username.
 function generateReferralCode(): string {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
-export const referralRouter = router({
-    // Get or generate the current user's referral code. The shareable link
-    // uses the USERNAME when one exists (watchparty.xyz/?ref=bry) — the code
-    // is the fallback for accounts without a username, and legacy codes keep
-    // working because applyCode matches both.
-    getMyCode: protectedProcedure.query(async ({ ctx }) => {
-        const [u] = await db.select({ referralCode: user.referralCode, username: user.username })
-            .from(user)
-            .where(eq(user.id, ctx.user.id))
-            .limit(1);
+// drizzle wraps driver errors in DrizzleQueryError; the postgres code is on .cause.
+function isUniqueViolation(err: unknown): boolean {
+    const e = err as { code?: string; cause?: { code?: string } } | null;
+    return e?.code === "23505" || e?.cause?.code === "23505";
+}
 
-        if (u?.referralCode) return { code: u.referralCode, username: u.username ?? null };
+async function loadLinkFields(userId: string) {
+    const [row] = await db
+        .select({ referralCode: user.referralCode, referralSlug: user.referralSlug, username: user.username })
+        .from(user)
+        .where(eq(user.id, userId))
+        .limit(1);
+    return row ?? { referralCode: null, referralSlug: null, username: null };
+}
 
-        // Generate a unique code
-        let code = generateReferralCode();
-        let attempts = 0;
-        while (attempts < 5) {
-            const existing = await db.select({ id: user.id })
-                .from(user).where(eq(user.referralCode, code)).limit(1);
-            if (!existing.length) break;
-            code = generateReferralCode();
-            attempts++;
+/**
+ * Assign a code if the row has none. Safe under concurrency: the UPDATE is
+ * conditioned on the column still being NULL and the unique index rejects a
+ * collision with another user, so we just re-read and return whatever won.
+ */
+async function ensureCode(userId: string, current: string | null): Promise<string> {
+    if (current) return current;
+    for (let attempt = 0; attempt < 6; attempt++) {
+        try {
+            await db
+                .update(user)
+                .set({ referralCode: generateReferralCode() })
+                .where(and(eq(user.id, userId), isNull(user.referralCode)));
+        } catch (err) {
+            if (isUniqueViolation(err)) continue;
+            throw err;
         }
+        const [row] = await db.select({ referralCode: user.referralCode }).from(user).where(eq(user.id, userId)).limit(1);
+        if (row?.referralCode) return row.referralCode;
+    }
+    throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Couldn't generate a referral code, try again" });
+}
 
-        await db.update(user).set({ referralCode: code }).where(eq(user.id, ctx.user.id));
-        const [me] = await db.select({ username: user.username }).from(user).where(eq(user.id, ctx.user.id)).limit(1);
-        return { code, username: me?.username ?? null };
+/**
+ * Claim `username` as the permanent slug if the account has none yet. A
+ * unique violation means someone else's link already uses that name (they
+ * held it before this user did) — the account stays on its code. Returns the
+ * slug in effect afterwards.
+ */
+async function claimSlugIfUnset(userId: string, username: string): Promise<string | null> {
+    try {
+        const rows = await db
+            .update(user)
+            .set({ referralSlug: username })
+            .where(and(eq(user.id, userId), isNull(user.referralSlug)))
+            .returning({ slug: user.referralSlug });
+        if (rows[0]?.slug) return rows[0].slug;
+    } catch (err) {
+        if (!isUniqueViolation(err)) throw err;
+    }
+    const [row] = await db.select({ slug: user.referralSlug }).from(user).where(eq(user.id, userId)).limit(1);
+    return row?.slug ?? null;
+}
+
+async function slugHeldByOther(slug: string, userId: string): Promise<boolean> {
+    const [row] = await db
+        .select({ id: user.id })
+        .from(user)
+        .where(and(sql`lower(${user.referralSlug}) = ${slug.toLowerCase()}`, ne(user.id, userId)))
+        .limit(1);
+    return !!row;
+}
+
+type ReferrerRow = { id: string; referredBy: string | null; isBot: boolean };
+async function findReferrer(where: SQL): Promise<ReferrerRow | null> {
+    const [row] = await db
+        .select({ id: user.id, referredBy: user.referredBy, isBot: user.isBot })
+        .from(user)
+        .where(where)
+        .limit(1);
+    return row ?? null;
+}
+
+export const referralRouter = router({
+    /**
+     * The caller's link. Generates the code on first call and, when the
+     * account has a username and no slug yet, claims the username as the
+     * permanent slug. The link is `/?ref=<slug ?? code>`.
+     */
+    getMyCode: protectedProcedure.query(async ({ ctx }) => {
+        const me = await loadLinkFields(ctx.user.id);
+        const code = await ensureCode(ctx.user.id, me.referralCode);
+        let slug = me.referralSlug;
+        if (!slug && me.username) slug = await claimSlugIfUnset(ctx.user.id, me.username);
+
+        const usernameTakenByOther = me.username ? await slugHeldByOther(me.username, ctx.user.id) : false;
+        return {
+            code,
+            slug,
+            username: me.username ?? null,
+            /** What goes after `?ref=` — the slug, else the code. */
+            linkSlug: linkSlugFor({ referralSlug: slug, referralCode: code }) ?? code,
+            /** The account was renamed and the new name is free: offer to move the link. */
+            canClaimUsername: canClaimUsernameSlug({ username: me.username, referralSlug: slug, usernameTakenByOtherSlug: usernameTakenByOther }),
+            /** The current username is already someone else's link (they held it first). */
+            usernameTakenByOther,
+        };
     }),
 
-    // Apply a referral (code or username — links carry the username)
-    applyCode: protectedProcedure
-        .input(z.object({ code: z.string().min(2).max(40) }))
-        .mutation(async ({ ctx, input }) => {
-            // Check user hasn't already been referred
-            const [me] = await db.select({ referredBy: user.referredBy })
-                .from(user).where(eq(user.id, ctx.user.id)).limit(1);
-            if (me?.referredBy) throw new TRPCError({ code: "BAD_REQUEST", message: "Already applied a referral code" });
-
-            // Find the referrer: legacy code first, then username
-            let [referrer] = await db.select({ id: user.id })
-                .from(user).where(eq(user.referralCode, input.code.toUpperCase())).limit(1);
-            if (!referrer) {
-                [referrer] = await db.select({ id: user.id })
-                    .from(user).where(eq(user.username, input.code.toLowerCase())).limit(1);
+    /**
+     * Move the link to the current username. Deliberate and explicit — the UI
+     * warns that links already shared under the old slug stop working.
+     */
+    claimUsernameSlug: protectedProcedure.mutation(async ({ ctx }) => {
+        const me = await loadLinkFields(ctx.user.id);
+        if (!me.username) throw new TRPCError({ code: "BAD_REQUEST", message: "Set a username first" });
+        if (me.referralSlug?.toLowerCase() === me.username.toLowerCase()) return { slug: me.referralSlug };
+        try {
+            await db.update(user).set({ referralSlug: me.username }).where(eq(user.id, ctx.user.id));
+        } catch (err) {
+            if (isUniqueViolation(err)) {
+                throw new TRPCError({ code: "CONFLICT", message: "That name is already used by another referral link" });
             }
-            if (!referrer) throw new TRPCError({ code: "NOT_FOUND", message: "Invalid referral code" });
-            if (referrer.id === ctx.user.id) throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot refer yourself" });
+            throw err;
+        }
+        return { slug: me.username };
+    }),
 
-            // Record referral
+    /** Apply a referral from a link (`?ref=`) or typed by hand: slug, username or code. */
+    applyCode: protectedProcedure
+        .input(z.object({ code: z.string().min(1).max(REF_INPUT_MAX * 2) }))
+        .mutation(async ({ ctx, input }) => {
+            const ref = normalizeRefInput(input.code);
+            if (!ref) throw new TRPCError({ code: "BAD_REQUEST", message: "Enter a username or referral code" });
+
+            const [me] = await db
+                .select({ id: user.id, referredBy: user.referredBy, createdAt: user.createdAt, isBot: user.isBot })
+                .from(user)
+                .where(eq(user.id, ctx.user.id))
+                .limit(1);
+            if (!me) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+            const applicantProblem = applicantRejection(me);
+            if (applicantProblem) throw new TRPCError({ code: "BAD_REQUEST", message: APPLY_REJECTION_MESSAGE[applicantProblem] });
+
+            const referrer = await resolveReferrer<ReferrerRow>(ref, {
+                bySlug: (s) => findReferrer(sql`lower(${user.referralSlug}) = ${s}`),
+                byUsername: (s) => findReferrer(sql`lower(${user.username}) = ${s}`),
+                byCode: (c) => findReferrer(eq(user.referralCode, c)),
+            });
+            if (!referrer) throw new TRPCError({ code: "NOT_FOUND", message: "We couldn't find that referral link or code" });
+
+            const pairProblem = pairRejection(me, referrer);
+            if (pairProblem) throw new TRPCError({ code: "BAD_REQUEST", message: APPLY_REJECTION_MESSAGE[pairProblem] });
+
+            // Record referral. The unique index on referredUserId plus the
+            // NULL-conditioned update make a double-submit a no-op.
             await db.insert(referrals).values({
                 id: nanoid(),
                 referrerId: referrer.id,
                 referredUserId: ctx.user.id,
                 status: "completed",
-                rewardLamports: 0, // set reward amount here when implemented
+                rewardLamports: 0,
                 completedAt: new Date(),
             }).onConflictDoNothing();
 
-            // Mark the referred user
-            await db.update(user).set({ referredBy: referrer.id }).where(eq(user.id, ctx.user.id));
+            await db
+                .update(user)
+                .set({ referredBy: referrer.id })
+                .where(and(eq(user.id, ctx.user.id), isNull(user.referredBy)));
 
             return { success: true };
         }),

@@ -44,7 +44,8 @@ export const user = pgTable("user", {
   xp: integer("xp").default(0).notNull(),              // lifetime XP; rollup of xp_events (server/lib/xp.ts)
   level: integer("level").default(1).notNull(),        // derived from xp via lib/xp.ts curve
   shareTrades: boolean("shareTrades").default(false).notNull(), // opt-in: trades notify followers + public PnL card/leaderboard
-  referralCode: text("referralCode"),                  // auto-generated code for referrals
+  referralCode: text("referralCode"),                  // auto-generated 6-char code; legacy link form + fallback when no slug
+  referralSlug: text("referral_slug"),                 // the /?ref=<slug> in the user's link; claimed once from the username, NEVER moved by a rename (db/referral-slug.sql)
   referredBy: text("referredBy"),                      // userId who referred this user
   banned: boolean("banned"),
   banReason: text("banReason"),
@@ -57,7 +58,9 @@ export const user = pgTable("user", {
 }, (table) => [
   uniqueIndex("idx_user_wallet_address").on(table.wallet_address),
   index("idx_user_username").on(table.username),
-  index("idx_user_referral_code").on(table.referralCode),
+  index("idx_user_username_lower").on(sql`lower(${table.username})`),
+  uniqueIndex("idx_user_referral_code").on(table.referralCode),
+  uniqueIndex("uq_user_referral_slug_lower").on(sql`lower(${table.referralSlug})`),
   pgPolicy("users_select_public", { for: "select", to: "public", using: sql`true` }),
   pgPolicy("users_update_own", { for: "update", to: "authenticated", using: sql`id = (SELECT auth.uid()::text)` }),
 ]).enableRLS();
