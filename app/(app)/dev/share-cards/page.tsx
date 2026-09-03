@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { CRAWLER_UA, missingShareTags, parseShareTags, type ShareTags } from "@/lib/share/parse-meta";
 import { SITE_URL } from "@/lib/share/metadata";
+import { CARD_FIXTURES } from "@/lib/share/og-fixtures";
+import { CardGallery } from "./card-gallery";
 
 // Share-card preview. Fetches each URL the way a link crawler does (same
 // parser as scripts/dev/check-share-meta.mjs), then draws what X and Discord
@@ -25,8 +27,13 @@ interface Preview {
     error?: string;
 }
 
-async function crawl(path: string): Promise<Preview> {
-    const url = `${SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+// Under `next dev` the crawl targets PROD by default: fetching this same dev
+// server from inside a render compiles every page cold and blows the deadline,
+// and prod is where the tags a crawler sees actually live. `?base=` overrides.
+const DEFAULT_BASE = process.env.NODE_ENV === "development" ? "https://watchparty.xyz" : SITE_URL;
+
+async function crawl(base: string, path: string): Promise<Preview> {
+    const url = `${base}${path.startsWith("/") ? path : `/${path}`}`;
     try {
         const res = await fetch(url, {
             headers: { "user-agent": CRAWLER_UA, accept: "text/html" },
@@ -34,7 +41,7 @@ async function crawl(path: string): Promise<Preview> {
             cache: "no-store",
             // No default fetch deadline on workerd — a hung page would hang
             // this whole preview (memory upstream-fetch-needs-deadline).
-            signal: AbortSignal.timeout(8000),
+            signal: AbortSignal.timeout(12000),
         });
         const tags = parseShareTags(await res.text());
         return { path, status: res.status, finalUrl: res.url, tags, missing: missingShareTags(tags) };
@@ -53,12 +60,13 @@ async function crawl(path: string): Promise<Preview> {
 export default async function ShareCardsPreview({
     searchParams,
 }: {
-    searchParams: Promise<{ u?: string }>;
+    searchParams: Promise<{ u?: string; base?: string }>;
 }) {
-    const { u } = await searchParams;
+    const { u, base: baseParam } = await searchParams;
+    const base = safeBase(baseParam) ?? DEFAULT_BASE;
     const paths = (u ? u.split(",") : DEFAULT_PATHS).map((p) => p.trim()).filter(Boolean);
-    const previews = await Promise.all(paths.map(crawl));
-    const host = new URL(SITE_URL).host;
+    const previews = await Promise.all(paths.map((p) => crawl(base, p)));
+    const host = new URL(base).host;
 
     return (
         <div className="mx-auto w-full max-w-[1100px] px-4 py-8 text-white sm:px-6">
@@ -68,7 +76,12 @@ export default async function ShareCardsPreview({
                 <span className="font-mono">{host}</span>, drawn the way X and Discord draw it.
             </p>
 
-            <form method="get" className="mt-5 flex gap-2">
+            <form method="get" className="mt-5 flex flex-wrap gap-2">
+                <input
+                    name="base"
+                    defaultValue={base}
+                    className="h-11 w-full rounded-full border border-border bg-white/[0.03] px-4 font-mono text-sm outline-none focus:border-twitter2 sm:w-[260px]"
+                />
                 <input
                     name="u"
                     defaultValue={paths.join(",")}
@@ -86,34 +99,35 @@ export default async function ShareCardsPreview({
                 ))}
             </div>
 
-            <section className="mt-12">
-                <h2 className="text-lg font-semibold">Raw card images</h2>
+            <section className="mt-14">
+                <h2 className="font-pixel text-2xl">Every card, sample data</h2>
                 <p className="mt-1 text-sm text-postgray">
-                    The image files themselves. Worker templates land here as they ship
-                    (docs/share-cards-plan.md).
+                    Rendered live by the og-worker from fixtures (lib/share/og-fixtures.ts). Click any card to
+                    open the PNG. The brand default is the static file every page falls back to.
                 </p>
-                <ul className="mt-3 space-y-1 font-mono text-sm">
-                    <li>
-                        <a className="text-twitter2 hover:underline" href="/og-default.png" target="_blank" rel="noreferrer">
-                            /og-default.png
-                        </a>{" "}
-                        <span className="text-postgray">— brand default (static)</span>
-                    </li>
-                    <li>
-                        <a
-                            className="text-twitter2 hover:underline"
-                            href="/api/og/post?text=gm%20from%20the%20preview%20page&name=watchparty&username=watchparty"
-                            target="_blank"
-                            rel="noreferrer"
-                        >
-                            /api/og/post?text=…
-                        </a>{" "}
-                        <span className="text-postgray">— og-worker, post (v0)</span>
-                    </li>
-                </ul>
+                <div className="mt-6 grid gap-6 sm:grid-cols-2">
+                    <figure>
+                        <figcaption className="mb-2 text-sm font-semibold">Default · brand</figcaption>
+                        <a href="/og-default.png" target="_blank" rel="noreferrer" className="block overflow-hidden rounded-2xl border border-border">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src="/og-default.png" alt="" className="block w-full" />
+                        </a>
+                    </figure>
+                    <CardGallery fixtures={CARD_FIXTURES} />
+                </div>
             </section>
         </div>
     );
+}
+
+function safeBase(v: string | undefined): string | null {
+    if (!v) return null;
+    try {
+        const u = new URL(v);
+        return u.protocol === "https:" || u.protocol === "http:" ? u.origin : null;
+    } catch {
+        return null;
+    }
 }
 
 function Row({ preview, host }: { preview: Preview; host: string }) {

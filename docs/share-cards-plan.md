@@ -4,8 +4,8 @@ The image a link turns into when it is pasted on X, Discord, Telegram, iMessage,
 Slack, LinkedIn, WhatsApp. One card per shareable thing, rendered on demand,
 branded like the app.
 
-Written 2026-09-03 from a survey of what exists. Nothing here is built yet
-except the pieces marked **exists**.
+Written 2026-09-03 from a survey of what existed then. §1 describes that
+starting state; the phase headings in §5 say what has shipped since.
 
 ---
 
@@ -269,7 +269,27 @@ open each image full-size (`?u=/status/abc,/pump`).
 **Done when:** pasting `watchparty.xyz` and a `/status/…` link into Discord
 and X both show the brand image, and the script passes.
 
-### Phase 1 — the worker becomes a card platform (1–2 days)
+### Phase 1 — the worker becomes a card platform — **SHIPPED 2026-09-03**
+
+Landed with Phase 2's templates in one pass: fonts bundled (`og-worker/fonts/`,
+wrangler `rules` Data module), `src/h.ts` element helper, `src/ui.ts`
+primitives, `src/images.ts` (allowlist + 2.5s deadline + Supabase resize +
+PNG/JPEG/GIF only — resvg cannot decode WebP, and a WebP body used to fail the
+whole card), `src/params.ts` capped readers, and the router with a shared
+warm-up promise (two cold concurrent renders double-initialise resvg's wasm
+otherwise). Local: `bunx wrangler dev --port 8787` in `og-worker/` + the
+`next.config` dev rewrite; **restart it after editing source** (hot reload
+leaves the worker dead). Every template is rendered from fixtures on
+`/dev/share-cards`.
+
+Three things learned rendering them, now encoded in the primitives:
+- **satori lets a flex column grow to its text's width instead of wrapping**,
+  pushing the other column off the canvas. Every column has an explicit width
+  from `innerWidth()`; never `flexGrow: 1` on a text column.
+- **Chips inside a column stretch full-width** — `chip()` sets `alignSelf`.
+- **`marginTop: "auto"` does not push** inside a column whose height came from
+  content; use a `flexGrow: 1` spacer.
+
 
 1. Fonts bundled (above). Emoji: enable `workers-og`'s emoji loader so posts
    with emoji don't render tofu.
@@ -287,7 +307,8 @@ and X both show the brand image, and the script passes.
    before every og-worker push and eyeball the PNGs — it is the only review a
    card gets.
 
-### Phase 2 — templates, in share-value order (2–3 days)
+### Phase 2 — templates — **SHIPPED 2026-09-03** (all eight, incl. PnL both ratios)
+
 
 Coin first (it is the reference and the template two others reuse) → post
 variants (text / image / video / token) → profile + live → prediction →
@@ -301,7 +322,13 @@ typed field set in `lib/share/og-url.ts`.
 plus `twitter: { card: "player", players: [{ playerUrl, streamUrl, width:
 1280, height: 720 }] }` and the raw thumbnail as `og:image`.
 
-### Phase 3 — wire the pages (1 day)
+### Phase 3 — wire the pages (1 day) — **NEXT**
+
+`lib/share/og-url.ts` (`ogImage()` / `ogImagePath()`, typed field sets per
+template) exists; the pages still send the brand default. Wiring is: build the
+fields from the row each `generateMetadata` already holds and pass
+`image: ogImage("coin", …)` to `shareMetadata()`.
+
 
 - Existing six: build the template URL from the row they already hold.
   Profile picks `live` when `getStreamByUser` says so (it already runs
@@ -345,7 +372,8 @@ og-worker/
   src/images.ts                     allowlist + deadline fetch + data URI
   src/templates/{post,profile,live,coin,video,market,community,category}.ts
   wrangler.jsonc                    + rules: Data *.ttf
-lib/share/og-url.ts                 ogImageUrl(template, fields)
+lib/share/og-url.ts                 (exists) ogImage()/ogImagePath(), typed fields per template
+lib/share/og-fixtures.ts            (exists) sample data for every card
 lib/share/metadata.ts               shareMetadata(...)
 app/layout.tsx                      metadataBase, openGraph, twitter
 app/opengraph-image.png (+ .gitignore negation)

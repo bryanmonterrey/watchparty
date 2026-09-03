@@ -26,5 +26,10 @@
   // the SAME share URLs the app builds (origin + /api/og/post?...) resolve
   // here with no client change. Only AFTER the route is live should the app's
   // own /api/og route be removed (that's what reclaims the bundle headroom).
+  // Geist + Geist Pixel, bundled as raw bytes for satori's `fonts` option
+  // (copied from ../app/fonts; ~580 KB total, well inside this worker's
+  // budget — the whole point of this worker is to carry weight the main
+  // one can't).
+  "rules": [{ "type": "Data", "globs": ["**/*.ttf"], "fallthrough": true }],
   "observability": { "enabled": true }
 }

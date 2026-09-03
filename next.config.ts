@@ -105,6 +105,15 @@ const nextConfig: NextConfig = {
   //
   // Ordering matters: /discover/post/<id> hits the second rule first and lands
   // on /feed/post/<id>, which the third then forwards to /status/<id>.
+  // Local dev only: the generated share cards render on the standalone
+  // og-worker (og-worker/, `bun run dev` there → :8787). In production the
+  // zone route watchparty.xyz/api/og/* reaches that worker before the app
+  // ever sees the request, so this rewrite is dev's stand-in for the route.
+  async rewrites() {
+    if (process.env.NODE_ENV === "production") return [];
+    const og = process.env.OG_WORKER_DEV_URL ?? "http://127.0.0.1:8787";
+    return [{ source: "/api/og/:path*", destination: `${og}/api/og/:path*` }];
+  },
   async redirects() {
     return [
       { source: "/discover", destination: "/feed", permanent: true },
