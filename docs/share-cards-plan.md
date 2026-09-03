@@ -235,16 +235,29 @@ squircle), element-object tree not HTML strings (the string parser drops
 
 ## 5. Phases
 
-### Phase 0 — every link gets *a* card (half a day)
+### Phase 0 — every link gets *a* card — **SHIPPED 2026-09-03**
+
+What landed: `lib/share/metadata.ts` (`shareMetadata` / `fallbackShareMetadata`,
+`SITE_URL`, the default image constant), the root layout's `metadataBase` +
+`openGraph` + `twitter` blocks, `public/og-default.png` rendered by
+`scripts/dev/render-og-default.mjs` (Chrome, fonts inlined), the six existing
+pages moved onto the helper (video and category use the raw thumbnail in the
+compact `summary` card), `lib/share/parse-meta.ts` + `scripts/dev/check-share-meta.mjs`,
+and **`/dev/share-cards`** — a preview page that crawls any list of paths as
+Twitterbot and draws the X and Discord unfurls side by side, with a link to
+open each image full-size (`?u=/status/abc,/pump`).
+
 
 1. `app/layout.tsx`: `metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL
    ?? "https://watchparty.xyz")`, `openGraph: { siteName: "watchparty",
    type: "website", images: [default] }`, `twitter: { card:
    "summary_large_image" }`.
-2. **Default brand image** as a static file at `app/opengraph-image.png`
-   (Next serves it and writes the tags). Static, not worker-rendered, so the
-   fallback survives the worker being down. `*.png` is gitignored repo-wide —
-   add a `!app/opengraph-image.png` negation (memory `ci-guards-and-png-ignore`).
+2. **Default brand image** as a static file at `public/og-default.png`,
+   referenced explicitly from the root metadata (not the `opengraph-image`
+   file convention — with shallow `openGraph` merging the explicit path is
+   the predictable one). Static, not worker-rendered, so the fallback
+   survives the worker being down. `*.png` is gitignored repo-wide — the
+   `!public/og-default.png` negation is in place (memory `ci-guards-and-png-ignore`).
 3. `lib/share/metadata.ts` helper; switch the six existing `generateMetadata`
    to it (still with the default image — templates come later).
 4. `scripts/dev/check-share-meta.mjs`: fetches one URL of each type on prod
@@ -340,8 +353,11 @@ app/(app)/**/page.tsx               the six existing + three community pages
 app/(marketing)/**/page.tsx         static metadata
 components/browse/post-card/share-menu.tsx
 components/browse/post-composer.tsx, components/app-ui/create-dialog.tsx
-scripts/dev/check-share-meta.mjs
+scripts/dev/check-share-meta.mjs    (exists)
+scripts/dev/render-og-default.mjs   (exists) brand default → public/og-default.png
 scripts/dev/render-og-cards.mjs
+lib/share/parse-meta.ts             (exists) crawler-style tag parser
+app/(app)/dev/share-cards/page.tsx  (exists) X + Discord unfurl preview
 ```
 
 ---

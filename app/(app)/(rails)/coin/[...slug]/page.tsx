@@ -8,6 +8,7 @@ import { TokenProfile } from "@/components/tokens/token-profile";
 import { CoinDetail, type CoinViewData } from "@/components/coins/coin-detail";
 import { CoinTabPrice } from "@/components/coins/coin-tab-price";
 import { resolveCoin } from "@/lib/coins/resolve";
+import { fallbackShareMetadata, shareMetadata } from "@/lib/share/metadata";
 
 // Coin pages live here, not at the top level. They used to share `/[slug]` with
 // user profiles — one route resolving a string to EITHER a user or a token —
@@ -100,19 +101,28 @@ type Params = {
 export async function generateMetadata({ params }: Pick<Params, "params">): Promise<Metadata> {
     const { slug } = await params;
     const parsed = parseSlug(slug);
-    if (!parsed) return { title: "not found" };
+    const path = `/coin/${slug.join("/")}`;
+    if (!parsed) return fallbackShareMetadata(path, "not found");
 
     const token = await getToken(parsed.address);
     if (token) {
-        return { title: `${token.name} ($${token.ticker})` };
+        return shareMetadata({
+            title: `${token.name} ($${token.ticker})`,
+            description: token.description || `Trade $${token.ticker} on watchparty`,
+            path,
+        });
     }
 
     const coin = await getCoin(parsed.address, parsed.network);
     if (coin) {
-        return { title: coin.name ? `${coin.name} ($${coin.symbol})` : `$${coin.symbol}` };
+        return shareMetadata({
+            title: coin.name ? `${coin.name} ($${coin.symbol})` : `$${coin.symbol}`,
+            description: `Trade $${coin.symbol} on watchparty`,
+            path,
+        });
     }
 
-    return { title: "not found" };
+    return fallbackShareMetadata(path, "not found");
 }
 
 /**

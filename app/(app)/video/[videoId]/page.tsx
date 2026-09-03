@@ -6,6 +6,7 @@ import { user } from "@/db/schema/auth";
 import { posts } from "@/db/schema/content";
 import { and, eq, isNotNull } from "drizzle-orm";
 import { VideoWatchPage } from "@/components/video/video-watch-page";
+import { fallbackShareMetadata, shareMetadata } from "@/lib/share/metadata";
 
 // Videos live at /video/<postId>, off the [slug] tree.
 //
@@ -36,13 +37,18 @@ const getCreator = cache((userId: string) =>
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
     const { videoId } = await params;
     const post = await getVideoPost(videoId);
-    if (!post) return { title: "not found" };
+    if (!post) return fallbackShareMetadata(`/video/${videoId}`, "not found");
 
-    return {
+    // The thumbnail already carries the meaning, so the card is the compact
+    // thumbnail-left shape (the YouTube treatment), not a generated image.
+    return shareMetadata({
         title: post.title ?? "Video",
-        description: post.content?.slice(0, 160) ?? undefined,
-        openGraph: post.thumbnailUrl ? { images: [{ url: post.thumbnailUrl }] } : undefined,
-    };
+        description: post.content,
+        path: `/video/${videoId}`,
+        image: post.thumbnailUrl ?? undefined,
+        card: post.thumbnailUrl ? "summary" : "summary_large_image",
+        type: "video.other",
+    });
 }
 
 export default async function VideoPage({ params }: { params: Promise<Params> }) {

@@ -2,6 +2,13 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import { ThemeProvider } from "@/components/theme/theme-provider";
+import {
+  DEFAULT_DESCRIPTION,
+  DEFAULT_OG_IMAGE,
+  SITE_HANDLE,
+  SITE_NAME,
+  SITE_URL,
+} from "@/lib/share/metadata";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -23,12 +30,33 @@ const geistPixel = localFont({
   preload: false,
 });
 
+// Share tags. `metadataBase` is what turns every relative image and URL below
+// (and in every page's `shareMetadata()`) into the absolute ones X, Discord
+// and iMessage require. Pages that set their own `openGraph`/`twitter`
+// REPLACE these blocks wholesale (Next merges shallowly), which is why they
+// go through lib/share/metadata.ts instead of writing the objects by hand.
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "watchparty",
-    template: "%s / watchparty",
+    default: SITE_NAME,
+    template: `%s / ${SITE_NAME}`,
   },
-  description: "magic internet money meets streaming",
+  description: DEFAULT_DESCRIPTION,
+  openGraph: {
+    siteName: SITE_NAME,
+    type: "website",
+    url: "/",
+    title: SITE_NAME,
+    description: DEFAULT_DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE],
+  },
+  twitter: {
+    card: "summary_large_image",
+    site: SITE_HANDLE,
+    title: SITE_NAME,
+    description: DEFAULT_DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE],
+  },
 };
 
 // Paints the mobile browser chrome (address bar) to match the black app

@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { predictionMarkets } from "@/db/schema/content/predictions";
 import { eq } from "drizzle-orm";
 import { MarketDetail } from "@/components/predictions/market-detail";
+import { fallbackShareMetadata, shareMetadata } from "@/lib/share/metadata";
 
 // Each prediction market has its own page (like tokens do).
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -13,13 +14,14 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
             .from(predictionMarkets)
             .where(eq(predictionMarkets.id, id))
             .limit(1);
-        if (!market) return { title: "market not found" };
-        return {
+        if (!market) return fallbackShareMetadata(`/trade/predictions/${id}`, "market not found");
+        return shareMetadata({
             title: market.question,
-            description: market.description?.slice(0, 160) ?? "Back an outcome in USDC on watchparty.",
-        };
+            description: market.description || "Back an outcome in USDC on watchparty.",
+            path: `/trade/predictions/${id}`,
+        });
     } catch {
-        return { title: "predictions" };
+        return fallbackShareMetadata(`/trade/predictions/${id}`, "predictions");
     }
 }
 

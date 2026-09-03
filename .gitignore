@@ -49,6 +49,9 @@ next-env.d.ts
 # public/avatar.png is the default avatar fallback served in production
 # (rendered by every avatar with no image) — must be committed.
 !public/avatar.png
+# public/og-default.png is the brand share card every link falls back to
+# (lib/share/metadata.ts); rendered by scripts/dev/render-og-default.mjs.
+!public/og-default.png
 # public/emoji/ is the emoji.gg pack art, built by scripts/build-emoji-packs.mjs
 # and served in production by the picker and by chat. 64 of the 80 files are
 # PNGs, so without this negation the blanket *.png rule silently drops them from

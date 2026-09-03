@@ -8,6 +8,7 @@ import { follows } from "@/db/schema/content/follow";
 import { count, eq, or } from "drizzle-orm";
 import { UserProfile } from "@/components/profile/user-profile";
 import { recordSlugMiss } from "@/lib/security/slug-miss-cache";
+import { fallbackShareMetadata, shareMetadata } from "@/lib/share/metadata";
 
 // A top-level slug is a USERNAME and nothing else. Coins used to share this
 // route — one string resolving to either a user or a token — and now live at
@@ -50,10 +51,15 @@ export async function generateMetadata({ params }: { params: Promise<{ username:
     if (userProfile) {
         // No @ — the root template already reads "%s / watchparty", and
         // "@name / watchparty" put two sigils in a six-character tab.
-        return { title: userProfile.username };
+        return shareMetadata({
+            title: userProfile.username ?? userProfile.name,
+            description: userProfile.bio || `${userProfile.name} on watchparty`,
+            path: `/${username}`,
+            type: "profile",
+        });
     }
 
-    return { title: "not found" };
+    return fallbackShareMetadata(`/${username}`, "not found");
 }
 
 export default async function UsernamePage({ params }: { params: Promise<{ username: string }> }) {

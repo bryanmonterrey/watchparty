@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { posts, user } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import type { Metadata } from "next";
+import { fallbackShareMetadata, shareMetadata } from "@/lib/share/metadata";
 
 // Port of sidebar's (browse)/discover/post/[id]/page.tsx.
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -20,18 +21,20 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
             .limit(1);
 
         const post = result[0];
-        if (!post) return { title: "post not found" };
+        if (!post) return fallbackShareMetadata(`/status/${id}`, "post not found");
 
-        return {
+        return shareMetadata({
             // Name and @handle are identity and keep their case; the brand
             // is dropped because the root template appends "/ watchparty"
             // already, and this read "... on Watchparty / watchparty".
             title: `${post.name} (@${post.username})`,
-            description: post.content?.slice(0, 160) || "Check out this post on Watchparty",
-        };
+            description: post.content || "Check out this post on watchparty",
+            path: `/status/${id}`,
+            type: "article",
+        });
     } catch (error) {
         console.error("Error in generateMetadata:", error);
-        return { title: "post" };
+        return fallbackShareMetadata(`/status/${id}`, "post");
     }
 }
 
