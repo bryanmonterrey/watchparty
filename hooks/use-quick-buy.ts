@@ -17,6 +17,10 @@ type QuickBuyToken = {
     tokenAddress?: string | null;
     symbol: string;
     imageUrl?: string | null;
+    /** The coin whose market data this trade moved, when it is not the output.
+     *  A SELL buys wrapped SOL, and syncing WSOL after it would spend a market
+     *  lookup on the one token nobody needs refreshed. */
+    syncMint?: string | null;
 };
 
 /** What to spend. Any SPL token works as the input — Jupiter routes from any
@@ -164,7 +168,7 @@ export function useQuickBuy() {
 
             // Event-driven freshness: pull this token's market data right now
             // instead of waiting for the next sync tick, then refresh the feed.
-            syncToken.mutate({ mint: token.tokenAddress }, {
+            syncToken.mutate({ mint: token.syncMint ?? token.tokenAddress }, {
                 onSettled: () => utils.trade.getFeed.invalidate(),
             });
             return "done";

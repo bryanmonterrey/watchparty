@@ -1,123 +1,37 @@
 "use client";
 
-// The coin page's buy/sell panel — every coin, every chain the app trades.
+// The coin page's buy/sell card — every coin, every chain the app trades.
 //
-// Anatomy follows Mobula's terminal (ProTab): a buy/sell toggle, one size
-// input with preset chips (native amounts buying, % of balance selling), a
-// live estimate, slippage, one big action button. Two engines behind one face:
+// It is the board's buy dialog, in a card: the same <BuyPanel> the trending
+// rows open, so the amount card, the dollar presets, the wallet switcher, the
+// pay-with picker, the details block and the hold-to-confirm are one
+// implementation rather than two that looked alike from a distance. What this
+// file adds is what a card needs and a dialog doesn't: a buy/sell toggle (a
+// dialog opened from a "Buy" button is buy-only; a page about a coin you may
+// hold is not), and the two gates that decide whether the panel renders at
+// all — a chain with no route, and no session.
 //
-//   Solana  → the existing Jupiter path (wallet.getQuote → getSwapTransaction
-//             → adapter/Swig signing), the same machinery quick-buy uses — so
-//             ANY mint trades, not just coins in Jupiter's token list.
-//   EVM ×5  → LI.FI through wallet.getEvmSwapQuote / wallet.swapEvm; the
+// Two engines behind one face, both owned by the panel:
+//
+//   Solana  → the Jupiter path (wallet.getQuote → getSwapTransaction →
+//             adapter/Swig signing), so ANY mint trades, not just coins in
+//             Jupiter's token list.
+//   EVM     → LI.FI through wallet.getEvmSwapQuote / wallet.swapEvm; the
 //             server re-quotes and signs from the seed-derived key, the same
-//             trust model as sendOnChain. Notably ahead of the reference —
-//             MTT ships its EVM branch as `throw "not yet implemented"`.
+//             trust model as sendOnChain.
 //
 // Chains with no route (sui, bitcoin, anything unknown) keep the open-market
 // card instead of a button that fails.
 
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { PublicKey } from "@solana/web3.js";
-import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
-import { useWalletSigning } from "@/hooks/use-wallet-signing";
-import { showSwapToast } from "@/components/wallet/wallet-drawer/views/swap/swap-transaction-toast";
 import { OPEN_WALLET_DRAWER_EVENT } from "@/components/wallet/sol-balance-chip";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { BuyPanel, type TradeSide } from "@/components/trending/buy-panel";
 import { cn } from "@/lib/utils";
-import { Squircle } from "@/components/ui/squircle";
-import { compactUsd } from "@/components/trending/trending-format";
-import { HoldButton } from "@/components/ui/hold-button";
-import { chainLabel } from "@/lib/coin-feed/networks";
+import { buyableChainId, chainLabel } from "@/lib/coin-feed/networks";
 import { getChain } from "@/lib/chains/registry";
-import { NATIVE_TOKEN } from "@/lib/chains/swap/types";
 import type { CoinViewData } from "./coin-detail";
-
-const SOL_WSOL = "So11111111111111111111111111111111111111112";
-/** getWalletAssets reports native SOL under this display mint. */
-const SOL_DISPLAY_MINT = "So11111111111111111111111111111111111111111";
-
-/** The coin page's network slugs (GeckoTerminal vocabulary) → chain registry
- *  ids. Anything absent has no in-app route and falls back to the market link. */
-const NETWORK_TO_CHAIN: Record<string, string> = {
-    solana: "solana",
-    eth: "ethereum",
-    ethereum: "ethereum",
-    base: "base",
-    polygon_pos: "polygon",
-    polygon: "polygon",
-    bsc: "bnb",
-    bnb: "bnb",
-    hyperevm: "hyperevm",
-    robinhood: "robinhood",
-};
-
-// BUY presets are DOLLARS, matching the buy dialog. Native amounts asked the
-// user to price the token in their head first, and the right numbers differed
-// per chain — 0.05 is ~$95 of ETH and about two cents of POL. The token amount
-// is derived from the coin's own listed price, so no extra request.
-//
-// SELL stays percent-of-balance: selling is denominated in what you hold, and
-// "$25" of a position you may not have that much of is the wrong question.
-const BUY_PRESETS_USD = [10, 25, 50, 100];
-/** Used only when the native coin cannot be priced (an empty wallet), so the
- *  presets stay usable instead of vanishing. */
-const BUY_PRESETS_NATIVE = [0.05, 0.1, 0.5, 1];
-const SELL_PRESETS_PCT = [25, 50, 75, 100];
-const SLIPPAGE_PRESETS = [
-    { label: "1%", bps: 100 },
-    { label: "2%", bps: 200 },
-    { label: "5%", bps: 500 },
-];
-
-function useDebounced<T>(value: T, ms: number): T {
-    const [debounced, setDebounced] = React.useState(value);
-    React.useEffect(() => {
-        const t = setTimeout(() => setDebounced(value), ms);
-        return () => clearTimeout(t);
-    }, [value, ms]);
-    return debounced;
-}
-
-/** Decimals straight from the mint account — works for any SPL mint, which is
- *  what frees selling from Jupiter's token-list metadata. */
-function useMintDecimals(mint: string | null | undefined, enabled: boolean) {
-    const { connection } = useConnection();
-    return useQuery({
-        queryKey: ["mint-decimals", mint],
-        enabled: !!mint && enabled,
-        staleTime: Infinity,
-        queryFn: async () => {
-            const info = await connection.getParsedAccountInfo(new PublicKey(mint!));
-            const decimals = (info.value?.data as { parsed?: { info?: { decimals?: number } } } | null)?.parsed?.info
-                ?.decimals;
-            if (typeof decimals !== "number") throw new Error("no mint info");
-            return decimals;
-        },
-    });
-}
-
-function formatAmount(n: number): string {
-    if (!Number.isFinite(n) || n === 0) return "0";
-    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
-    if (n >= 1_000) return n.toLocaleString("en-US", { maximumFractionDigits: 2 });
-    if (n >= 1) return n.toFixed(4).replace(/\.?0+$/, "");
-    return n.toPrecision(4);
-}
-
-/** Trim a float for the input box without scientific notation. */
-function toInputAmount(n: number): string {
-    if (!Number.isFinite(n) || n <= 0) return "";
-    return n.toFixed(Math.min(9, Math.max(2, 9 - Math.floor(Math.log10(Math.max(n, 1e-9))))))
-        .replace(/\.?0+$/, "");
-}
-
-const CHIP =
-    "h-8 cursor-pointer rounded-full px-3 text-[13px] font-bold tabular-nums transition-colors";
 
 export function CoinTradePanel({
     coin,
@@ -128,201 +42,17 @@ export function CoinTradePanel({
     marketUrl: string | null;
     cardClassName: string;
 }) {
-    const chainId = NETWORK_TO_CHAIN[coin.network] ?? null;
+    // The same slug → chain mapping the dialog uses, so "buyable on the board"
+    // and "tradeable on the coin page" can never disagree about a chain.
+    const chainId = buyableChainId(coin.network);
     const chain = chainId ? getChain(chainId) : null;
-    const isSolana = chainId === "solana";
-    const isEvm = chain?.kind === "evm";
+    const tradeable = chainId === "solana" || chain?.kind === "evm";
 
     const { data: session } = useAuthSession();
-    const { connection } = useConnection();
-    const { publicKey: adapterPublicKey, sendTransaction } = useWallet();
-    const { signAndSubmit } = useWalletSigning();
-    const walletAddress = adapterPublicKey?.toBase58() || session?.user?.wallet_address || "";
-
-    const [side, setSide] = React.useState<"buy" | "sell">("buy");
-    const [amount, setAmount] = React.useState("");
-    const [slippageBps, setSlippageBps] = React.useState(200);
-    const [submitting, setSubmitting] = React.useState(false);
-    // "No wallet on this chain yet" gets a dialog (dismissable by clicking
-    // outside), not a toast — it's a setup step, not a transient failure.
-    const [walletDialogOpen, setWalletDialogOpen] = React.useState(false);
-    const amountNum = Number(amount) || 0;
-    const debouncedAmount = useDebounced(amount, 400);
-
-    const utils = trpc.useUtils();
-    const getQuote = trpc.wallet.getQuote.useMutation();
-    const getSwapTx = trpc.wallet.getSwapTransaction.useMutation();
-    const reportSwapSignature = trpc.wallet.reportSwapSignature.useMutation();
-    const syncToken = trpc.trade.syncToken.useMutation();
-    const swapEvm = trpc.wallet.swapEvm.useMutation();
-
-    // ── Balances ────────────────────────────────────────────────────────────
-    const solAssets = trpc.wallet.getWalletAssets.useQuery(
-        { address: walletAddress },
-        { enabled: isSolana && !!walletAddress, staleTime: 30_000 },
-    );
-    const evmAssets = trpc.wallet.getChainAssets.useQuery(
-        { chain: chainId ?? "" },
-        { enabled: !!isEvm && !!session?.user, staleTime: 30_000 },
-    );
-    const nativeBalance = isSolana
-        ? solAssets.data?.tokens?.find((t) => t.mint === SOL_DISPLAY_MINT)?.balance ?? 0
-        : evmAssets.data?.assets?.find((a) => !a.contract)?.balance ?? 0;
-    const coinBalance = isSolana
-        ? solAssets.data?.tokens?.find((t) => t.mint === coin.tokenAddress)?.balance ?? 0
-        : evmAssets.data?.assets?.find((a) => a.contract?.toLowerCase() === coin.tokenAddress.toLowerCase())
-              ?.balance ?? 0;
-
-    // What one unit of the native coin is worth, derived from the holding
-    // itself (`usdValue / balance`) exactly as the buy dialog does it: no extra
-    // price request, and it cannot disagree with the balance shown beside it.
-    // Null when there is no balance to divide — a wallet with no SOL cannot be
-    // asked for a dollar-denominated amount, and inventing a rate would be
-    // worse than falling back to native presets.
-    const nativeAsset = isSolana
-        ? solAssets.data?.tokens?.find((t) => t.mint === SOL_DISPLAY_MINT)
-        : evmAssets.data?.assets?.find((a) => !a.contract);
-    const nativeUsd =
-        nativeAsset && nativeAsset.balance > 0 && nativeAsset.usdValue
-            ? nativeAsset.usdValue / nativeAsset.balance
-            : null;
-
-    const mintDecimals = useMintDecimals(coin.tokenAddress, isSolana);
-    const nativeSymbol = chain?.nativeCurrency.symbol ?? "SOL";
+    const [side, setSide] = React.useState<TradeSide>("buy");
     const coinSymbol = coin.symbol.replace(/^\$/, "");
 
-    // ── Live estimate ───────────────────────────────────────────────────────
-    // Solana: Jupiter quote via the existing mutation, debounced by hand.
-    const [solEstimate, setSolEstimate] = React.useState<number | null>(null);
-    React.useEffect(() => {
-        if (!isSolana) return;
-        const amt = Number(debouncedAmount) || 0;
-        const decimals = mintDecimals.data;
-        if (!amt || decimals == null || !walletAddress) {
-            setSolEstimate(null);
-            return;
-        }
-        let cancelled = false;
-        const base = side === "buy" ? Math.round(amt * 1e9) : Math.round(amt * 10 ** decimals);
-        if (!Number.isSafeInteger(base) || base <= 0) {
-            setSolEstimate(null);
-            return;
-        }
-        getQuote
-            .mutateAsync({
-                inputMint: side === "buy" ? SOL_WSOL : coin.tokenAddress,
-                outputMint: side === "buy" ? coin.tokenAddress : SOL_WSOL,
-                amount: base,
-                slippageBps,
-            })
-            .then((q: { outAmount?: string | number }) => {
-                if (cancelled) return;
-                const out = Number(q?.outAmount ?? 0);
-                setSolEstimate(out / 10 ** (side === "buy" ? decimals : 9));
-            })
-            .catch(() => {
-                if (!cancelled) setSolEstimate(null);
-            });
-        return () => {
-            cancelled = true;
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isSolana, debouncedAmount, side, slippageBps, mintDecimals.data, walletAddress, coin.tokenAddress]);
-
-    // EVM: server quote as a debounced query.
-    const evmQuote = trpc.wallet.getEvmSwapQuote.useQuery(
-        {
-            chain: chainId ?? "",
-            fromToken: side === "buy" ? NATIVE_TOKEN : coin.tokenAddress,
-            toToken: side === "buy" ? coin.tokenAddress : NATIVE_TOKEN,
-            amountHuman: debouncedAmount || "0",
-            slippageBps,
-        },
-        {
-            enabled: !!isEvm && !!session?.user && Number(debouncedAmount) > 0,
-            staleTime: 15_000,
-            retry: false,
-        },
-    );
-    const evmEstimate = evmQuote.data ? Number(evmQuote.data.toAmount) / 10 ** evmQuote.data.toDecimals : null;
-
-    const estimate = isSolana ? solEstimate : evmEstimate;
-    const receiveSymbol = side === "buy" ? coinSymbol : nativeSymbol;
-
-    // ── Execute ─────────────────────────────────────────────────────────────
-    const submit = async () => {
-        if (!amountNum || submitting) return;
-        setSubmitting(true);
-        const swapToast = showSwapToast({
-            inputSymbol: side === "buy" ? nativeSymbol : coinSymbol,
-            outputSymbol: side === "buy" ? coinSymbol : nativeSymbol,
-            inputAmount: amount,
-            outputAmount: estimate ? formatAmount(estimate) : "",
-            outputIcon: side === "buy" ? coin.imageUrl ?? undefined : undefined,
-        });
-        try {
-            if (isSolana) {
-                const decimals = mintDecimals.data;
-                if (decimals == null) throw new Error("Mint metadata still loading — try again in a second");
-                const base = side === "buy" ? Math.round(amountNum * 1e9) : Math.round(amountNum * 10 ** decimals);
-                if (!Number.isSafeInteger(base) || base <= 0) throw new Error("Amount out of range");
-                const quote = await getQuote.mutateAsync({
-                    inputMint: side === "buy" ? SOL_WSOL : coin.tokenAddress,
-                    outputMint: side === "buy" ? coin.tokenAddress : SOL_WSOL,
-                    amount: base,
-                    slippageBps,
-                });
-                const { swapTransaction, tradeId } = await getSwapTx.mutateAsync({
-                    quoteResponse: quote,
-                    userPublicKey: walletAddress,
-                    wrapAndUnwrapSol: true,
-                });
-                const { VersionedTransaction } = await import("@solana/web3.js");
-                const transaction = VersionedTransaction.deserialize(Buffer.from(swapTransaction, "base64"));
-                swapToast.setStep("signing");
-                let signature: string;
-                if (adapterPublicKey) {
-                    signature = await sendTransaction(transaction, connection);
-                } else {
-                    const result = await signAndSubmit({ transaction: swapTransaction });
-                    signature = result.signature;
-                }
-                if (tradeId) reportSwapSignature.mutate({ tradeId, signature });
-                swapToast.setStep("confirming");
-                await connection.confirmTransaction(signature, "confirmed");
-                swapToast.success(signature);
-                syncToken.mutate({ mint: coin.tokenAddress });
-                utils.wallet.getWalletAssets.invalidate();
-            } else {
-                swapToast.setStep("confirming");
-                const result = await swapEvm.mutateAsync({
-                    chain: chainId!,
-                    fromToken: side === "buy" ? NATIVE_TOKEN : coin.tokenAddress,
-                    toToken: side === "buy" ? coin.tokenAddress : NATIVE_TOKEN,
-                    amountHuman: amount,
-                    slippageBps,
-                });
-                swapToast.success(result.txId, result.explorerUrl);
-                utils.wallet.getChainAssets.invalidate({ chain: chainId! });
-            }
-            setAmount("");
-        } catch (error) {
-            const code = (error as { data?: { code?: string } })?.data?.code;
-            if (code === "PRECONDITION_FAILED") {
-                // No embedded wallet on this chain — a setup step, not a swap
-                // failure. The dialog explains; the toast would just alarm.
-                swapToast.dismiss();
-                setWalletDialogOpen(true);
-            } else {
-                swapToast.error((error as Error)?.message || "Swap failed");
-            }
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    // ── Gates ───────────────────────────────────────────────────────────────
-    if (!chainId || (!isSolana && !isEvm) || (isEvm && !getChain(chainId))) {
+    if (!tradeable) {
         return (
             <div className={cn(cardClassName, "p-5")}>
                 <h3 className="text-lg font-bold text-white">Trade {coinSymbol}</h3>
@@ -338,49 +68,23 @@ export function CoinTradePanel({
         );
     }
 
-    if (!session?.user || (isSolana && !walletAddress)) {
+    if (!session?.user) {
         return (
             <div className={cn(cardClassName, "p-5")}>
-                <h3 className="text-lg font-bold text-white">trade {coinSymbol}</h3>
-                <p className="mt-2 text-sm text-zinc-500">connect or unlock your wallet to trade this coin.</p>
+                <h3 className="text-lg font-bold text-white">Trade {coinSymbol}</h3>
+                <p className="mt-2 text-sm text-zinc-500">Connect or unlock your wallet to trade this coin.</p>
                 <Button
                     onClick={() => window.dispatchEvent(new Event(OPEN_WALLET_DRAWER_EVENT))}
                     className="mt-5 h-12 w-full rounded-full bg-white font-bold text-black hover:bg-white/85"
                 >
-                    open wallet
+                    Open wallet
                 </Button>
             </div>
         );
     }
 
-    /** Dollars only when we can convert them; otherwise the old native amounts. */
-    const buyInUsd = side === "buy" && nativeUsd != null;
-
-    /** The trade's dollar size, and how much of the pool that is. Buying spends
-     *  the native coin; selling spends the coin itself, so each side is priced
-     *  with its own rate rather than one of them being assumed. */
-    const tradeUsd =
-        side === "buy"
-            ? nativeUsd != null && amountNum > 0 ? amountNum * nativeUsd : null
-            : coin.priceUsd && amountNum > 0 ? amountNum * coin.priceUsd : null;
-    const depthRatio = tradeUsd && coin.liquidityUsd ? tradeUsd / coin.liquidityUsd : 0;
-    const presets = side === "buy" ? BUY_PRESETS_USD : SELL_PRESETS_PCT;
-    const balance = side === "buy" ? nativeBalance : coinBalance;
-    const balanceSymbol = side === "buy" ? nativeSymbol : coinSymbol;
-    // The missing-wallet precondition never renders inline — pressing the
-    // action button opens the setup dialog instead. Everything else (no
-    // liquidity, amount too small) is a real quote answer and shows in place.
-    const quoteErrorCode = isEvm && evmQuote.isError
-        ? (evmQuote.error as { data?: { code?: string } })?.data?.code
-        : null;
-    const quoteError =
-        isEvm && evmQuote.isError && quoteErrorCode !== "PRECONDITION_FAILED"
-            ? (evmQuote.error as { message?: string })?.message
-            : null;
-    const canSubmit = amountNum > 0 && !submitting && (!isSolana || mintDecimals.data != null);
-
     return (
-        <div className={cn(cardClassName, "p-4")}>
+        <div className={cn(cardClassName, "flex flex-col gap-3 p-4")}>
             {/* buy / sell — matches the perps order-panel direction tabs: a
                 segmented pill with a subtle white wash on the active side +
                 its accent color (green buy / red sell), no solid fill. */}
@@ -389,10 +93,7 @@ export function CoinTradePanel({
                     <button
                         key={s}
                         type="button"
-                        onClick={() => {
-                            setSide(s);
-                            setAmount("");
-                        }}
+                        onClick={() => setSide(s)}
                         className={cn(
                             "flex h-11 cursor-pointer items-center justify-center rounded-full text-base font-extrabold capitalize transition-colors",
                             side === s
@@ -405,160 +106,11 @@ export function CoinTradePanel({
                 ))}
             </div>
 
-            {/* size */}
-            <div className="mt-4 flex items-center justify-between text-[13px] font-medium text-zinc-500">
-                <span>Amount</span>
-                <button
-                    type="button"
-                    onClick={() => setAmount(toInputAmount(balance))}
-                    className="cursor-pointer tabular-nums transition-colors hover:text-white"
-                >
-                    Balance {formatAmount(balance)} {balanceSymbol}
-                </button>
-            </div>
-            <div className="mt-1.5 flex h-12 items-center gap-2 rounded-2xl bg-white/5 px-4">
-                <input
-                    value={amount}
-                    onChange={(e) => {
-                        const v = e.target.value.replace(",", ".");
-                        if (/^\d*\.?\d*$/.test(v)) setAmount(v);
-                    }}
-                    inputMode="decimal"
-                    placeholder="0.0"
-                    className="min-w-0 flex-1 bg-transparent text-lg font-bold tabular-nums text-white outline-none placeholder:text-zinc-600"
-                />
-                <span className="shrink-0 text-sm font-bold text-zinc-400">{balanceSymbol}</span>
-            </div>
-
-            {/* What that amount is worth. An amount in SOL means nothing to
-                someone thinking in dollars, which is the same gap the buy
-                dialog closed. */}
-            {side === "buy" && nativeUsd != null && amountNum > 0 && (
-                <p className="mt-1.5 text-[13px] font-medium text-zinc-500 tabular-nums">
-                    ≈ ${(amountNum * nativeUsd).toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                </p>
-            )}
-
-            {/* presets: native amounts buying, % of balance selling */}
-            <div className="mt-2 flex items-center gap-1.5">
-                {(buyInUsd || side === "sell" ? presets : BUY_PRESETS_NATIVE).map((p) => (
-                    <Squircle asChild autoEffects={false} radius={12} key={p}>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                if (side === "sell") return setAmount(toInputAmount((coinBalance * p) / 100));
-                                // Dollars -> native, via the rate the balance
-                                // implies. Rounded to 6dp: more precision than
-                                // that is noise in an input box.
-                                if (buyInUsd && nativeUsd) return setAmount(toInputAmount(p / nativeUsd));
-                                return setAmount(String(p));
-                            }}
-                            className={cn(CHIP, "flex-1 bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white")}
-                        >
-                            {side === "sell" ? `${p}%` : buyInUsd ? `$${p}` : p}
-                        </button>
-                    </Squircle>
-                ))}
-            </div>
-
-            {/* estimate */}
-            <div className="mt-4 flex items-center justify-between text-[13px] font-medium">
-                <span className="text-zinc-500">You receive</span>
-                <span className="tabular-nums text-zinc-200">
-                    {estimate != null && amountNum > 0 ? `≈ ${formatAmount(estimate)} ${receiveSymbol}` : "—"}
-                </span>
-            </div>
-            {isEvm && evmQuote.data?.tool && amountNum > 0 && (
-                <div className="mt-1 flex items-center justify-between text-[12px] font-medium text-zinc-600">
-                    <span>Route</span>
-                    <span>{evmQuote.data.tool}</span>
-                </div>
-            )}
-
-            {/* slippage */}
-            <div className="mt-3 flex items-center justify-between">
-                <span className="text-[13px] font-medium text-zinc-500">Slippage</span>
-                <div className="flex items-center gap-1">
-                    {SLIPPAGE_PRESETS.map((s) => (
-                        <button
-                            key={s.bps}
-                            type="button"
-                            onClick={() => setSlippageBps(s.bps)}
-                            className={cn(
-                                CHIP,
-                                slippageBps === s.bps
-                                    ? "bg-white/15 text-white"
-                                    : "text-zinc-500 hover:bg-white/5 hover:text-white",
-                            )}
-                        >
-                            {s.label}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* DEPTH. The share of the pool this trade represents, which is
-                what says whether it can be exited — the number behind every
-                junk row the board filters. Shown only when it is worth saying:
-                under 2% of a pool is noise, and a permanent line would train
-                people to ignore it. */}
-            {tradeUsd != null && depthRatio > 0.02 && (
-                <p className={cn(
-                    "mt-3 text-[13px] font-medium leading-snug",
-                    depthRatio > 0.05 ? "text-pastelred" : "text-sunset",
-                )}>
-                    This is {(depthRatio * 100).toFixed(0)}% of the pool
-                    {coin.liquidityUsd ? ` (${compactUsd(coin.liquidityUsd)} liquidity)` : ""} — expect the
-                    price to move against you.
-                </p>
-            )}
-
-            {quoteError && (
-                <p className="mt-3 text-[13px] leading-snug text-pastelred">{quoteError}</p>
-            )}
-
-            {/* HOLD, not click — the same rule as the buy dialog. This spends
-                real money and cannot be undone, and it sits under a free-text
-                amount field where a mis-click follows a typo closely. */}
-            <HoldButton
-                onConfirm={() => void submit()}
-                disabled={!canSubmit}
-                fillClassName={side === "buy" ? "bg-lantern text-black" : "bg-pastelred text-black"}
-                className={cn(
-                    "mt-4 h-13 w-full cursor-pointer rounded-full font-bold text-black transition-colors disabled:opacity-40",
-                    side === "buy" ? "bg-flexwhite/85 hover:bg-flexwhite/95" : "bg-pastelred/85 hover:bg-pastelred",
-                )}
-            >
-                {submitting
-                    ? "Swapping…"
-                    : `Hold to ${side === "buy" ? "buy" : "sell"} ${coinSymbol}`}
-            </HoldButton>
-
-            {/* Bottom "open market ↗" link removed (2026-08-12) — the in-app swap
-                is the intended action here; the market link stays only in the
-                no-in-app-swap gate above, where it's the sole fallback. */}
-
-            {/* Radix closes this on outside click / escape — exactly the asked-for
-                behaviour. Lives in a portal, so its place in this card is moot. */}
-            <Dialog open={walletDialogOpen} onOpenChange={setWalletDialogOpen}>
-                <DialogContent className="max-w-sm">
-                    <DialogTitle>no {chain?.name ?? "chain"} wallet yet</DialogTitle>
-                    <DialogDescription>
-                        trading on {chain?.name ?? "this chain"} uses your embedded multichain wallet, and
-                        this account doesn&apos;t have one set up. open your wallet to create it — your
-                        address on every chain comes from the same phrase.
-                    </DialogDescription>
-                    <Button
-                        onClick={() => {
-                            setWalletDialogOpen(false);
-                            window.dispatchEvent(new Event(OPEN_WALLET_DRAWER_EVENT));
-                        }}
-                        className="mt-2 h-12 w-full rounded-full bg-white font-bold text-black hover:bg-white/85"
-                    >
-                        open wallet
-                    </Button>
-                </DialogContent>
-            </Dialog>
+            {/* Keyed on the side so switching starts clean — the presets mean
+                different things on each (dollars vs. a share of the position)
+                and a selection carried across would be a number in the wrong
+                unit. The coin itself is keyed one level up, in CoinSwap. */}
+            <BuyPanel key={side} coin={coin} side={side} />
         </div>
     );
 }
