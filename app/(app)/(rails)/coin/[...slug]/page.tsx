@@ -9,6 +9,7 @@ import { CoinDetail, type CoinViewData } from "@/components/coins/coin-detail";
 import { CoinTabPrice } from "@/components/coins/coin-tab-price";
 import { resolveCoin } from "@/lib/coins/resolve";
 import { fallbackShareMetadata, shareMetadata } from "@/lib/share/metadata";
+import { ogImage } from "@/lib/share/og-url";
 
 // Coin pages live here, not at the top level. They used to share `/[slug]` with
 // user profiles — one route resolving a string to EITHER a user or a token —
@@ -85,6 +86,12 @@ function coinFromToken(token: NonNullable<Awaited<ReturnType<typeof getToken>>>)
     };
 }
 
+/** Network id → the chip on the share card. Unknown ids just get capitalised. */
+function chainLabel(network: string): string {
+    const known: Record<string, string> = { solana: "Solana", ethereum: "Ethereum", base: "Base", bsc: "BNB", polygon: "Polygon", arbitrum: "Arbitrum" };
+    return known[network.toLowerCase()] ?? network.charAt(0).toUpperCase() + network.slice(1);
+}
+
 /** `[address]` or `[chain, address]` — the address is always last. Anything
  *  longer isn't a coin URL. */
 function parseSlug(slug: string[]): { address: string; network?: string } | null {
@@ -110,6 +117,17 @@ export async function generateMetadata({ params }: Pick<Params, "params">): Prom
             title: `${token.name} ($${token.ticker})`,
             description: token.description || `Trade $${token.ticker} on watchparty`,
             path,
+            image: ogImage("coin", {
+                name: token.name,
+                symbol: token.ticker,
+                image: token.imageUrl,
+                price: token.priceUsd,
+                mcap: token.marketCapUsd,
+                change: token.priceChange24h,
+                chain: "Solana",
+                progress: token.bondingProgress,
+                creator: token.creator?.username,
+            }),
         });
     }
 
@@ -119,6 +137,15 @@ export async function generateMetadata({ params }: Pick<Params, "params">): Prom
             title: coin.name ? `${coin.name} ($${coin.symbol})` : `$${coin.symbol}`,
             description: `Trade $${coin.symbol} on watchparty`,
             path,
+            image: ogImage("coin", {
+                name: coin.name ?? coin.symbol,
+                symbol: coin.symbol,
+                image: coin.imageUrl,
+                price: coin.priceUsd,
+                mcap: coin.marketCapUsd,
+                change: coin.priceChange24h,
+                chain: chainLabel(coin.network),
+            }),
         });
     }
 

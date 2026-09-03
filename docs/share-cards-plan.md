@@ -322,12 +322,16 @@ typed field set in `lib/share/og-url.ts`.
 plus `twitter: { card: "player", players: [{ playerUrl, streamUrl, width:
 1280, height: 720 }] }` and the raw thumbnail as `og:image`.
 
-### Phase 3 — wire the pages (1 day) — **NEXT**
+### Phase 3 — wire the pages — **SHIPPED 2026-09-03**
 
-`lib/share/og-url.ts` (`ogImage()` / `ogImagePath()`, typed field sets per
-template) exists; the pages still send the brand default. Wiring is: build the
-fields from the row each `generateMetadata` already holds and pass
-`image: ogImage("coin", …)` to `shareMetadata()`.
+Coin (both the `tokens` row and the `resolveCoin()` shape), profile with the
+live variant when the host is broadcasting, post (text / image / video /
+launch chosen from the row), market (implied odds from the outcome pools),
+and community — the server layout covers every channel page, and a new
+invite layout covers the invite link, both because those pages are client
+components and cannot export `generateMetadata`. Video stays the compact
+card; captionless videos get a "@creator · 0:42 · 1.2K views" byline.
+Verified on prod with `check-share-meta.mjs` and `/dev/share-cards`.
 
 
 - Existing six: build the template URL from the row they already hold.
@@ -341,7 +345,11 @@ fields from the row each `generateMetadata` already holds and pass
 - Every `generateMetadata` wraps its query in try/catch and falls back to the
   brand card — a DB hiccup must never produce a blank unfurl.
 
-### Phase 4 — in-app share UX (1 day)
+### Phase 4 — in-app share UX (1 day) — **NEXT**
+
+Also queued here: `app/embed/video/[id]` + the X `player` card for videos
+(§4a), and the PnL flow (§9).
+
 
 - `components/browse/post-card/share-menu.tsx`: "Share post via …" is a dead
   row today. Implement `navigator.share` where available, else a sub-menu: X

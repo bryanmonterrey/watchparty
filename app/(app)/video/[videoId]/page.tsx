@@ -7,7 +7,7 @@ import { posts } from "@/db/schema/content";
 import { and, eq, isNotNull } from "drizzle-orm";
 import { VideoWatchPage } from "@/components/video/video-watch-page";
 import { fallbackShareMetadata, shareMetadata } from "@/lib/share/metadata";
-import { compactCount } from "@/lib/utils";
+import { compactCount, formatClock } from "@/lib/utils";
 
 // Videos live at /video/<postId>, off the [slug] tree.
 //
@@ -34,15 +34,6 @@ const getVideoPost = cache((videoId: string) =>
 const getCreator = cache((userId: string) =>
     db.query.user.findFirst({ where: eq(user.id, userId) })
 );
-
-/** 42 → "0:42", 3725 → "1:02:05". */
-function formatClock(seconds: number): string {
-    const s = Math.max(0, Math.round(seconds));
-    const h = Math.floor(s / 3600);
-    const m = Math.floor((s % 3600) / 60);
-    const sec = String(s % 60).padStart(2, "0");
-    return h ? `${h}:${String(m).padStart(2, "0")}:${sec}` : `${m}:${sec}`;
-}
 
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
     const { videoId } = await params;

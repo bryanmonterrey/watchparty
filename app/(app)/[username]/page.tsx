@@ -9,6 +9,7 @@ import { count, eq, or } from "drizzle-orm";
 import { UserProfile } from "@/components/profile/user-profile";
 import { recordSlugMiss } from "@/lib/security/slug-miss-cache";
 import { fallbackShareMetadata, shareMetadata } from "@/lib/share/metadata";
+import { ogImage } from "@/lib/share/og-url";
 
 // A top-level slug is a USERNAME and nothing else. Coins used to share this
 // route — one string resolving to either a user or a token — and now live at
@@ -44,18 +45,63 @@ const getStreamByUser = cache((userId: string) =>
     db.query.streams.findFirst({ where: eq(streams.userId, userId) })
 );
 
+// Shared with the page body (cache() dedupes), so the card's follower count
+// costs no extra query.
+const getFollowerCount = cache((userId: string) =>
+    db.select({ count: count() }).from(follows).where(eq(follows.followingId, userId))
+);
+
 export async function generateMetadata({ params }: { params: Promise<{ username: string }> }): Promise<Metadata> {
     const { username } = await params;
 
     const userProfile = await getUserBySlug(username);
     if (userProfile) {
+        // Both are the page body's own lookups; a failure here just means a
+        // card without that detail, never a missing card.
+        const [stream, followerRows] = await Promise.all([
+            getStreamByUser(userProfile.id).catch(() => null),
+            getFollowerCount(userProfile.id).catch(() => null),
+        ]);
+        const handle = userProfile.username ?? username;
+        const avatar = userProfile.avatar_url ?? userProfile.image;
+        const verified = Boolean(userProfile.verifiedTier);
+
+        // Live is a mode of this page (see below), so it is a mode of the card
+        // too: the stream is what a shared link should sell while it is on.
+        if (stream?.isLive) {
+            return shareMetadata({
+                title: stream.title || `${handle} is live`,
+                description: [stream.category, `${userProfile.name} is live on watchparty`].filter(Boolean).join(" · "),
+                path: `/${username}`,
+                type: "profile",
+                image: ogImage("live", {
+                    name: userProfile.name,
+                    username: handle,
+                    avatar,
+                    verified,
+                    title: stream.title,
+                    category: stream.category,
+                    viewers: stream.viewerCount,
+                    thumb: stream.thumbnailUrl,
+                }),
+            });
+        }
+
         // No @ — the root template already reads "%s / watchparty", and
         // "@name / watchparty" put two sigils in a six-character tab.
         return shareMetadata({
-            title: userProfile.username ?? userProfile.name,
+            title: handle,
             description: userProfile.bio || `${userProfile.name} on watchparty`,
             path: `/${username}`,
             type: "profile",
+            image: ogImage("profile", {
+                name: userProfile.name,
+                username: handle,
+                avatar,
+                bio: userProfile.bio,
+                verified,
+                followers: followerRows?.[0]?.count,
+            }),
         });
     }
 
@@ -75,7 +121,7 @@ export default async function UsernamePage({ params }: { params: Promise<{ usern
         let initialFollowCounts: { followers: number; following: number } | undefined;
         try {
             const [followerResult, followingResult] = await Promise.all([
-                db.select({ count: count() }).from(follows).where(eq(follows.followingId, userProfile.id)),
+                getFollowerCount(userProfile.id),
                 db.select({ count: count() }).from(follows).where(eq(follows.followerId, userProfile.id)),
             ]);
             initialFollowCounts = {
