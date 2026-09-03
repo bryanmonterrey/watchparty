@@ -156,7 +156,7 @@ function XCard({ tags, host }: { tags: ShareTags; host: string }) {
     return (
         <figure>
             <figcaption className="mb-2 text-xs font-semibold text-postgray">X</figcaption>
-            <div className="max-w-[520px] rounded-2xl bg-black p-3 text-[15px] text-[#e7e9ea]">
+            <div className="max-w-[520px] rounded-2xl bg-black p-3 text-15 text-[#e7e9ea]">
                 {compact ? (
                     <div className="flex overflow-hidden rounded-2xl border border-[#2f3336]">
                         <div className="relative size-[130px] shrink-0 border-r border-[#2f3336] bg-[#16181c]">
@@ -178,11 +178,11 @@ function XCard({ tags, host }: { tags: ShareTags; host: string }) {
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img src={tags.image} alt="" className="size-full object-cover" />
                             )}
-                            <span className="absolute bottom-3 left-3 max-w-[90%] truncate rounded-md bg-black/70 px-1.5 py-0.5 text-[13px] text-white">
+                            <span className="absolute bottom-3 left-3 max-w-[90%] truncate rounded-md bg-black/70 px-1.5 py-0.5 text-13 text-white">
                                 {tags.title}
                             </span>
                         </div>
-                        <p className="mt-1.5 px-1 text-[13px] text-[#71767b]">From {host}</p>
+                        <p className="mt-1.5 px-1 text-13 text-[#71767b]">From {host}</p>
                     </div>
                 )}
             </div>
@@ -196,8 +196,8 @@ function DiscordCard({ tags }: { tags: ShareTags }) {
         <figure>
             <figcaption className="mb-2 text-xs font-semibold text-postgray">Discord</figcaption>
             <div className="max-w-[520px] rounded-2xl bg-[#313338] p-3">
-                <div className="max-w-[432px] rounded-[4px] border-l-4 border-twitter2 bg-[#2b2d31] p-3 pr-4 text-[14px] text-[#dbdee1]">
-                    {tags.siteName && <p className="text-[12px] text-[#b5bac1]">{tags.siteName}</p>}
+                <div className="max-w-[432px] rounded-[4px] border-l-4 border-twitter2 bg-[#2b2d31] p-3 pr-4 text-14 text-[#dbdee1]">
+                    {tags.siteName && <p className="text-12 text-[#b5bac1]">{tags.siteName}</p>}
                     <p className="mt-1 font-semibold text-[#00a8fc]">{tags.title}</p>
                     {tags.description && <p className="mt-1 line-clamp-3 text-[#dbdee1]">{tags.description}</p>}
                     {tags.image && (
