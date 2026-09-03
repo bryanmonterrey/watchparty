@@ -58,10 +58,10 @@ except the pieces marked **exists**.
 | 1b | Post with **image** | same | `posts.media[0]` / `posts.imageUrl` | Image hero on the right ~45%, author + first line on the left |
 | 1c | Post with **video** | same | `posts.thumbnailUrl`, `duration` | Thumbnail hero + play glyph + duration chip |
 | 1d | Post with **token** | same | `posts.ticker`, `tokens.imageUrl/priceUsd/marketCapUsd` | Author strip + `$TICKER` coin chip + mcap |
-| 2 | **Video** | `/video/[videoId]` | `title`, `thumbnailUrl`, `duration`, `views`, creator | Thumbnail hero, title, creator strip, views/duration chips |
+| 2 | **Video** | `/video/[videoId]` | `title`, `thumbnailUrl`, `duration`, `views`, creator | **Compact card, not a generated image** (see §4a): raw thumbnail as the square on the left, title + description as text, play glyph via a `player` card backed by `/embed/video/[id]` |
 | 3 | **Profile** | `/[username]` | `name`, `username`, `avatar_url`, `banner_url`, `bio`, `verifiedTier`, follower count | Avatar large, name + verified mark, @handle, bio line, followers pill |
 | 3b | Profile, **live** | `/[username]` when `streams.isLive` | `streams.title/category/thumbnailUrl/viewerCount` | Stream thumbnail hero, LIVE pill, title, category, viewers, host strip |
-| 4 | **Coin** | `/coin/[...slug]` | `tokens.*` or `resolveCoin()`: name, symbol, imageUrl, priceUsd, marketCapUsd, 24h change, bondingProgress, chain, creator | Coin image, name + `$SYMBOL`, price, mcap, 24h delta (lantern up / pastelred down), chain badge, bonding bar for drafts/curve |
+| 4 | **Coin** | `/coin/[...slug]` | `tokens.*` or `resolveCoin()`: name, symbol, imageUrl, priceUsd, marketCapUsd, 24h change, bondingProgress, chain, creator | pump.fun anatomy (§4b): name, ticker line, "Market Cap" label, one **big glowing number**, a "See more" pill, coin image as a rounded square on the right; 24h delta and chain badge as small chips |
 | 5 | **Prediction market** | `/trade/predictions/[id]` | `question`, `imageUrl`, outcomes with `poolUsdc`, `closesAt`, `status` | Question, top 2–3 outcomes with implied % bars, pool total, closes-in / RESOLVED chip |
 | 6 | **Community** | `/communities/[serverId]` (channels fall back to this) | `servers.name/description`, icon, member count | Icon, name, description line, members pill |
 | 6b | **Community invite** | `/communities/invite/[code]` | same via `inviteCode` | Same card with an "You're invited to" eyebrow |
@@ -169,6 +169,62 @@ Fixed-dark surface — a share card is never themed (memory
 - **Type chip** top-left of the panel names the thing: Post · Video · Live ·
   Coin · Market · Community. It is what makes a 200 px-wide preview legible.
 
+### 4a. Two card shapes, chosen per thing
+
+The two references (a YouTube link and a pump.fun coin link, both as they
+unfurl on X, screenshots from 2026-09-03) are **different card types**, and
+the difference is the point:
+
+- **Compact card** (`twitter:card = summary` or `player`). The platform draws
+  a small square image on the left and the page's own title + description as
+  text on the right, with the domain above. YouTube uses this. It is the
+  right shape for anything whose thumbnail already carries the meaning — a
+  **video**, and probably a **live stream** — because the title stays real,
+  selectable text and the thumbnail is not squeezed into a second frame with
+  more text painted on it. Nothing is rendered by the worker: `og:image` is
+  the raw `thumbnailUrl`, `og:title` the video title, `og:description` the
+  first line of the post body.
+  - The **play glyph** in the reference comes from the `player` card type.
+    `twitter:player` wants an HTTPS iframe URL plus width/height, and Next's
+    metadata API supports it (`twitter: { card: "player", players: [...] }`).
+    We have the shape already: `app/embed/post/[id]` is a public,
+    provider-free, framable page. Add **`app/embed/video/[id]`** that renders
+    only the IVS/HLS player for a public video, and point the player card at
+    it. Nothing in `next.config` or the middleware sets `X-Frame-Options` or
+    `frame-ancestors` (checked), so x.com can frame it. Fall back to
+    `summary` if X declines to render the player inline; the layout is the
+    same either way.
+  - Discord, Telegram and iMessage ignore Twitter card types and use the OG
+    tags, so the compact shape only affects X. That is fine: on those
+    surfaces a raw thumbnail plus title is already the YouTube treatment.
+- **Big card** (`twitter:card = summary_large_image`) — the full-width
+  generated 1200×630 image. For things whose *numbers* or *identity* are the
+  hook and no photo exists: **coin**, **prediction market**, **profile**,
+  **community**, and **text posts**. This is what the worker renders.
+- **Posts with an image or video** are the borderline. Default: big card with
+  the media as hero (the tweet-with-photo look). Revisit after the Phase 5
+  matrix if the compact shape reads better for video posts.
+
+### 4b. The coin card, from the pump.fun reference
+
+What the reference does, and how each part maps onto our rules:
+
+| pump.fun | ours |
+|---|---|
+| Dark panel, large radius, hairline border | Same: canvas `rgb(5,5,5)`, panel radius 40, slate hairline, 1 px inset highlight |
+| Blurred coin image washed across the background | **No.** That is a gradient in effect and satori has no `filter` anyway. Flat canvas; the tint comes from a brand-coloured `boxShadow` glow behind the number and the coin tile |
+| Name (bold) over ticker (muted) | `name` 56 px SemiBold, `$SYMBOL` 32 px Medium in pastelgray |
+| "Market Cap" label, then a huge number with a green glow | Label 30 px Medium; number **120 px Bold** white with a lantern `textShadow` glow (satori supports `textShadow`). Glow colour follows the 24h delta: lantern up, pastelred down, `#358efc` when flat or unknown |
+| Green "See more" pill | Lantern pill, dark text, `rounded-full`, 64 px tall at card scale. It is paint, not a button — crawlers do not click — but it tells the viewer the link goes somewhere |
+| Coin image as a big rounded square on the right | Same, 300×300, radius 48, on the right edge of the panel; `/logo.svg` tile when the coin has no image |
+| pump.fun wordmark + app-store badges below | The badges are X's **app card** (`twitter:app:*`), a separate card type, not part of the image. Wordmark goes inside our image bottom-left in the pixel font. App card: §8 |
+
+Same anatomy, with the number swapped, serves the **prediction market** card
+(question as the name line, the leading outcome's implied % as the big
+number, pool size as the label) and the **live** card (viewer count as the
+number, LIVE pill in pastelred where the ticker line sits). One layout,
+three templates, which is what keeps the primitives small.
+
 Satori constraints to design within: flexbox only (every multi-child node
 needs explicit `display: flex`), no `line-clamp` (clamp text server-side by
 characters and append `…`), no `clip-path` (large radius stands in for the
@@ -219,17 +275,25 @@ and X both show the brand image, and the script passes.
 
 ### Phase 2 — templates, in share-value order (2–3 days)
 
-Post variants (text / image / video / token) → profile + live → coin → video →
-prediction → community + invite → category. Each is one file
+Coin first (it is the reference and the template two others reuse) → post
+variants (text / image / video / token) → profile + live → prediction →
+community + invite → category. Each is one file
 `og-worker/src/templates/<name>.ts`, one fixture in the render script, one
 typed field set in `lib/share/og-url.ts`.
+
+**Video is not a worker template.** It ships as the compact card (§4a):
+`app/embed/video/[id]/page.tsx` (public, provider-free, HLS player only,
+`robots: noindex`, added to the `/embed/*` public prefix that already exists)
+plus `twitter: { card: "player", players: [{ playerUrl, streamUrl, width:
+1280, height: 720 }] }` and the raw thumbnail as `og:image`.
 
 ### Phase 3 — wire the pages (1 day)
 
 - Existing six: build the template URL from the row they already hold.
   Profile picks `live` when `getStreamByUser` says so (it already runs
   server-side for the page). Coin handles both the `tokens` row and the
-  `resolveCoin()` shape.
+  `resolveCoin()` shape. Video switches to the compact/player card and drops
+  the worker entirely.
 - Add `generateMetadata` to `/communities/[serverId]`, `.../channels/[channelId]`
   (server card), `/communities/invite/[code]`.
 - Static `metadata` exports on the marketing pages and `/home`.
@@ -271,6 +335,7 @@ lib/share/og-url.ts                 ogImageUrl(template, fields)
 lib/share/metadata.ts               shareMetadata(...)
 app/layout.tsx                      metadataBase, openGraph, twitter
 app/opengraph-image.png (+ .gitignore negation)
+app/embed/video/[id]/page.tsx       player-card iframe target (public, no providers)
 app/(app)/**/page.tsx               the six existing + three community pages
 app/(marketing)/**/page.tsx         static metadata
 components/browse/post-card/share-menu.tsx
@@ -325,6 +390,12 @@ scripts/dev/render-og-cards.mjs
   bounded by the crawler's own cache.
 - **Wallet addresses.** Never on a card (memory `no-wallet-address-display`).
   Coin cards show `$SYMBOL` and the chain badge, not the mint.
+- **X app card** (the Google Play / App Store badges under the pump.fun
+  reference). It is `twitter: { card: "app", app: { id: { iphone } } }` and
+  needs a live App Store id, so it waits for the iOS app (memory
+  `mobile-app-expo`). When it ships, add it on the **home/marketing** pages
+  only — an app card replaces the image card on X, and a coin link should
+  still unfurl as the coin, not as a download prompt. Default until then: no.
 - **Verified mark.** From `user.verifiedTier` — on a card it is a badge, which
   is exactly what that field is (CLAUDE.md: never *gate* on it; displaying it
   is fine).
