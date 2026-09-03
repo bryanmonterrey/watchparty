@@ -151,7 +151,9 @@ export async function signInWithEvmWalletConnect(
       name: process.env.NEXT_PUBLIC_APP_NAME || "Watchparty",
       description: "Sign in to Watchparty",
       url: origin,
-      icons: [`${origin}/favicon.ico`],
+      // The padded 512 icon, not favicon.ico — wallets crop the dapp icon to a
+      // circle, and the .ico is the old edge-to-edge star.
+      icons: [`${origin}/icon-512.png`],
     },
   });
   opts?.registerAbort?.(() => {
