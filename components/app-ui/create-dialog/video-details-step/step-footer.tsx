@@ -11,6 +11,8 @@ import type { StepType } from "./types"
 interface StepFooterProps {
     currentStep: StepType
     isUploading: boolean
+    /** The save path is running (createVideo, and the token launch before it). */
+    isSaving: boolean
     uploadProgress: number
     tokenLaunch: TokenLaunchState
     onTokenLaunchSave: (updates: Partial<TokenLaunchState>) => void
@@ -21,6 +23,7 @@ interface StepFooterProps {
 export function StepFooter({
     currentStep,
     isUploading,
+    isSaving,
     uploadProgress,
     tokenLaunch,
     onTokenLaunchSave,
@@ -71,12 +74,19 @@ export function StepFooter({
                         {`Uploading ${uploadProgress}%`}
                     </TextShimmer>
                 )}
-                <Button variant="ghost" onClick={onBack} className="text-white text-lg  hover:bg-zinc-800">
+                <Button variant="ghost" onClick={onBack} disabled={isSaving} className="text-white text-lg  hover:bg-zinc-800">
                     Back
                 </Button>
 
-                <Button onClick={onNext} className={cn("text-black hover:bg-zinc-200 text-lg font-semibold px-6", currentStep === "visibility" ? "bg-white hover:bg-gray-200" : "bg-white")}>
-                    {currentStep === "visibility" ? "Save" : "Next"}
+                {/* The last step is a publish, so it says so — and says it is
+                    happening, instead of a live "Save" that could be pressed
+                    twice while createVideo ran. */}
+                <Button
+                    onClick={onNext}
+                    disabled={isSaving}
+                    className={cn("text-black hover:bg-zinc-200 text-lg font-semibold px-6", currentStep === "visibility" ? "bg-white hover:bg-gray-200" : "bg-white")}
+                >
+                    {currentStep === "visibility" ? (isSaving ? "Publishing…" : "Publish") : "Next"}
                 </Button>
             </div>
         </div>

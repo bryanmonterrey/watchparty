@@ -127,6 +127,7 @@ export function VideoDetailsStep(props: VideoDetailsStepProps) {
             <StepFooter
                 currentStep={state.currentStep}
                 isUploading={props.isUploading}
+                isSaving={state.isSaving}
                 uploadProgress={props.uploadProgress ?? 0}
                 tokenLaunch={state.tokenLaunch}
                 onTokenLaunchSave={(updates) => state.setTokenLaunch(prev => ({ ...prev, ...updates }))}

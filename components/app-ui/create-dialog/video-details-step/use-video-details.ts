@@ -25,6 +25,10 @@ export function useVideoDetails({ file, uploadedUrl, isUploading, uploadProgress
 
     // Token Launch State
     const [tokenLaunch, setTokenLaunch] = React.useState<TokenLaunchState>({ ...DEFAULT_TOKEN_LAUNCH })
+    // True from the moment Publish is pressed until the save path settles
+    // (including its early returns) — the footer reads it for the busy label
+    // and to stop a second press queuing a second createVideo.
+    const [isSaving, setIsSaving] = React.useState(false)
 
     const { launchToken, isLaunching: isTokenLaunching } = useTokenLaunch()
 
@@ -255,6 +259,8 @@ export function useVideoDetails({ file, uploadedUrl, isUploading, uploadProgress
                 return
             }
 
+            if (isSaving) return
+            setIsSaving(true)
             try {
                 let tokenData = {
                     tokenAddress: undefined as string | undefined,
@@ -388,10 +394,12 @@ export function useVideoDetails({ file, uploadedUrl, isUploading, uploadProgress
                 }
 
                 onNext()
-                toast.success("Video saved and published!")
+                toast.success("Published")
             } catch (error) {
                 toast.error("Failed to save video details")
                 console.error(error)
+            } finally {
+                setIsSaving(false)
             }
         }
     }
@@ -431,6 +439,7 @@ export function useVideoDetails({ file, uploadedUrl, isUploading, uploadProgress
         tokenLaunch,
         setTokenLaunch,
         isTokenLaunching,
+        isSaving,
         // Advanced settings
         autoChapters,
         setAutoChapters,
