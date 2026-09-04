@@ -22,7 +22,9 @@ export const maxDuration = 60;
 // HeliusSwapEvent, which recordSwaps consumes.
 type HeliusEvent = {
     signature?: string;
-    accountData?: { account?: string }[];
+    accountData?: { account?: string; tokenBalanceChanges?: { mint?: string }[] }[];
+    tokenTransfers?: { mint?: string }[];
+    events?: { swap?: { tokenInputs?: { mint?: string }[]; tokenOutputs?: { mint?: string }[] } };
 };
 
 // A hot token can appear in many txs per second; sync it at most once per
@@ -98,11 +100,21 @@ export async function POST(req: NextRequest) {
 
 async function processDelivery(events: HeliusEvent[]) {
     // Every account touched by the batch → which are pools we track?
+    // Every account touched by the batch, AND every mint moved in it. The
+    // webhook watches MINTS under SWAP mode (see trades-webhook.ts), and a
+    // swap's mint is not reliably in `accountData[].account` — it lives in
+    // the token transfers and balance changes. Matching on accounts alone
+    // left the breaker's per-address counters at zero while ~200/min arrived
+    // (2026-09-04), so it could see the flood but never name an address.
     const touched = new Set<string>();
     for (const ev of events) {
         for (const a of ev.accountData ?? []) {
             if (a.account) touched.add(a.account);
+            for (const c of a.tokenBalanceChanges ?? []) if (c.mint) touched.add(c.mint);
         }
+        for (const t of ev.tokenTransfers ?? []) if (t.mint) touched.add(t.mint);
+        for (const l of ev.events?.swap?.tokenInputs ?? []) if (l.mint) touched.add(l.mint);
+        for (const l of ev.events?.swap?.tokenOutputs ?? []) if (l.mint) touched.add(l.mint);
     }
     if (touched.size === 0) return;
 
