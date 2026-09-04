@@ -4,6 +4,7 @@ import { linkedWallets } from "@/db/schema/auth/linked-wallets";
 import { and, eq, isNotNull, isNull, or } from "drizzle-orm";
 import { webhookIsCurrent } from "@/lib/helius/webhook-edit";
 import { isAddressFormat } from "@/lib/chains/address";
+import { heliusWebhookSecret } from "@/lib/helius/webhook-secret";
 
 /**
  * Helius address webhook for wallet assets ("rung 2" of the indexer ladder):
@@ -75,7 +76,7 @@ export async function syncAssetsWebhook(): Promise<{ webhookID: string; watching
         transactionTypes: ["ANY"],
         accountAddresses,
         webhookType: "enhanced",
-        ...(process.env.HELIUS_WEBHOOK_SECRET ? { authHeader: process.env.HELIUS_WEBHOOK_SECRET } : {}),
+        ...(heliusWebhookSecret() ? { authHeader: heliusWebhookSecret() } : {}),
     };
 
     // Reuse the existing webhook for this URL if present (idempotent sync).

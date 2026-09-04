@@ -6,6 +6,7 @@
 // activity lands in seconds — the minute cron is only the self-heal behind
 // this.
 import { NextRequest, NextResponse, after } from "next/server";
+import { isAuthorizedHeliusRequest } from "@/lib/helius/webhook-secret";
 import { db } from "@/db";
 import { tokens } from "@/db/schema/content/token";
 import { trendingCoins } from "@/db/schema/content/trending";
@@ -65,11 +66,10 @@ const THROTTLE_SECONDS = 5;
 const MAX_TOKENS_PER_CALL = 10;
 
 export async function POST(req: NextRequest) {
-    if (process.env.HELIUS_WEBHOOK_SECRET) {
-        const auth = req.headers.get("authorization");
-        if (auth !== process.env.HELIUS_WEBHOOK_SECRET) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+    // Only the CURRENT secret — see lib/helius/webhook-secret.ts for why a
+    // stale one must be a 401 and not a fallback.
+    if (!isAuthorizedHeliusRequest(req)) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     let events: HeliusEvent[] = [];

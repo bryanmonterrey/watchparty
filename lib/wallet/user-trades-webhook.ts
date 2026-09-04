@@ -11,6 +11,7 @@ import { linkedWallets } from "@/db/schema/auth/linked-wallets";
 import { eq, and, isNotNull, or, isNull, ne } from "drizzle-orm";
 import { heliusApiKey } from "@/lib/wallet/assets-webhook";
 import { webhookIsCurrent } from "@/lib/helius/webhook-edit";
+import { heliusWebhookSecret } from "@/lib/helius/webhook-secret";
 
 const MAX_ADDRESSES = 90_000;
 
@@ -63,7 +64,7 @@ export async function syncUserTradesWebhook(): Promise<{ webhookID: string; watc
         transactionTypes: ["SWAP"],
         accountAddresses,
         webhookType: "enhanced",
-        ...(process.env.HELIUS_WEBHOOK_SECRET ? { authHeader: process.env.HELIUS_WEBHOOK_SECRET } : {}),
+        ...(heliusWebhookSecret() ? { authHeader: heliusWebhookSecret() } : {}),
     };
 
     const list = await (await fetch(`https://api.helius.xyz/v0/webhooks?api-key=${apiKey}`)).json();

@@ -18,7 +18,10 @@
  * times a day at most; the rest of the runs now cost nothing.
  */
 
+import { heliusWebhookSecret } from "./webhook-secret";
+
 export interface HeliusWebhookState {
+    authHeader?: unknown;
     accountAddresses?: unknown;
     transactionTypes?: unknown;
     /**
@@ -79,6 +82,13 @@ export async function webhookIsCurrent(
         // "absent" must not read as "disabled" or the guard never skips.
         if (current.active === false) return false;
         const types = Array.isArray(current.transactionTypes) ? (current.transactionTypes as string[]) : [];
+        // The auth header is part of "current" too: after a secret rotation
+        // (lib/helius/webhook-secret.ts) the addresses have not changed, but a
+        // webhook still sending the OLD header is a webhook whose every
+        // delivery is now a 401. Skipping the write here would leave it that
+        // way forever, since each later run reaches the same verdict.
+        const secret = heliusWebhookSecret();
+        if (secret && current.authHeader !== secret) return false;
         return (
             sameAddressSet(current.accountAddresses, nextAddresses) &&
             types.join(",") === nextTransactionTypes.join(",")

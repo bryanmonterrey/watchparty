@@ -5,6 +5,7 @@
 //   • USDC out of the COLLECTOR to a non-cold addr → alert only if ≥ threshold
 // Register the watch with scripts/premium/setup-helius-alert.ts.
 import { NextRequest, NextResponse } from "next/server";
+import { isAuthorizedHeliusRequest } from "@/lib/helius/webhook-secret";
 import { USDC_MINT } from "@/lib/premium/tiers";
 
 export const dynamic = "force-dynamic";
@@ -34,11 +35,10 @@ async function dispatchAlert(lines: string[]) {
 }
 
 export async function POST(req: NextRequest) {
-    if (process.env.HELIUS_WEBHOOK_SECRET) {
-        const auth = req.headers.get("authorization");
-        if (auth !== process.env.HELIUS_WEBHOOK_SECRET) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+    // Only the CURRENT secret — see lib/helius/webhook-secret.ts for why a
+    // stale one must be a 401 and not a fallback.
+    if (!isAuthorizedHeliusRequest(req)) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const collector = process.env.NEXT_PUBLIC_COLLECTOR_PUBKEY ?? process.env.NEXT_PUBLIC_TREASURY_PUBKEY;

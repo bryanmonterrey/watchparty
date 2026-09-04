@@ -5,6 +5,7 @@
 // (docs/exp-callouts.md §4a-2). The txSignature unique index dedupes against
 // the app-recorded path when both see the same swap.
 import { NextRequest, NextResponse } from "next/server";
+import { isAuthorizedHeliusRequest } from "@/lib/helius/webhook-secret";
 import { db } from "@/db";
 import { trades } from "@/db/schema/content";
 import { user } from "@/db/schema/auth";
@@ -92,11 +93,10 @@ function parseSwap(ev: HeliusSwapEvent, wallet: string): ParsedSwap | null {
 }
 
 export async function POST(req: NextRequest) {
-    if (process.env.HELIUS_WEBHOOK_SECRET) {
-        const auth = req.headers.get("authorization");
-        if (auth !== process.env.HELIUS_WEBHOOK_SECRET) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+    // Only the CURRENT secret — see lib/helius/webhook-secret.ts for why a
+    // stale one must be a 401 and not a fallback.
+    if (!isAuthorizedHeliusRequest(req)) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     let events: HeliusSwapEvent[] = [];

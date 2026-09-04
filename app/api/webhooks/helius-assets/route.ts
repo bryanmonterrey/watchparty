@@ -5,6 +5,7 @@
 // topic so mounted headers refetch immediately — deposits appear in seconds
 // instead of waiting out the cache + polling interval.
 import { NextRequest, NextResponse } from "next/server";
+import { isAuthorizedHeliusRequest } from "@/lib/helius/webhook-secret";
 import { invalidateCache } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
@@ -45,11 +46,10 @@ async function broadcastAssetsChanged(addresses: string[]) {
 }
 
 export async function POST(req: NextRequest) {
-    if (process.env.HELIUS_WEBHOOK_SECRET) {
-        const auth = req.headers.get("authorization");
-        if (auth !== process.env.HELIUS_WEBHOOK_SECRET) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+    // Only the CURRENT secret — see lib/helius/webhook-secret.ts for why a
+    // stale one must be a 401 and not a fallback.
+    if (!isAuthorizedHeliusRequest(req)) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     let events: HeliusEvent[] = [];

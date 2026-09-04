@@ -16,6 +16,7 @@ import { heliusApiKey } from "@/lib/wallet/assets-webhook";
 import { selectPoolsWithinBudget } from "./pool-budget";
 import { webhookIsCurrent } from "@/lib/helius/webhook-edit";
 import { deniedAmong } from "./trades-breaker";
+import { heliusWebhookSecret } from "@/lib/helius/webhook-secret";
 
 const MAX_ADDRESSES = 90_000; // Helius caps 100k/webhook; headroom before sharding
 
@@ -227,7 +228,7 @@ export async function syncTradesWebhook(): Promise<{ webhookID: string; watching
                 transactionTypes: [mode],
                 accountAddresses: keep,
                 webhookType: "enhanced",
-                ...(process.env.HELIUS_WEBHOOK_SECRET ? { authHeader: process.env.HELIUS_WEBHOOK_SECRET } : {}),
+                ...(heliusWebhookSecret() ? { authHeader: heliusWebhookSecret() } : {}),
             }),
         });
         if (!res.ok) throw new Error(`Helius API error: ${JSON.stringify(await res.json())}`);
@@ -263,7 +264,7 @@ export async function syncTradesWebhook(): Promise<{ webhookID: string; watching
         transactionTypes: [mode],
         accountAddresses,
         webhookType: "enhanced",
-        ...(process.env.HELIUS_WEBHOOK_SECRET ? { authHeader: process.env.HELIUS_WEBHOOK_SECRET } : {}),
+        ...(heliusWebhookSecret() ? { authHeader: heliusWebhookSecret() } : {}),
     };
 
     // SKIP THE WRITE WHEN NOTHING CHANGED.
