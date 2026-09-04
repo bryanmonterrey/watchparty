@@ -73,5 +73,15 @@ export async function recordView(postId: string, viewer: string): Promise<boolea
 
 /** The caller's stable handle, preferring the account over the network path. */
 export function viewerHandle(userId: string | null | undefined, headers: Headers): string {
-    return userId ?? headers.get("cf-connecting-ip") ?? headers.get("x-forwarded-for") ?? "anon";
+    // x-watchparty-client-ip first: on the container path cf-connecting-ip is
+    // stripped and x-forwarded-for is the proxy's internal hop, so reading
+    // those made EVERY anonymous viewer the same viewer — one view per post
+    // per day for all of them together. See lib/utils/ip.ts.
+    return (
+        userId ??
+        headers.get("x-watchparty-client-ip") ??
+        headers.get("cf-connecting-ip") ??
+        headers.get("x-forwarded-for") ??
+        "anon"
+    );
 }
