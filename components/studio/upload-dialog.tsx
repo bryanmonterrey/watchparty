@@ -58,6 +58,13 @@ export function UploadDialog({
         appToast.error(`That video is ${formatFileSize(file.size)}. Max size is ${MAX_UPLOAD_LABEL}.`);
         return;
       }
+      // By its bytes, not its name — see lib/video/sniff.ts.
+      const { sniffVideoFile } = await import("@/lib/video/sniff");
+      const sniff = await sniffVideoFile(file);
+      if (!sniff.ok) {
+        appToast.error(sniff.reason);
+        return;
+      }
       setTitle(baseName(file.name));
       setStep("uploading");
       setProgress(0);

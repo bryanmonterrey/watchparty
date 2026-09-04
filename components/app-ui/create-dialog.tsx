@@ -431,6 +431,15 @@ export function CreateDialog({ children, open: openProp, onOpenChange, initialTa
                 appToast.error(`That video is ${formatFileSize(file.size)}. Max size is ${MAX_UPLOAD_LABEL}.`)
                 return
             }
+            // By its bytes, not its name: a failed download saved as "x.mp4"
+            // is 9 bytes of "Not Found", and it used to upload and publish
+            // as a video that could never play — see lib/video/sniff.ts.
+            const { sniffVideoFile } = await import('@/lib/video/sniff')
+            const sniff = await sniffVideoFile(file)
+            if (!sniff.ok) {
+                appToast.error(sniff.reason)
+                return
+            }
 
             setVideoFile(file)
             setStep("details")
