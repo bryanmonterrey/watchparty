@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeEach, describe, expect, test } from "bun:test";
 
 import { sameAddressSet, webhookIsCurrent } from "@/lib/helius/webhook-edit";
 
@@ -45,6 +45,19 @@ describe("sameAddressSet", () => {
 });
 
 describe("webhookIsCurrent", () => {
+    // The auth header is part of "current" since the 2026-09-04 secret
+    // rotation; these cases are about addresses/types, so run them with no
+    // secret configured (bun loads .env, which would otherwise set one).
+    const realSecret = [process.env.HELIUS_WEBHOOK_SECRET, process.env.HELIUS_WEBHOOK_SECRET_V2];
+    beforeEach(() => {
+        delete process.env.HELIUS_WEBHOOK_SECRET;
+        delete process.env.HELIUS_WEBHOOK_SECRET_V2;
+    });
+    afterAll(() => {
+        if (realSecret[0] !== undefined) process.env.HELIUS_WEBHOOK_SECRET = realSecret[0];
+        if (realSecret[1] !== undefined) process.env.HELIUS_WEBHOOK_SECRET_V2 = realSecret[1];
+    });
+
     const realFetch = globalThis.fetch;
     afterEach(() => {
         globalThis.fetch = realFetch;
@@ -67,6 +80,14 @@ describe("webhookIsCurrent", () => {
         // dead — permanently, since every later run reaches the same verdict.
         serve({ active: false, accountAddresses: ["a", "b"], transactionTypes: ["SWAP"] });
         expect(await webhookIsCurrent("k", "id", ["a", "b"], ["SWAP"])).toBe(false);
+    });
+
+    test("a webhook still sending the OLD secret is not current", async () => {
+        process.env.HELIUS_WEBHOOK_SECRET_V2 = "new-secret";
+        serve({ active: true, accountAddresses: ["a"], transactionTypes: ["SWAP"], authHeader: "old-secret" });
+        expect(await webhookIsCurrent("k", "id", ["a"], ["SWAP"])).toBe(false);
+        serve({ active: true, accountAddresses: ["a"], transactionTypes: ["SWAP"], authHeader: "new-secret" });
+        expect(await webhookIsCurrent("k", "id", ["a"], ["SWAP"])).toBe(true);
     });
 
     test("an ABSENT active field does not read as disabled", async () => {

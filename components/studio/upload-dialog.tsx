@@ -65,9 +65,12 @@ export function UploadDialog({
         const filename = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
         const { path, token, endpoint } = await createResumableUpload.mutateAsync({ bucket: "videos", filename });
 
+        // moov in front before it leaves the browser — see lib/video/faststart.ts.
+        const { faststartFile } = await import("@/lib/video/faststart");
+        const body = await faststartFile(file);
         const { Upload: TusUpload } = await import("tus-js-client");
         await new Promise<void>((resolve, reject) => {
-          const up = new TusUpload(file, {
+          const up = new TusUpload(body, {
             endpoint,
             chunkSize: 6 * 1024 * 1024, // Supabase requires exactly 6MB chunks.
             retryDelays: [0, 3000, 5000, 10000, 20000],

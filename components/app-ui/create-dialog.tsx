@@ -452,9 +452,13 @@ export function CreateDialog({ children, open: openProp, onOpenChange, initialTa
                 });
 
                 // Aliased: `Upload` is already the lucide icon in this file.
+                // moov in front before it leaves the browser — see lib/video/faststart.ts.
+                // Falls back to the original file on anything unexpected.
+                const { faststartFile } = await import('@/lib/video/faststart')
+                const body = await faststartFile(file)
                 const { Upload: TusUpload } = await import('tus-js-client')
                 await new Promise<void>((resolve, reject) => {
-                    const upload = new TusUpload(file, {
+                    const upload = new TusUpload(body, {
                         endpoint,
                         // Supabase requires exactly 6MB chunks.
                         chunkSize: 6 * 1024 * 1024,

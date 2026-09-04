@@ -54,6 +54,7 @@ export function usePlayer(props: VideoPlayerProps) {
     const volumeTrackRef = useRef<HTMLDivElement>(null);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const hlsRef = useRef<any>(null);
+    const errorRetriesRef = useRef(0);
 
     // ── Playback state ────────────────────────────────────────────────────────
     const [isPlaying, setIsPlaying] = useState(false);
@@ -318,6 +319,7 @@ export function usePlayer(props: VideoPlayerProps) {
 
         hlsRef.current?.destroy();
         hlsRef.current = null;
+        errorRetriesRef.current = 0;
 
         const savedVolume = parseFloat(store.get("ytp-volume", "1"));
         const savedRate = parseFloat(store.get("ytp-rate", "1"));
@@ -865,9 +867,28 @@ export function usePlayer(props: VideoPlayerProps) {
         if (v?.buffered.length) setBuffered(v.buffered.end(v.buffered.length - 1));
     }, []);
 
+    // Safari reports MEDIA_ERR_SRC_NOT_SUPPORTED (4) for transient failures on
+    // an MP4 whose moov sits at the end of the file — and plays the same URL
+    // fine on the next refresh. So do the refresh for the user: reload the
+    // element a couple of times before admitting defeat. HLS has its own
+    // recovery; this is the native-source path only.
     const onError = useCallback(() => {
         const v = videoRef.current;
         const code = v?.error?.code;
+        if (v && !hlsRef.current && (code === 2 || code === 3 || code === 4) && errorRetriesRef.current < 2) {
+            errorRetriesRef.current += 1;
+            const attempt = errorRetriesRef.current;
+            const resumeAt = v.currentTime;
+            const wasPlaying = !v.paused || v.autoplay;
+            setTimeout(() => {
+                const el = videoRef.current;
+                if (!el || el.error === null) return;
+                el.load();
+                if (resumeAt > 0) el.currentTime = resumeAt;
+                if (wasPlaying) el.play().catch(() => {});
+            }, 800 * attempt);
+            return;
+        }
         const msg = code === 1 ? "Playback aborted"
             : code === 2 ? "Network error — check your connection"
             : code === 3 ? "Video file is corrupted"
