@@ -15,6 +15,7 @@ import { eq, and, isNotNull } from "drizzle-orm";
 import { heliusApiKey } from "@/lib/wallet/assets-webhook";
 import { selectPoolsWithinBudget } from "./pool-budget";
 import { webhookIsCurrent } from "@/lib/helius/webhook-edit";
+import { deniedAmong } from "./trades-breaker";
 
 const MAX_ADDRESSES = 90_000; // Helius caps 100k/webhook; headroom before sharding
 
@@ -179,9 +180,17 @@ export async function syncTradesWebhook(): Promise<{ webhookID: string; watching
         `(${selection.tooQuiet} too quiet, ${selection.tooBusy} didn't fit)`,
     );
 
-    const accountAddresses = [
-        ...new Set([...rows, ...trending].map((r) => r.poolAddress).filter(Boolean) as string[]),
-    ].slice(0, MAX_ADDRESSES);
+    const wanted = [...new Set([...rows, ...trending].map((r) => r.poolAddress).filter(Boolean) as string[])];
+
+    // Shed by the receiver's breaker, or listed in HELIUS_TRADES_EXCLUDE. The
+    // estimate that chose these is a daily mean and cannot see a bot run; the
+    // receiver measures the real rate and sheds — see trades-breaker.ts. Without
+    // this filter the next hourly run would put the shed address straight back.
+    const denied = await deniedAmong(wanted);
+    if (denied.size) {
+        console.warn(`[trades-webhook] skipping ${denied.size} denied address(es): ${[...denied].join(", ")}`);
+    }
+    const accountAddresses = wanted.filter((a) => !denied.has(a)).slice(0, MAX_ADDRESSES);
 
     const list = await (await fetch(`https://api.helius.xyz/v0/webhooks?api-key=${apiKey}`)).json();
     const existing = Array.isArray(list)

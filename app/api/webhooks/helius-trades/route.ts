@@ -13,6 +13,7 @@ import { and, eq, isNotNull } from "drizzle-orm";
 import { withCache, redis } from "@/lib/cache";
 import { syncMarketData, syncCurveProgress, type SyncableToken } from "@/lib/tokens/market-sync";
 import { recordSwaps, type HeliusSwapEvent } from "@/lib/coins/record-swaps";
+import { BREAKER_PER_MIN, countDelivery, shedIfBursting } from "@/lib/tokens/trades-breaker";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -184,6 +185,27 @@ async function processDelivery(events: HeliusEvent[]) {
             (p.poolAddress && touched.has(p.poolAddress)) ||
             (p.tokenAddress && touched.has(p.tokenAddress)),
     );
+
+    // BREAKER — the real delivery rate is only measurable here. Registration
+    // picks display coins from a daily mean, and on 2026-09-04 one of them
+    // (TROLL, estimated ~10/min) delivered ~1,400/min, which alone pushed the
+    // container past its 4,096-connection ceiling and 500'd every page.
+    // Count this delivery against the watched addresses it touched; past the
+    // threshold, shed the loudest one and deny it so the sync can't re-add it.
+    try {
+        const watched = [
+            ...liveTokens.map((t) => t.poolAddress),
+            ...(displayPools ?? []).flatMap((p) => [p.poolAddress, p.tokenAddress]),
+        ].filter(Boolean) as string[];
+        const hits = watched.filter((a) => touched.has(a));
+        const total = await countDelivery(hits);
+        if (BREAKER_PER_MIN > 0 && total >= BREAKER_PER_MIN) {
+            const base = (process.env.NEXT_PUBLIC_BASE_URL ?? process.env.NEXT_PUBLIC_AUTH_URL ?? "").replace(/\/$/, "");
+            await shedIfBursting(watched, `${base}/api/webhooks/helius-trades`);
+        }
+    } catch (err) {
+        console.error("[helius-trades] breaker failed:", err instanceof Error ? err.message : err);
+    }
 
     if (rows.length === 0 && displayHits.length === 0) {
         return;
