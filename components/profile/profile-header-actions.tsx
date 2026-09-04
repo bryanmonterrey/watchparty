@@ -9,6 +9,7 @@ import { UserType } from "@/db/schema/auth/user";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/client";
+import { useAuthSession } from "@/hooks/use-auth-session";
 import { Link2Icon, VerticalDotsIcon } from "@/components/icons";
 import { GooDropdown, gooMenuItem } from "@/components/ui/goo-dropdown";
 import { BlockButton, MuteButton } from "@/components/moderation/block-mute-buttons";
@@ -43,7 +44,14 @@ export function MoreMenu({ userId, username, open, onOpenChange, onClose, trigge
     const unbanUser = trpc.moderation.unbanUser.useMutation({
         onSuccess: () => { utils.moderation.isUserBannedByMe.invalidate({ userId }); onClose(); },
     });
-    const { data: banStatus } = trpc.moderation.isUserBannedByMe.useQuery({ userId });
+    const { data: session } = useAuthSession();
+    // Mute / Block / Ban only make sense against SOMEONE ELSE while signed
+    // in. MuteButton and BlockButton already render nothing otherwise — but a
+    // custom row still reserves its 52px, so the owner's own video (and every
+    // signed-out visitor) got two blank rows and a stray pair of separators
+    // in this menu. Decide it here and drop the rows, not just their content.
+    const canModerate = !!session?.user && session.user.id !== userId;
+    const { data: banStatus } = trpc.moderation.isUserBannedByMe.useQuery({ userId }, { enabled: canModerate });
     const isBanned = banStatus?.banned ?? false;
 
     const copyProfileLink = () => {
@@ -78,28 +86,30 @@ export function MoreMenu({ userId, username, open, onOpenChange, onClose, trigge
                     icon: <Link2Icon />,
                     label: "Copy profile link",
                 }),
-                { key: "sep-1", type: "separator" },
-                {
-                    key: "mute",
-                    type: "custom",
-                    label: <MuteButton userId={userId} username={username} className={cn(rowClass, "gap-2.5")} onDone={onClose} />,
-                },
-                {
-                    key: "block",
-                    type: "custom",
-                    label: <BlockButton userId={userId} username={username} className={cn(rowClass, "gap-2.5")} onDone={onClose} />,
-                },
-                { key: "sep-2", type: "separator" },
-                gooMenuItem({
-                    key: "ban",
-                    onClick: () => isBanned ? unbanUser.mutate({ userId }) : banUser.mutate({ userId }),
-                    closeOnSelect: false,
-                    variant: "danger",
-                    icon: (banUser.isPending || unbanUser.isPending)
-                        ? <Loader2 className="animate-spin" />
-                        : <HugeiconsIcon icon={HammerIcon} />,
-                    label: isBanned ? "Unban from channel" : "Ban from channel",
-                }),
+                ...(canModerate ? [
+                    { key: "sep-1", type: "separator" as const },
+                    {
+                        key: "mute",
+                        type: "custom" as const,
+                        label: <MuteButton userId={userId} username={username} className={cn(rowClass, "gap-2.5")} onDone={onClose} />,
+                    },
+                    {
+                        key: "block",
+                        type: "custom" as const,
+                        label: <BlockButton userId={userId} username={username} className={cn(rowClass, "gap-2.5")} onDone={onClose} />,
+                    },
+                    { key: "sep-2", type: "separator" as const },
+                    gooMenuItem({
+                        key: "ban",
+                        onClick: () => isBanned ? unbanUser.mutate({ userId }) : banUser.mutate({ userId }),
+                        closeOnSelect: false,
+                        variant: "danger",
+                        icon: (banUser.isPending || unbanUser.isPending)
+                            ? <Loader2 className="animate-spin" />
+                            : <HugeiconsIcon icon={HammerIcon} />,
+                        label: isBanned ? "Unban from channel" : "Ban from channel",
+                    }),
+                ] : []),
             ]}
         />
     );
