@@ -33,23 +33,10 @@ import { useLinkPreview } from "@/hooks/use-link-preview"
 import { nanoid } from "nanoid"
 import { PollComposer, type PollOption } from "@/components/browse/poll-composer"
 
-interface CreateDialogProps extends React.HTMLAttributes<HTMLElement> {
-    children: React.ReactNode
-    /** Controlled mode — the header's create dropdown opens this on a chosen
-     *  tab, so it can't own its own open state there. Omit both and it stays
-     *  self-contained: the child is the trigger, as before. */
-    open?: boolean
-    onOpenChange?: (open: boolean) => void
-    /** Which tab to land on. Defaults to video, which is what the trigger did. */
-    initialTab?: Tab
-}
-
-type Tab = "video" | "post" | "coin" | "stream" | "space"
+import type { CreateDialogProps, Step, Tab } from "./create-dialog/types"
 
 // The tab surfaces that are code-split — see create-dialog/lazy-steps.
 import { LazyStreamSetup, LazySpaceSetup } from "./create-dialog/lazy-steps"
-
-type Step = "upload" | "details"
 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { GooDropdown } from "@/components/ui/goo-dropdown"

@@ -7,6 +7,16 @@ const eslintConfig = defineConfig([
   ...nextTs,
   // Override default ignores of eslint-config-next.
   globalIgnores([
+    // Vendored agent skills (installed by `npx skills add`): third-party example
+    // code, not ours.
+    ".agents/**",
+    ".claude/**",
+    // The sub-workers' build output and wrangler scratch, and the static
+    // bundles under public/ — generated or vendored, never source. Together
+    // with .agents these were ~500 of the 1,295 lint errors on 2026-10-01.
+    "**/.open-next/**",
+    "**/.wrangler/**",
+    "public/**",
     // Default ignores of eslint-config-next:
     ".next/**",
     "out/**",
