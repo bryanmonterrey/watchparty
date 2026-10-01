@@ -13,7 +13,9 @@
 
 import { hmac } from "@noble/hashes/hmac.js";
 import { sha512 } from "@noble/hashes/sha2.js";
-import { blake2b } from "@noble/hashes/blake2b.js";
+// blake2.js carries blake2b in both @noble/hashes 1.8 (the console's copy) and
+// 2.x (the root's since 2026-10-01); blake2b.js was dropped in 2.0.
+import { blake2b } from "@noble/hashes/blake2.js";
 import { ed25519 } from "@noble/curves/ed25519.js";
 import { HDKey } from "@scure/bip32";
 import { mnemonicToSeedSync } from "@scure/bip39";

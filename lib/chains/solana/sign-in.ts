@@ -67,7 +67,8 @@ export async function signInWithSolana(wallet: SolanaWallet) {
   // wallet's sig/pubkey/message don't line up — this log says which.
   try {
     const ed = await import("@noble/ed25519");
-    const { sha512 } = await import("@noble/hashes/sha512");
+    // sha2.js exists in @noble/hashes 1.8 and 2.x; the sha512 entry was dropped in 2.0.
+    const { sha512 } = await import("@noble/hashes/sha2.js");
     if (!ed.etc.sha512Sync) ed.etc.sha512Sync = (...m: Uint8Array[]) => sha512(ed.etc.concatBytes(...m));
     const sigBytes = bs58.decode(signature);
     const addrBytes = bs58.decode(address);
