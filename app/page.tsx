@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { getServerSession } from "@/lib/auth/get-session";
+import { PUBLIC_BROWSING } from "@/lib/auth/public-browsing";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { Highlighter } from "@/components/ui/highlighter"
 import { TextAnimate } from "@/components/ui/text-animate"
@@ -25,10 +26,13 @@ export default async function Home({
   const session = await getServerSession();
   if (session) redirect("/home");
 
-  // Marketing landing is parked for now — send everyone to login.
-  // Referral links land here (/?ref=username) — carry the ref through.
-  // Delete this line to bring the landing page back.
-  redirect(ref ? `/login?ref=${encodeURIComponent(ref)}` : "/login");
+  // Marketing landing is parked for now. With PUBLIC_BROWSING on, /home is
+  // the landing surface for a signed-out visitor too (lib/auth/public-browsing.ts);
+  // the login wall at / is only right while the toggle is off. Referral links
+  // land here (/?ref=username) — carry the ref through either way.
+  // Delete these lines to bring the landing page back.
+  const landing = PUBLIC_BROWSING ? "/home" : "/login";
+  redirect(ref ? `${landing}?ref=${encodeURIComponent(ref)}` : landing);
 
   // min-h-svh + content-driven height (NOT flex-1: a basis-0 flex child
   // contributes nothing to document height, which swallows the pin-spacer
