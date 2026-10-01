@@ -16,6 +16,9 @@ export * from "./oauth-client";
 export * from "./oauth-access-token";
 export * from "./oauth-refresh-token";
 export * from "./oauth-consent";
+export * from "./oauth-resource";
+export * from "./oauth-client-resource";
+export * from "./oauth-client-assertion";
 export * from "./jwks";
 
 

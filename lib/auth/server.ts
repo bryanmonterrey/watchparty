@@ -32,6 +32,9 @@ import {
   linkedWallets,
   twoFactor as twoFactorTable,
   oauthClient,
+  oauthResource,
+  oauthClientResource,
+  oauthClientAssertion,
   oauthAccessToken,
   oauthRefreshToken,
   oauthConsent,
@@ -247,6 +250,12 @@ export const auth = betterAuth({
       walletAddress,
       twoFactor: twoFactorTable,
       oauthClient,
+      // 1.7.7's oauth-provider models (resource indicators, the client/resource
+      // join, JWT client-assertion replay guard). Empty for now; without them
+      // the adapter logs "Drizzle schema mismatch / Missing tables".
+      oauthResource,
+      oauthClientResource,
+      oauthClientAssertion,
       oauthAccessToken,
       oauthRefreshToken,
       oauthConsent,
