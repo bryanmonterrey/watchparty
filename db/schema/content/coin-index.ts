@@ -1,4 +1,5 @@
-import { pgTable, text, doublePrecision, timestamp, index } from "drizzle-orm/pg-core";
+import { pgTable, text, doublePrecision, timestamp, index, pgPolicy } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 /**
  * Address → chain + pool, for coins nobody here tracks.
@@ -49,5 +50,8 @@ export const coinIndex = pgTable(
         // The lookup is BY ADDRESS: the URL carries an address and, usually, no
         // chain. Not unique — the same address exists on several chains.
         index("coin_index_token_address_idx").on(t.tokenAddress),
+        // Server-only: read through postgres (bypasses RLS); the API roles get
+        // nothing (db/enable-rls-coin-tables.sql, 2026-10-01).
+        pgPolicy("coin_index_deny_direct_access", { for: "all", to: ["authenticated", "anon"], using: sql`false` }),
     ],
-);
+).enableRLS();

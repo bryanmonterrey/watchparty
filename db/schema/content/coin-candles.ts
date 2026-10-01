@@ -1,4 +1,5 @@
-import { pgTable, text, doublePrecision, bigint, index, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, text, doublePrecision, bigint, index, primaryKey, pgPolicy } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 /**
  * OHLCV we own, so a chart read never leaves our database.
@@ -43,5 +44,8 @@ export const coinCandles = pgTable(
         // Every read is "this series, newest N bars in a window", which is
         // exactly this index's shape.
         index("coin_candles_series_idx").on(t.network, t.poolAddress, t.resolution, t.ts),
+        // Server-only: read through postgres (bypasses RLS); the API roles get
+        // nothing (db/enable-rls-coin-tables.sql, 2026-10-01).
+        pgPolicy("coin_candles_deny_direct_access", { for: "all", to: ["authenticated", "anon"], using: sql`false` }),
     ],
-);
+).enableRLS();

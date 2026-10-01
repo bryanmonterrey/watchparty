@@ -1,4 +1,5 @@
-import { pgTable, text, doublePrecision, bigint, primaryKey, index } from "drizzle-orm/pg-core";
+import { pgTable, text, doublePrecision, bigint, primaryKey, index, pgPolicy } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 /**
  * Public per-pool swap log — what the transactions table under a chart reads.
@@ -49,7 +50,10 @@ export const coinTrades = pgTable(
         index("coin_trades_pool_ts_idx").on(t.network, t.poolAddress, t.ts),
         // Opening a table by mint, before a pool is known.
         index("coin_trades_token_ts_idx").on(t.network, t.tokenAddress, t.ts),
+        // Server-only: read through postgres (bypasses RLS); the API roles get
+        // nothing (db/enable-rls-coin-tables.sql, 2026-10-01).
+        pgPolicy("coin_trades_deny_direct_access", { for: "all", to: ["authenticated", "anon"], using: sql`false` }),
     ],
-);
+).enableRLS();
 
 export type CoinTrade = typeof coinTrades.$inferSelect;

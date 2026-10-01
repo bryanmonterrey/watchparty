@@ -1,4 +1,5 @@
-import { pgTable, text, timestamp, index, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, index, primaryKey, pgPolicy } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { posts } from "./post";
 
 /**
@@ -54,7 +55,10 @@ export const postTags = pgTable(
         // "every tag for this coin, newest first" — the chart and the table.
         index("post_tags_coin_idx").on(t.network, t.tokenAddress, t.createdAt),
         index("post_tags_post_idx").on(t.postId),
+        // Server-only: read through postgres (bypasses RLS); the API roles get
+        // nothing (db/enable-rls-coin-tables.sql, 2026-10-01).
+        pgPolicy("post_tags_deny_direct_access", { for: "all", to: ["authenticated", "anon"], using: sql`false` }),
     ],
-);
+).enableRLS();
 
 export type PostTag = typeof postTags.$inferSelect;
