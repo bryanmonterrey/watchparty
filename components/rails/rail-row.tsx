@@ -21,7 +21,7 @@ import { ViewsStat } from "@/components/ui/views-stat";
 // would be 125x70) — deliberate, to give the thumb more presence in the rail.
 // INFO_INDENT below is derived from this width; change both together.
 export const RAIL_ROW = "flex h-fit p-2 w-full items-start justify-start gap-3 text-left transition-colors";
-export const RAIL_THUMB = "relative h-[75px] w-[125px] shrink-0 overflow-hidden rounded-xs bg-muted";
+export const RAIL_THUMB = "relative h-[75px] w-[125px] shrink-0 overflow-hidden rounded-md bg-muted";
 
 /** Thumb width + the row's gap-3 — what the extra lines indent to so they sit
  *  under the text column rather than under the thumbnail.
