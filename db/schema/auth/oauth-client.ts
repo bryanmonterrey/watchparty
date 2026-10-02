@@ -51,6 +51,18 @@ export const oauthClient = pgTable("oauthClient", {
     requirePKCE: boolean("requirePKCE"),
     referenceId: text("referenceId"),
     metadata: jsonb("metadata"),
+    // Added by @better-auth/oauth-provider 1.7.7 (db/better-auth-1.7.7-columns.sql).
+    // All nullable: the plugin reads each through `?? default`, and none is
+    // set by anything we do yet (client-credentials scopes, back-channel
+    // logout, private_key_jwt client auth via jwks/jwksUri, DPoP).
+    clientDiscoveryId: text("clientDiscoveryId"),
+    clientCredentialsScopes: text("clientCredentialsScopes").array(),
+    backchannelLogoutUri: text("backchannelLogoutUri"),
+    backchannelLogoutSessionRequired: boolean("backchannelLogoutSessionRequired"),
+    applicationType: text("applicationType"),
+    jwks: text("jwks"),
+    jwksUri: text("jwksUri"),
+    dpopBoundAccessTokens: boolean("dpopBoundAccessTokens").default(false),
 }, (table) => [
     index("idx_oauth_client_user").on(table.userId),
     // Server-only table — accessed via service role only

@@ -1,4 +1,4 @@
-import { boolean, index, integer, pgTable, text } from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { user } from "./user";
 
 export const twoFactor = pgTable("twoFactor", {
@@ -11,6 +11,9 @@ export const twoFactor = pgTable("twoFactor", {
     // after its maxFailedAttempts; without the column the adapter logs
     // "Drizzle schema mismatch" on every request. db/better-auth-1.7.7-two-factor-failed-count.sql
     failedVerificationCount: integer("failedVerificationCount").notNull().default(0),
+    // ...and this is the lock it sets once the count trips (1.7.7).
+    // db/better-auth-1.7.7-columns.sql
+    lockedUntil: timestamp("lockedUntil"),
 }, (table) => [
     index("idx_two_factor_user").on(table.userId),
 ]);

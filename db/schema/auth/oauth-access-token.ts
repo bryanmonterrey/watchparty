@@ -1,4 +1,4 @@
-import { index, pgPolicy, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { index, jsonb, pgPolicy, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { user } from "./user";
 import { session } from "./session";
@@ -23,7 +23,15 @@ export const oauthAccessToken = pgTable("oauthAccessToken", {
     expiresAt: timestamp("expiresAt"),
     createdAt: timestamp("createdAt"),
     scopes: text("scopes").array().notNull(),
+    // Added by @better-auth/oauth-provider 1.7.7 (db/better-auth-1.7.7-columns.sql).
+    // `revoked` means rows can now be marked rather than only deleted. All nullable.
+    authorizationCodeId: text("authorizationCodeId"),
+    resources: text("resources").array(),
+    requestedUserInfoClaims: text("requestedUserInfoClaims").array(),
+    revoked: timestamp("revoked"),
+    confirmation: jsonb("confirmation"),
 }, (table) => [
+    index("idx_oauth_access_token_auth_code").on(table.authorizationCodeId),
     index("idx_oauth_access_token_client").on(table.clientId),
     index("idx_oauth_access_token_session").on(table.sessionId),
     index("idx_oauth_access_token_user").on(table.userId),

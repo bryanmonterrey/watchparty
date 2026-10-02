@@ -20,6 +20,9 @@ export const oauthConsent = pgTable("oauthConsent", {
     scopes: text("scopes").array().notNull(),
     createdAt: timestamp("createdAt"),
     updatedAt: timestamp("updatedAt"),
+    // Added by @better-auth/oauth-provider 1.7.7 (db/better-auth-1.7.7-columns.sql).
+    resources: text("resources").array(),
+    requestedUserInfoClaims: text("requestedUserInfoClaims").array(),
 }, (table) => [
     index("idx_oauth_consent_client").on(table.clientId),
     index("idx_oauth_consent_user").on(table.userId),
