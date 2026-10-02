@@ -77,8 +77,27 @@ export class NextApp extends Container {
  */
 const INSTANCES = 1;
 
+/**
+ * Helius's trades webhook POSTs here about once a second, around the clock,
+ * whether or not anyone is watching: the old account's webhook the billing
+ * runbook said to delete, and it cannot be deleted from the API while that
+ * key is over quota. With three containers it was noise; with one it is
+ * what saturated the instance within minutes of the 2026-10-02 deploy
+ * (every page request 500'd after the 20 s proxy timeout while the tail
+ * showed nothing but Canceled webhook posts). The trade tape is off anyway
+ * (HELIUS_TRADES_DISPLAY_POOLS = 0 on the free plan), so nothing reads what
+ * the handler would have stored. Answer at the edge, 200 so Helius does not
+ * retry, and never wake the container for it. Flip to false once the
+ * webhook is deleted in the Helius dashboard or the tape comes back.
+ */
+const BLOCK_HELIUS_TRADES_WEBHOOK = true;
+const HELIUS_TRADES_PATH = "/api/webhooks/helius-trades";
+
 export default {
     async fetch(request: Request, env: { NEXT_APP: DurableObjectNamespace<NextApp> }) {
+        if (BLOCK_HELIUS_TRADES_WEBHOOK && request.method === "POST" && new URL(request.url).pathname === HELIUS_TRADES_PATH) {
+            return new Response(null, { status: 200, headers: { "x-watchparty-edge": "helius-trades-blocked" } });
+        }
         // getRandom, not a fixed name: spreads connections across INSTANCES so
         // one saturated container cannot take the site with it.
         //
