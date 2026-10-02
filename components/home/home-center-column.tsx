@@ -19,7 +19,16 @@ import { useHomeFeed } from "./home-feed-context";
 // Persisted, like the left rail's collapse: a view mode you chose should
 // survive a navigation rather than snapping back.
 
-const STORAGE_KEY = "wp:home:focus";
+// EXPANDED IS THE DEFAULT (2026-10-02): the coin list under the screen is the
+// part of this page that isn't working, so a first-time visitor gets the video
+// and its header rather than tabs over an empty board. Collapsing is still a
+// choice and still persists.
+//
+// The key is :v2 on purpose. The old key stored "0" for anyone who had ever
+// touched the toggle, and under the old default "0" was also simply where
+// everyone sat — keeping it would have left exactly the people who use the
+// page most on the view this change is meant to replace.
+const STORAGE_KEY = "wp:home:focus:v2";
 
 // Expanded, the screen takes the viewport below the app header, less the strip
 // under it. Not 100svh — that would push the strip off the bottom and there'd
@@ -43,16 +52,17 @@ const HERO_EXPANDED = "min-h-[calc(100svh-var(--header-height)-6.5rem)]";
 const HERO_DEFAULT = "min-h-0";
 
 export function HomeCenterColumn() {
-    const [focus, setFocus] = useState(false);
+    const [focus, setFocus] = useState(true);
     const { active } = useHomeFeed();
 
     // After mount, never during render — the app shell server-renders and
     // reading localStorage in render would be a hydration mismatch.
     useEffect(() => {
         try {
-            setFocus(window.localStorage.getItem(STORAGE_KEY) === "1");
+            // Only an explicit "0" collapses; no stored value means expanded.
+            if (window.localStorage.getItem(STORAGE_KEY) === "0") setFocus(false);
         } catch {
-            // storage disabled — the default view is the right fallback
+            // storage disabled — the default (expanded) view is the right fallback
         }
     }, []);
 
