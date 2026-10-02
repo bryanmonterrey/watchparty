@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuthSession } from "@/hooks/use-auth-session";
-import { WalletConnectModal } from "@/components/wallet/wallet-connect-modal";
 
 interface WithAuthProps {
     children: React.ReactElement<{ onClick?: React.MouseEventHandler<HTMLElement> }>;
@@ -12,14 +12,18 @@ interface WithAuthProps {
 /**
  * A wrapper component that intercepts clicks. 
  * If the user is authenticated, it fires the normal onClick handler or lets the child's onClick propagate.
- * If the user is unauthenticated, it opens the WalletConnectModal instead of triggering the action.
+ * If the user is unauthenticated, it sends them to /login instead of triggering the action —
+ * the same destination as the header's Sign In button, with the current path as callbackUrl.
+ * (It used to open WalletConnectModal, which offers only the wallet methods and statically
+ * pulled the modal into every bundle that wraps something in WithAuth.)
  * 
  * Uses forwardRef so it can safely wrap items inside Dropdowns, Tooltips, or DialogTriggers.
  */
 export const WithAuth = React.forwardRef<HTMLElement, WithAuthProps & React.HTMLAttributes<HTMLElement>>(
     ({ children, onClick, ...props }, ref) => {
         const { data: session, isPending } = useAuthSession();
-        const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+        const router = useRouter();
+        const pathname = usePathname();
 
         const handleClick: React.MouseEventHandler<HTMLElement> = (e) => {
             // Wait for session to load before making decisions
@@ -32,7 +36,7 @@ export const WithAuth = React.forwardRef<HTMLElement, WithAuthProps & React.HTML
             // Safely check if user is populated in the session object
             const hasUser = session && typeof session === "object" && "user" in session && Boolean(session.user);
 
-            // If not logged in, intercept the click and show login
+            // If not logged in, intercept the click and go to login
             if (!hasUser) {
                 // Stop navigation and propagation but do NOT fire the parent's onClick (e.g., DialogTrigger)
                 e.preventDefault();
@@ -43,7 +47,7 @@ export const WithAuth = React.forwardRef<HTMLElement, WithAuthProps & React.HTML
                     children.props.onClick(e);
                 }
 
-                setIsLoginModalOpen(true);
+                router.push(`/login?callbackUrl=${encodeURIComponent(pathname || "/home")}`);
                 return;
             }
 
@@ -67,12 +71,6 @@ export const WithAuth = React.forwardRef<HTMLElement, WithAuthProps & React.HTML
                 {React.isValidElement(children)
                     ? React.cloneElement(children, { ...props, onClick: handleClick, ref } as any)
                     : children}
-
-                {/* The login modal that appears for unauthenticated users */}
-                <WalletConnectModal
-                    open={isLoginModalOpen}
-                    onOpenChange={setIsLoginModalOpen}
-                />
             </React.Fragment>
         );
     }

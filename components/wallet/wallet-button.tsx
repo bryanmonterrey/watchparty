@@ -97,9 +97,14 @@ function WalletButtonInner() {
     // Header siblings (the SOL balance chip) open the drawer via this event —
     // the drawer state lives here, next to its lazy-mount gates. Users with no
     // linked wallet get the connect modal instead of an empty drawer.
+    // Signed-out visitors go to /login, exactly like the Sign In button below:
+    // the connect modal offers only the wallet methods, and it used to open
+    // here for anyone pressing the empty chip's "Deposit" while signed out.
     useEffect(() => {
         const open = () => {
-            if (walletAddress) {
+            if (!isSignedIn && !connected) {
+                router.push(`/login?callbackUrl=${encodeURIComponent(pathname || "/home")}`);
+            } else if (walletAddress) {
                 setDrawerReady(true);
                 setDrawerOpen(true);
             } else {
@@ -109,7 +114,7 @@ function WalletButtonInner() {
         };
         window.addEventListener(OPEN_WALLET_DRAWER_EVENT, open);
         return () => window.removeEventListener(OPEN_WALLET_DRAWER_EVENT, open);
-    }, [walletAddress]);
+    }, [walletAddress, isSignedIn, connected, router, pathname]);
 
     const handleSignIn = useCallback(async () => {
         if (!connected || !publicKey) {
