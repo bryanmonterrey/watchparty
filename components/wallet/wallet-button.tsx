@@ -15,21 +15,20 @@ import { appToast } from "@/components/app-ui/app-toast";
 import { Loader2 } from "lucide-react";
 import { WalletButtonSkeleton } from "./wallet-button-skeleton";
 import { OPEN_WALLET_DRAWER_EVENT, useHeaderWalletLoading } from "./sol-balance-chip";
+import { loginHref } from "@/hooks/use-login-redirect";
 import "@/lib/types";
 
-// WalletConnectModal + WalletDrawer are interaction-only and HEAVY (the drawer
+// WalletDrawer is interaction-only and HEAVY (it
 // pulls swap/send/settings/NFT views + @solana/web3.js + spl-token). Lazy-load
-// them so they stay OUT of the initial authenticated bundle — mobile Safari was
-// killing the tab on the eager load. They fetch on first hover/click.
+// it so it stays OUT of the initial authenticated bundle — mobile Safari was
+// killing the tab on the eager load. It fetches on first hover/click.
+// There is deliberately NO sign-in/connect dialog here any more (2026-10-02):
+// every "sign in" or "use another wallet" path goes to the /login page.
 // Points at wallet-drawer2 — the redesign copy. The original wallet-drawer/ is
 // kept untouched as a reference (same "2" convention as app-header2 /
 // global-search2 / sol-balance-chip2).
 const WalletDrawer = dynamic(
   () => import("./wallet-drawer2").then((m) => ({ default: m.WalletDrawer })),
-  { ssr: false },
-);
-const WalletConnectModal = dynamic(
-  () => import("./wallet-connect-modal").then((m) => ({ default: m.WalletConnectModal })),
   { ssr: false },
 );
 
@@ -42,12 +41,10 @@ function WalletButtonInner() {
     const router = useRouter();
     const pathname = usePathname();
     const queryClient = useQueryClient();
-    const [isModalOpen, setIsModalOpen] = useState(false);
     // Lazy-mount gates: don't fetch the drawer/modal chunks until the user shows
     // intent (hover/click), so /home's first load stays light.
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [drawerReady, setDrawerReady] = useState(false);
-    const [modalReady, setModalReady] = useState(false);
     const isSigningOut = useRef(false);
     const isAutoSignInTriggered = useRef(false);
     /** True once a real session has been seen on the current wallet connection. */
@@ -89,32 +86,24 @@ function WalletButtonInner() {
         }
     }, [walletAddress, trpcUtils]);
 
-    const handleConnect = useCallback(() => {
-        setModalReady(true);
-        setIsModalOpen(true);
-    }, []);
-
     // Header siblings (the SOL balance chip) open the drawer via this event —
-    // the drawer state lives here, next to its lazy-mount gates. Users with no
-    // linked wallet get the connect modal instead of an empty drawer.
-    // Signed-out visitors go to /login, exactly like the Sign In button below:
-    // the connect modal offers only the wallet methods, and it used to open
-    // here for anyone pressing the empty chip's "Deposit" while signed out.
+    // the drawer state lives here, next to its lazy-mount gates.
+    // Signed-out visitors go to /login, exactly like the Sign In button below
+    // (a connect dialog used to open here for anyone pressing the empty chip's
+    // "Deposit" while signed out). Signed in with no wallet yet still opens the
+    // drawer: its setup CTA is the way forward, not a dialog.
     useEffect(() => {
         const open = () => {
-            if (!isSignedIn && !connected) {
-                router.push(`/login?callbackUrl=${encodeURIComponent(pathname || "/home")}`);
-            } else if (walletAddress) {
+            if (!isSignedIn) {
+                router.push(loginHref(pathname));
+            } else {
                 setDrawerReady(true);
                 setDrawerOpen(true);
-            } else {
-                setModalReady(true);
-                setIsModalOpen(true);
             }
         };
         window.addEventListener(OPEN_WALLET_DRAWER_EVENT, open);
         return () => window.removeEventListener(OPEN_WALLET_DRAWER_EVENT, open);
-    }, [walletAddress, isSignedIn, connected, router, pathname]);
+    }, [isSignedIn, router, pathname]);
 
     const handleSignIn = useCallback(async () => {
         if (!connected || !publicKey) {
@@ -183,10 +172,11 @@ function WalletButtonInner() {
         }
     }, [walletAddress]);
 
+    // "Change wallet" = sign in with a different one, which is what the
+    // account switcher's /login?add=1 already does (better-auth multiSession).
     const handleChangeWallet = useCallback(() => {
-        setModalReady(true);
-        setIsModalOpen(true);
-    }, []);
+        router.push(`/login?add=1&callbackUrl=${encodeURIComponent(pathname || "/home")}`);
+    }, [router, pathname]);
 
     // Auto sign-in when wallet connects.
     //
@@ -271,7 +261,7 @@ function WalletButtonInner() {
             // passkey, QR) — the modal offers only the wallet ones. The current
             // path rides along so pressing Sign In returns them to what they
             // were looking at.
-            router.push(`/login?callbackUrl=${encodeURIComponent(pathname || "/home")}`);
+            router.push(loginHref(pathname));
         }
     };
 
@@ -334,12 +324,6 @@ function WalletButtonInner() {
                     />
                 )}
 
-                {modalReady && (
-                    <WalletConnectModal
-                        open={isModalOpen}
-                        onOpenChange={setIsModalOpen}
-                    />
-                )}
             </>
         );
     }
@@ -356,12 +340,6 @@ function WalletButtonInner() {
                 <span>{buttonText}</span>
             </Button>
 
-            {modalReady && (
-                <WalletConnectModal
-                    open={isModalOpen}
-                    onOpenChange={setIsModalOpen}
-                />
-            )}
         </>
     );
 }

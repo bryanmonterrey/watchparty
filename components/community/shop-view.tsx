@@ -1,5 +1,6 @@
 "use client";
 
+import { useLoginRedirect } from "@/hooks/use-login-redirect";
 import { useState } from "react";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
@@ -19,6 +20,7 @@ import { cn } from "@/lib/utils";
 // handler — the page itself ships no Solana code.
 export function ShopView() {
     const { data: session } = useAuthSession();
+    const goToLogin = useLoginRedirect();
     const { connection } = useConnection();
     const { publicKey, sendTransaction } = useWallet();
     const { signAndSubmit } = useWalletSigning();
@@ -30,7 +32,7 @@ export function ShopView() {
 
     const buy = async (pack: BoostPack) => {
         if (!session?.user) {
-            toast.error("Sign in to buy boosts");
+            goToLogin();
             return;
         }
         setBuying(pack.boosts);

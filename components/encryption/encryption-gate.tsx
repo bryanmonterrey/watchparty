@@ -1,7 +1,5 @@
 'use client';
 
-import { useState } from 'react';
-import dynamic from 'next/dynamic';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { SquareLock02Icon } from '@hugeicons/core-free-icons';
 import { useEncryptionContext } from './encryption-provider';
@@ -11,12 +9,11 @@ import { useAuthSession } from '@/hooks/use-auth-session';
 // i.e. the gate's primary button was dead in prod.
 import { WalletSetupCta } from '@/components/wallet/wallet-drawer2/views/setup/wallet-setup-cta';
 
-// Same lazy-mount pattern as WalletButton: the connect modal is heavy and only
-// needed on click, so it stays out of the messages bundle until then.
-const WalletConnectModal = dynamic(
-    () => import('@/components/wallet/wallet-connect-modal').then((m) => ({ default: m.WalletConnectModal })),
-    { ssr: false },
-);
+// "Connect wallet" is a LINK to /login, not a dialog (2026-10-02: no sign-in
+// dialog anywhere). ?add=1 keeps /login from bouncing an already signed-in
+// visitor straight back; signing there with the wallet on file lands on the
+// same account with the adapter connected, and callbackUrl returns here.
+const CONNECT_HREF = '/login?add=1&callbackUrl=%2Fmessages';
 
 /**
  * Gates the messages UI on wallet setup. Messaging is end-to-end encrypted with
@@ -25,8 +22,8 @@ const WalletConnectModal = dynamic(
  * server-readable key.
  *
  * Extension-wallet users land here whenever the page's wallet adapter isn't
- * connected (being signed in ≠ adapter connected): "Connect wallet" opens the
- * standard connect modal, and the EncryptionProvider re-runs key init on its
+ * connected (being signed in ≠ adapter connected): "Connect wallet" goes to the
+ * login page's wallet step, and the EncryptionProvider re-runs key init on its
  * own once the adapter reports a publicKey (it's in the init effect's deps) —
  * deriving the messaging key from a one-time signature. Embedded-wallet users
  * use the inline create flow, then `retry()`.
@@ -34,8 +31,6 @@ const WalletConnectModal = dynamic(
 export function EncryptionGate({ children }: { children: React.ReactNode }) {
     const { needsWallet, retry } = useEncryptionContext();
     const { data: session } = useAuthSession();
-    const [modalReady, setModalReady] = useState(false);
-    const [modalOpen, setModalOpen] = useState(false);
 
     if (!needsWallet) return <>{children}</>;
 
@@ -65,29 +60,23 @@ export function EncryptionGate({ children }: { children: React.ReactNode }) {
                 <div className="flex w-full flex-col gap-3">
                     {hasWallet ? (
                         <>
-                            <button
-                                onClick={() => {
-                                    setModalReady(true);
-                                    setModalOpen(true);
-                                }}
-                                className="h-18 w-full cursor-pointer rounded-full bg-white text-[16px] font-bold text-black transition-transform hover:bg-white/90 active:scale-[0.98]"
+                            <a
+                                href={CONNECT_HREF}
+                                className="flex h-18 w-full cursor-pointer items-center justify-center rounded-full bg-white text-[16px] font-bold text-black transition-transform hover:bg-white/90 active:scale-[0.98]"
                             >
                                 Connect wallet
-                            </button>
+                            </a>
                             <WalletSetupCta variant="inline" />
                         </>
                     ) : (
                         <>
                             <WalletSetupCta variant="inline" />
-                            <button
-                                onClick={() => {
-                                    setModalReady(true);
-                                    setModalOpen(true);
-                                }}
-                                className="h-11 w-full cursor-pointer rounded-full text-[13px] font-semibold text-zinc-500 transition-colors hover:text-white"
+                            <a
+                                href={CONNECT_HREF}
+                                className="flex h-11 w-full cursor-pointer items-center justify-center rounded-full text-[13px] font-semibold text-zinc-500 transition-colors hover:text-white"
                             >
                                 Connect an existing wallet instead
-                            </button>
+                            </a>
                         </>
                     )}
                 </div>
@@ -99,8 +88,6 @@ export function EncryptionGate({ children }: { children: React.ReactNode }) {
                     I&apos;ve already connected
                 </button>
             </div>
-
-            {modalReady && <WalletConnectModal open={modalOpen} onOpenChange={setModalOpen} />}
         </div>
     );
 }

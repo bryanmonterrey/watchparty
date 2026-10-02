@@ -1,5 +1,6 @@
 "use client";
 
+import { useLoginRedirect } from "@/hooks/use-login-redirect";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
@@ -38,6 +39,7 @@ export function TipModal({ open, onOpenChange, recipient }: TipModalProps) {
     const [sending, setSending] = useState(false);
 
     const { data: session } = useAuthSession();
+    const goToLogin = useLoginRedirect();
     const { connection } = useConnection();
     const { publicKey, sendTransaction } = useWallet();
     const { signAndSubmit: signAndSend } = useWalletSigning();
@@ -48,7 +50,7 @@ export function TipModal({ open, onOpenChange, recipient }: TipModalProps) {
 
     const handleSend = async () => {
         if (!isValid) return;
-        if (!session?.user) { toast.error("Sign in to send a tip"); return; }
+        if (!session?.user) { goToLogin(); return; }
         if (!recipient.wallet_address) { toast.error("Recipient has no wallet"); return; }
 
         setSending(true);

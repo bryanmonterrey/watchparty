@@ -1,5 +1,6 @@
 "use client";
 
+import { useLoginRedirect } from "@/hooks/use-login-redirect";
 import { useState, useEffect } from "react";
 import { Plus, Users2, Hash, ArrowRight, Loader2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -128,6 +129,7 @@ function DiscoverSection() {
 
 export function CommunitiesLanding() {
     const { data: session, isPending: sessionPending } = useAuthSession();
+    const goToLogin = useLoginRedirect();
     const { data: servers = [], isLoading } = trpc.community.listServers.useQuery(
         undefined,
         { enabled: !!session?.user }
@@ -200,7 +202,7 @@ export function CommunitiesLanding() {
                         </div>
                         <h2 className="text-2xl font-bold text-white mb-2">Join a Community</h2>
                         <p className="text-flexwhite/40 text-lg max-w-sm mb-8">Sign in to sync your servers and start chatting with your friends</p>
-                        <button className="px-8 py-3 bg-white text-black rounded-full font-bold hover:bg-zinc-200 transition">
+                        <button onClick={goToLogin} className="cursor-pointer px-8 py-3 bg-white text-black rounded-full font-bold hover:bg-zinc-200 transition">
                             Sign In
                         </button>
                     </div>

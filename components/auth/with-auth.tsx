@@ -3,6 +3,7 @@
 import React from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuthSession } from "@/hooks/use-auth-session";
+import { loginHref } from "@/hooks/use-login-redirect";
 
 interface WithAuthProps {
     children: React.ReactElement<{ onClick?: React.MouseEventHandler<HTMLElement> }>;
@@ -47,7 +48,7 @@ export const WithAuth = React.forwardRef<HTMLElement, WithAuthProps & React.HTML
                     children.props.onClick(e);
                 }
 
-                router.push(`/login?callbackUrl=${encodeURIComponent(pathname || "/home")}`);
+                router.push(loginHref(pathname));
                 return;
             }
 

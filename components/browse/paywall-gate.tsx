@@ -1,5 +1,6 @@
 "use client";
 
+import { useLoginRedirect } from "@/hooks/use-login-redirect";
 import { useState } from "react";
 import { Lock, Unlock, Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
@@ -20,6 +21,7 @@ interface PaywallGateProps {
 export function PaywallGate({ postId, paywallPrice, authorWalletAddress, onUnlocked }: PaywallGateProps) {
     const [unlocking, setUnlocking] = useState(false);
     const { data: session } = useAuthSession();
+    const goToLogin = useLoginRedirect();
     const { connection } = useConnection();
     const { publicKey, sendTransaction } = useWallet();
     const unlockPost = trpc.content.unlockPost.useMutation({ onSuccess: onUnlocked });
@@ -28,7 +30,7 @@ export function PaywallGate({ postId, paywallPrice, authorWalletAddress, onUnloc
     const solPrice = paywallPrice / LAMPORTS_PER_SOL;
 
     const handleUnlock = async () => {
-        if (!session?.user) { toast.error("Sign in to unlock"); return; }
+        if (!session?.user) { goToLogin(); return; }
         if (!authorWalletAddress) { toast.error("This creator has no wallet on file to receive payment"); return; }
         setUnlocking(true);
         try {

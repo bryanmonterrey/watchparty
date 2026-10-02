@@ -1,5 +1,6 @@
 "use client";
 
+import { useLoginRedirect } from "@/hooks/use-login-redirect";
 import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon, LinkSquare02Icon } from "@hugeicons/core-free-icons";
@@ -121,6 +122,7 @@ const SectionRule = () => <div className="my-4 h-px bg-[rgba(138,145,158,0.2)]" 
 
 function Identity({ hostUserId }: { hostUserId: string }) {
     const { data: session } = useAuthSession();
+    const goToLogin = useLoginRedirect();
     const userId = session?.user?.id ?? "";
     const utils = trpc.useUtils();
 
@@ -148,7 +150,15 @@ function Identity({ hostUserId }: { hostUserId: string }) {
     });
 
     if (!userId) {
-        return <p className="px-2 py-8 text-center text-sm font-medium text-zinc-500">Sign in to set your identity</p>;
+        return (
+            <button
+                type="button"
+                onClick={goToLogin}
+                className="w-full cursor-pointer px-2 py-8 text-center text-sm font-medium text-zinc-500 transition-colors hover:text-white"
+            >
+                Sign in to set your identity
+            </button>
+        );
     }
 
     const active = resolveChatNameColor(userId, card?.chatColor);

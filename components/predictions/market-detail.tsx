@@ -1,5 +1,6 @@
 "use client";
 
+import { useLoginRedirect } from "@/hooks/use-login-redirect";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { isPast } from "date-fns";
@@ -32,6 +33,7 @@ import {
 export function MarketDetail({ marketId }: { marketId: string }) {
     const utils = trpc.useUtils();
     const { data: session } = useAuthSession();
+    const goToLogin = useLoginRedirect();
     const isAdmin = session?.user?.role === "admin";
     const { connection } = useConnection();
     const { publicKey, sendTransaction } = useWallet();
@@ -72,7 +74,7 @@ export function MarketDetail({ marketId }: { marketId: string }) {
     const bet = async () => {
         const usdAmount = Number(amount);
         if (picked == null || !Number.isFinite(usdAmount) || usdAmount < 1) return;
-        if (!session?.user) { toast.error("Sign in to bet"); return; }
+        if (!session?.user) { goToLogin(); return; }
         setPaying(true);
         try {
             const baseUnits = BigInt(Math.round(usdAmount * 1_000_000));
