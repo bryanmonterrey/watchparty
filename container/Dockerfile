@@ -12,6 +12,8 @@
 FROM --platform=linux/amd64 oven/bun:1 AS deps
 WORKDIR /app
 COPY package.json bun.lock ./
+# patchedDependencies in package.json point here; bun install fails without it.
+COPY patches ./patches
 RUN bun install --frozen-lockfile
 
 # ── build ───────────────────────────────────────────────────────────────────
