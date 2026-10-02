@@ -634,6 +634,32 @@ The auth stack is sensitive to transitive versions. Two non-obvious pins/fixes w
     rate limiting instead of taking sign-in down.
   - better-call is still `1.4.0` on 1.7.1, so the `overrides` pin is unchanged.
 
+- **better-auth is on 1.7.7 (migrated 2026-10-02) — and several bullets above
+  are now history.** The first attempt took sign-in down for an hour; the
+  runbook and everything found on the way is `docs/better-auth-1.7.7-migration.md`.
+  What changed underneath the 1.7.1 notes:
+  - **1.7.7's drizzle adapter THROWS on every request on a schema mismatch**
+    (a field a plugin declares that the drizzle schema lacks, or a NOT NULL
+    column it never writes). Build, tests and tsc all pass on a broken schema.
+    The check reads the **drizzle schema objects, not the database** — so the
+    repro in the runbook proves the schema files, and
+    `bun scripts/db/check-drift.ts prod` proves the database. Run both after
+    any better-auth bump. Neither checks column TYPES.
+  - **Accounts are keyed on `(providerId, accountId)` again** (1.7.3+);
+    `findAccountByKey` ignores `issuer` and better-auth no longer writes it.
+    `account.issuer` is nullable now and kept filled by the
+    `account_fill_issuer` trigger (`db/better-auth-1.7.7-columns.sql`) purely
+    so a rollback to 1.7.1 still finds every account. Drop trigger, index and
+    column together once 1.7.1 is no longer a rollback target.
+  - **`better-auth-siws` must be ≥ 0.2.2.** 0.2.0/0.2.1 look accounts up by
+    issuer only, which on 1.7.3+ matches nothing and mints a duplicate user on
+    every Solana sign-in with a 200. Only the sign-in-twice assertion in
+    `smoke-siws-contract.mjs` sees it.
+  - **An `additionalFields` entry must not carry a snake_case `fieldName`.**
+    The drizzle adapter resolves by TS property key, so
+    `verifiedTier: { fieldName: "verified_tier" }` read a property that does
+    not exist: undefined on every session under 1.7.1, a hard failure on 1.7.7.
+
 - **Don't add `better-call` as a direct dependency** — it's better-auth's *internal* RPC/endpoint framework (same authors), not a package we consume. No published better-auth has adopted better-call `2.x` (re-checked 2026-08-19: `@latest` 1.7.1 → `1.4.0`, `@rc` 1.7.0-rc.6 → `1.4.0`, `@beta` → `1.3.7`, `@canary` → `0.2.15-beta.7`). Forcing `better-call@2.0.5` in produced **31 type errors in `lib/auth/server.ts`** (verified 2026-06-27, mobile tsc): every plugin (`expo`, `siwe`, `custom-session`, `multi-session`, `two-factor`, `dash`) becomes *not assignable to `BetterAuthPlugin`*, because the plugins' `endpoints` carry better-call 1.3.7's `Endpoint` type while `BetterAuthPlugin` resolves `Endpoint` from 2.0.5 — two type identities colliding at the registration site. **Not fixable in our code** (only `as any` per plugin, which throws away auth type-safety) and **not a stale-install issue** (deterministic reinstall reproduces it). We get better-call 2.x *with types intact* automatically once better-auth adopts it upstream; until then stay on latest better-auth and let it pick its own better-call. Import `APIError` from `better-auth/api`, not `better-call`. **Watch for the upstream flip** with `npm view better-auth@beta dependencies.better-call` (also `@latest`/`@rc`) — when it returns `2.x`, better-auth has adopted it and a plain `bun update better-auth` brings it in cleanly. No GitHub issue tracks this migration (as of 2026-06-27); the npm dependency is the signal.
 - Email OTP has a **dev console fallback**: with no `RESEND_API_KEY`, the code is `console.log`ed instead of emailed. To test the flow locally without an inbox, run dev with `RESEND_API_KEY=` cleared and read the code from stdout.
 - **`@meteora-ag/dynamic-bonding-curve-sdk`: migrated to 1.5.10** (no pin). The 1.5.8+ breaking changes were renames/moves, applied in `hooks/use-token-launch.ts`: `TokenUpdateAuthorityOption`→`TokenAuthorityOption`, `TokenType.SPL`→`TokenType.SPLToken`, and `createConfigAndPoolWithFirstBuy` moved from `client.pool` to `client.partner` (same signature/return). Token-launch flow needs an on-chain smoke test before relying on it in prod.
