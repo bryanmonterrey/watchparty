@@ -21,7 +21,7 @@
       // being killed for exceededMemory at near-zero traffic.
       "instance_type": "standard-1",
       // No autoscaling exists yet, so this is the ceiling AND the plan.
-      "max_instances": 3
+      "max_instances": 1
     }
   ],
 

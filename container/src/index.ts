@@ -64,11 +64,18 @@ export class NextApp extends Container {
  * plus long-lived assistant streams was enough from a single user. One
  * saturated instance had nowhere to spill.
  *
- * Three is headroom, not scale — it turns a hard ceiling into a soft one.
- * Instances sleep when idle (see sleepAfter), so the cost floor barely moves;
- * they only all wake under the kind of load that used to break the site.
+ * Three was headroom, not scale — it turned a hard ceiling into a soft one.
+ *
+ * Back to ONE on 2026-10-02 (owner's call, cost): "instances sleep when idle"
+ * did not hold in practice. getRandom spreads the cron worker's every-minute
+ * pings across all three, so none of them ever reached sleepAfter and all
+ * three billed around the clock — roughly $100/month while the site was not
+ * being promoted. One instance is a third of that. The 4096-connection
+ * ceiling above is back as a single point of failure; if it bites again, the
+ * cheaper answer is the plain `watchparty` worker (docs/buzz-adoption-plan.md
+ * measured it carrying more than the containers did), not more containers.
  */
-const INSTANCES = 3;
+const INSTANCES = 1;
 
 export default {
     async fetch(request: Request, env: { NEXT_APP: DurableObjectNamespace<NextApp> }) {
