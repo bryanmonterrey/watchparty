@@ -103,22 +103,12 @@ export function VideoDetailsStep(props: VideoDetailsStepProps) {
                         file={props.file}
                         videoUrl={state.videoUrl}
                         previewVideoRef={state.previewVideoRef}
-                        onLoadedMetadata={(e) => {
-                            const vid = e.currentTarget
-                            const seekTo = isFinite(vid.duration) && vid.duration > 0
-                                ? Math.min(vid.duration * 0.15, 5)
-                                : 0
-                            if (seekTo > 0) {
-                                vid.currentTime = seekTo
-                            } else {
-                                requestAnimationFrame(() => requestAnimationFrame(() => state.captureAndUpload(vid)))
-                            }
-                        }}
-                        onSeeked={(e) => {
-                            // Must capture currentTarget synchronously — it's null inside rAF
-                            const vid = e.currentTarget
-                            requestAnimationFrame(() => requestAnimationFrame(() => state.captureAndUpload(vid)))
-                        }}
+                        // The auto thumbnail: step through the video until a
+                        // frame that isn't black turns up (use-video-details).
+                        // currentTarget is read synchronously — it's null by
+                        // the time a rAF callback runs.
+                        onLoadedMetadata={(e) => state.beginAutoThumbnail(e.currentTarget)}
+                        onSeeked={(e) => state.onPreviewSeeked(e.currentTarget)}
                         previewLink={state.previewLink}
                         copyLink={state.copyLink}
                     />

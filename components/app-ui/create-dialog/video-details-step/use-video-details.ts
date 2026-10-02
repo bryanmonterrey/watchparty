@@ -110,24 +110,44 @@ export function useVideoDetails({ file, uploadedUrl, isUploading, uploadProgress
     // Thumbnail State
     const [thumbnailFile, setThumbnailFile] = React.useState<File | null>(null)
     const [thumbnailPreview, setThumbnailPreview] = React.useState<string | null>(null)
-    const [thumbnailUrl, setThumbnailUrl] = React.useState<string | undefined>(undefined)
+    const [thumbnailUrlState, setThumbnailUrl] = React.useState<string | undefined>(undefined)
+    const thumbnailUrl = thumbnailUrlState
     const [isThumbnailUploading, setIsThumbnailUploading] = React.useState(false)
 
     const getPresignedUrl = trpc.upload.getPresignedUrl.useMutation()
     const previewVideoRef = React.useRef<HTMLVideoElement>(null)
     const autoThumbAttempted = React.useRef(false)
 
+    // One upload path for the auto thumbnail, reused at publish time if the
+    // first attempt failed. Returns the public URL.
+    const uploadThumbnailFile = React.useCallback(async (thumb: File) => {
+        const { token, path } = await getPresignedUrl.mutateAsync({
+            bucket: 'thumbnails',
+            filename: thumb.name.replace(/[^a-zA-Z0-9.-]/g, '_'),
+            contentType: thumb.type || 'image/jpeg',
+        })
+        const { supabase } = await import('@/lib/supabase/client')
+        const { data, error } = await supabase.storage.from('thumbnails').uploadToSignedUrl(path, token, thumb)
+        if (error) throw error
+        return supabase.storage.from('thumbnails').getPublicUrl(data!.path).data.publicUrl
+    }, [getPresignedUrl])
+
     const captureAndUpload = React.useCallback(async (vid: HTMLVideoElement | null) => {
         if (!vid) return
         if (autoThumbAttempted.current) return
         if (thumbnailFile) return
-        if (vid.readyState < 2) return
-        autoThumbAttempted.current = true
+        if (vid.readyState < 2) {
+            // No frame decoded yet. This used to just return, and nothing ever
+            // called back — one of the ways a video shipped with NO thumbnail.
+            vid.addEventListener('loadeddata', () => captureAndUpload(vid), { once: true })
+            return
+        }
         const canvas = document.createElement('canvas')
         canvas.width = vid.videoWidth || 1280
         canvas.height = vid.videoHeight || 720
         const ctx = canvas.getContext('2d')
         if (!ctx) return
+        autoThumbAttempted.current = true
         ctx.drawImage(vid, 0, 0, canvas.width, canvas.height)
         canvas.toBlob(async (blob) => {
             if (!blob) {
@@ -139,23 +159,91 @@ export function useVideoDetails({ file, uploadedUrl, isUploading, uploadProgress
             setThumbnailPreview(URL.createObjectURL(autoFile))
             setIsThumbnailUploading(true)
             try {
-                const { token, path } = await getPresignedUrl.mutateAsync({
-                    bucket: 'thumbnails',
-                    filename: autoFile.name,
-                    contentType: 'image/jpeg',
-                })
-                const { supabase } = await import('@/lib/supabase/client')
-                const { data, error } = await supabase.storage.from('thumbnails').uploadToSignedUrl(path, token, autoFile)
-                if (error) throw error
-                const { data: pub } = supabase.storage.from('thumbnails').getPublicUrl(data!.path)
-                setThumbnailUrl(pub.publicUrl)
+                setThumbnailUrl(await uploadThumbnailFile(autoFile))
             } catch (e) {
+                // Not fatal here: handleNext retries with the same file at
+                // publish, so a blip doesn't cost the video its thumbnail.
                 console.error('Auto-thumbnail upload failed', e)
             } finally {
                 setIsThumbnailUploading(false)
             }
         }, 'image/jpeg', 0.88)
-    }, [getPresignedUrl, thumbnailFile])
+    }, [uploadThumbnailFile, thumbnailFile])
+
+    // PICK A LIT FRAME, NOT THE FIRST ONE.
+    //
+    // The auto thumbnail used to be whatever was on screen at min(15%, 5s).
+    // Music videos open on black or a fade-in, so that was a black JPEG: on
+    // 2026-10-02, 7 of 65 video posts had a pure-black thumbnail (five of them
+    // the byte-identical 15 KB image) and the rail looked broken. Now the
+    // preview steps through a few points in the video and takes the first frame
+    // that isn't dark; if every one is dark (audio over a black card) it settles
+    // on the least dark rather than looping.
+    // scripts/dev/backfill-video-thumbnails.ts repairs the ones already posted
+    // and uses the same idea — keep the thresholds roughly in step.
+    const THUMB_SAMPLE_AT = [0.15, 0.3, 0.5, 0.7, 0.85]
+    const THUMB_DARK_LUMA = 28
+    const thumbQueue = React.useRef<number[]>([])
+    const thumbBest = React.useRef<{ t: number; luma: number } | null>(null)
+    const thumbSettled = React.useRef(false)
+
+    /** Mean luma (0-255) of the frame on screen. 255 = "can't tell, accept it". */
+    const frameLuma = (vid: HTMLVideoElement) => {
+        try {
+            const c = document.createElement('canvas')
+            c.width = 64
+            c.height = 36
+            const ctx = c.getContext('2d', { willReadFrequently: true })
+            if (!ctx) return 255
+            ctx.drawImage(vid, 0, 0, c.width, c.height)
+            const px = ctx.getImageData(0, 0, c.width, c.height).data
+            let sum = 0
+            for (let i = 0; i < px.length; i += 4) sum += 0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2]
+            return sum / (px.length / 4)
+        } catch {
+            return 255
+        }
+    }
+
+    const beginAutoThumbnail = React.useCallback((vid: HTMLVideoElement) => {
+        if (autoThumbAttempted.current || thumbnailFile) return
+        const d = vid.duration
+        if (!isFinite(d) || d <= 0) {
+            requestAnimationFrame(() => requestAnimationFrame(() => captureAndUpload(vid)))
+            return
+        }
+        thumbQueue.current = THUMB_SAMPLE_AT.map((f) => d * f)
+        thumbBest.current = null
+        thumbSettled.current = false
+        vid.currentTime = thumbQueue.current.shift()!
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [captureAndUpload, thumbnailFile])
+
+    const onPreviewSeeked = React.useCallback((vid: HTMLVideoElement) => {
+        // Two frames: the seeked event fires before the new frame is painted.
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            if (autoThumbAttempted.current || thumbnailFile) return
+            if (!thumbSettled.current) {
+                const luma = frameLuma(vid)
+                if (luma < THUMB_DARK_LUMA) {
+                    if (!thumbBest.current || luma > thumbBest.current.luma) thumbBest.current = { t: vid.currentTime, luma }
+                    const next = thumbQueue.current.shift()
+                    if (next !== undefined) {
+                        vid.currentTime = next
+                        return
+                    }
+                    // Dark everywhere we looked: take the least dark and stop.
+                    thumbSettled.current = true
+                    if (Math.abs(vid.currentTime - thumbBest.current.t) > 0.05) {
+                        vid.currentTime = thumbBest.current.t
+                        return
+                    }
+                }
+            }
+            captureAndUpload(vid)
+        }))
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [captureAndUpload, thumbnailFile])
 
     const onThumbnailDrop = React.useCallback(async (acceptedFiles: File[]) => {
         if (acceptedFiles.length > 0) {
@@ -260,8 +348,21 @@ export function useVideoDetails({ file, uploadedUrl, isUploading, uploadProgress
             }
 
             if (isSaving) return
+            // Publishing mid-upload sent thumbnailUrl as undefined and the
+            // post was saved with no thumbnail at all.
+            if (isThumbnailUploading) {
+                toast.error("Thumbnail is still uploading — try again in a moment")
+                return
+            }
             setIsSaving(true)
             try {
+                // The file exists but its upload failed earlier: one more go
+                // before settling for a post without a thumbnail.
+                let thumbnailUrl = thumbnailUrlState
+                if (!thumbnailUrl && thumbnailFile) {
+                    thumbnailUrl = await uploadThumbnailFile(thumbnailFile).catch(() => undefined)
+                    if (thumbnailUrl) setThumbnailUrl(thumbnailUrl)
+                }
                 let tokenData = {
                     tokenAddress: undefined as string | undefined,
                     poolAddress: undefined as string | undefined,
@@ -517,6 +618,8 @@ export function useVideoDetails({ file, uploadedUrl, isUploading, uploadProgress
         videoUrl,
         previewVideoRef,
         captureAndUpload,
+        beginAutoThumbnail,
+        onPreviewSeeked,
         // Preview link
         previewId,
         previewLink,
