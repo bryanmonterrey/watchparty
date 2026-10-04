@@ -39,6 +39,26 @@ function TickProgress({ progress, target }: { progress: number; target: number }
     );
 }
 
+// Each quest wears one of the emoji.gg pack emotes (public/emoji, the same
+// files the chat picker serves) so the list is not a column of bare text —
+// owner, 2026-10-03. Keyed by quest id with an event-level fallback, so a new
+// quest gets a picture before anyone names one for it.
+const QUEST_ART: Record<string, string> = {
+    daily_post: "/emoji/pepe/pepetyping.gif",
+    weekly_posts: "/emoji/pepe/pepetyping.gif",
+    daily_comments: "/emoji/sukuna-meme-aura/catnoted.png",
+    daily_callout: "/emoji/penguin/agahi.gif",
+    weekly_likes: "/emoji/pepe/pepeheart.png",
+    weekly_followers: "/emoji/sukuna-meme-aura/hug.png",
+    weekly_launch: "/emoji/chud-r-us/yippeee.png",
+    daily_prediction: "/emoji/sukuna-meme-aura/catgoodjob.png",
+    weekly_predictions: "/emoji/sukuna-meme-aura/catgoodjob.png",
+    daily_perps: "/emoji/pepe/pepehacker.gif",
+    weekly_perps: "/emoji/pepe/pepehacker.gif",
+};
+const QUEST_ART_FALLBACK = "/emoji/pepe/pepeclap.gif";
+const QUEST_ART_DONE = "/emoji/pepe/pepeperfect.png";
+
 interface QuestRow {
     id: string;
     title: string;
@@ -51,6 +71,19 @@ interface QuestRow {
 function QuestCard({ q }: { q: QuestRow }) {
     return (
         <div className={cn("flex items-center gap-4 rounded-[20px] bg-panel px-5 py-4", q.completed && "opacity-70")}>
+            {/* The emote tile. A finished quest swaps to the "perfect" pepe
+                rather than greying the art out — done should read as a win. */}
+            <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-white/[0.04]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                    src={q.completed ? QUEST_ART_DONE : (QUEST_ART[q.id] ?? QUEST_ART_FALLBACK)}
+                    alt=""
+                    width={28}
+                    height={28}
+                    loading="lazy"
+                    className="size-7 object-contain"
+                />
+            </div>
             <div className="flex flex-col gap-2 min-w-0">
                 <span className={cn("text-sm font-bold", q.completed ? "text-zinc-400 line-through" : "text-white")}>{q.title}</span>
                 <div className="flex items-center gap-2.5">

@@ -31,7 +31,7 @@ export function NotificationItem({ notification: n, onMarkRead }: NotificationIt
                     </AvatarFallback>
                 </Avatar>
                 <div className={cn("absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center", cfg.bg)}>
-                    <Icon className={cn("w-3 h-3", cfg.color)} />
+                    <Icon className={cn("w-3 h-3", cfg.color)} fill={cfg.filled ? "currentColor" : "none"} />
                 </div>
             </div>
 

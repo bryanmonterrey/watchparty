@@ -12,7 +12,8 @@
 
 import * as React from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Clock01Icon, LinkForwardIcon } from "@hugeicons/core-free-icons";
+import { Clock01Icon, LinkForwardIcon, Share01Icon } from "@hugeicons/core-free-icons";
+import { appToast } from "@/components/app-ui/app-toast";
 import { TokenTradingViewChart } from "@/components/tokens/token-tradingview-chart";
 import type { ChartMarker } from "@/components/tokens/chart-trade-markers";
 import {
@@ -215,6 +216,22 @@ function CoinHeader({ coin: initial }: { coin: CoinViewData }) {
                                 <HugeiconsIcon icon={LinkForwardIcon} className="size-3.5" strokeWidth={2} />
                             </a>
                         )}
+                        {/* Share = this page's own URL. The coin had no share
+                            of its own until 2026-10-03: the only "share" after a
+                            launch was the create dialog's preview link, which is
+                            the VIDEO. Drafts included — a draft's page is where
+                            the first buy (the launch) happens. */}
+                        <button
+                            type="button"
+                            aria-label="copy link to this coin"
+                            onClick={() => {
+                                void navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}`);
+                                appToast.success("Link copied");
+                            }}
+                            className="shrink-0 cursor-pointer text-zinc-600 transition-colors hover:text-white"
+                        >
+                            <HugeiconsIcon icon={Share01Icon} className="size-3.5" strokeWidth={2} />
+                        </button>
                     </div>
                     <div className="flex min-w-0 items-center gap-2">
                         <span className="truncate text-[13px] font-medium text-zinc-500">
