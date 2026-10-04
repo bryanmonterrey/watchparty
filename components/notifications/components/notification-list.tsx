@@ -3,6 +3,8 @@
 import { Bell } from "lucide-react"
 import type { RefObject } from "react"
 import { NotificationItem } from "./notification-item"
+import { NotificationGroupItem } from "./notification-group-item"
+import { groupNotifications } from "@/lib/notifications/group"
 import { LoadMore } from "@/components/interior/load-more"
 
 interface NotificationListProps {
@@ -56,13 +58,15 @@ export function NotificationList({
 
     return (
         <>
-            {notifications.map((n) => (
-                <NotificationItem 
-                    key={n.id} 
-                    notification={n} 
-                    onMarkRead={onMarkRead} 
-                />
-            ))}
+            {/* Likes / reposts / follows collapse into one row per burst
+                (lib/notifications/group); everything else renders as itself. */}
+            {groupNotifications(notifications).map((g) =>
+                g.single ? (
+                    <NotificationItem key={g.id} notification={g.single} onMarkRead={onMarkRead} />
+                ) : (
+                    <NotificationGroupItem key={g.id} group={g} onMarkRead={onMarkRead} />
+                ),
+            )}
 
             <LoadMore
                 onLoad={() => fetchNextPage()}
