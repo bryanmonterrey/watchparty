@@ -1,10 +1,92 @@
 import { Redis } from "@upstash/redis";
 import { after } from "next/server";
 
-const redis = new Redis({
+const upstash = new Redis({
     url: process.env.UPSTASH_REDIS_REST_URL || "",
     token: process.env.UPSTASH_REDIS_REST_TOKEN || "",
+    // One attempt. The client's default retries a failed fetch five times
+    // with backoff, which under the breaker below only multiplies the wait.
+    retry: { retries: 0 },
 });
+
+// ─── Circuit breaker ────────────────────────────────────────────────────────
+//
+// Every caller of this client already treats a failure as a cache miss
+// (withCache / withSwrCache fall through; the better-auth secondaryStorage
+// wrapper in lib/auth/server.ts fails OPEN). What none of them could do was
+// fail FAST. On 2026-10-03 Upstash had the free database "temporarily
+// rate-limited" (daily quota): every command still made the round trip and
+// came back 200–700 ms later carrying an error. With the session read, the
+// auth rate-limit increment and a cache read on most requests, that put
+// 1.5–3.5 s in front of EVERY dynamic request — a zod 400 took 2 s, the feed
+// 5–6 s — and the feed's own fetch started timing out at the edge, so the
+// page kept painting its stale snapshot (hearts "un-liking" themselves).
+//
+// So: a failure opens the breaker and every command until it closes throws
+// immediately, no network. The window doubles with each consecutive failure
+// (10 s → 20 s → 40 s → 60 s cap) and one command is let through at the end
+// to probe; success closes it and resets the count. A rate-limit answer the
+// client names as such opens at the cap at once — but it usually doesn't:
+// @upstash/redis chokes on the `{"error": …}` body with "res.map is not a
+// function", which is why the escalation, not the message, is the mechanism.
+const FAILURE_OPEN_MS = 10_000;
+const MAX_OPEN_MS = 60_000;
+let breakerOpenUntil = 0;
+let breakerReason = "";
+let consecutiveFailures = 0;
+
+const isRateLimited = (err: unknown) => /rate.?limit/i.test(err instanceof Error ? err.message : String(err));
+
+export class RedisBreakerOpenError extends Error {
+    constructor() {
+        super(`redis skipped: breaker open (${breakerReason})`);
+        this.name = "RedisBreakerOpenError";
+    }
+}
+
+/** For tests and diagnostics: is the breaker currently refusing commands? */
+export function redisBreakerOpen() {
+    return Date.now() < breakerOpenUntil;
+}
+
+// Only the command methods are wrapped; property reads (pipeline builders,
+// config) pass through. Everything awaits, so a rejected promise is what
+// callers already handle.
+const redis: Redis = new Proxy(upstash, {
+    get(target, prop, receiver) {
+        const value = Reflect.get(target, prop, receiver);
+        if (typeof value !== "function") return value;
+        // pipeline()/multi() return a builder synchronously; gating them would
+        // hand callers a rejected promise where they expect an object. Their
+        // exec() goes to the network ungated — three call sites, all wrapped.
+        if (prop === "pipeline" || prop === "multi") return (value as (...a: unknown[]) => unknown).bind(target);
+        return (...args: unknown[]) => {
+            if (Date.now() < breakerOpenUntil) return Promise.reject(new RedisBreakerOpenError());
+            let out: unknown;
+            try {
+                out = (value as (...a: unknown[]) => unknown).apply(target, args);
+            } catch (err) {
+                trip(err);
+                throw err;
+            }
+            if (out instanceof Promise) {
+                return out.then(
+                    (v) => { breakerOpenUntil = 0; consecutiveFailures = 0; return v; },
+                    (err) => { trip(err); throw err; },
+                );
+            }
+            return out;
+        };
+    },
+}) as Redis;
+
+function trip(err: unknown) {
+    consecutiveFailures++;
+    const limited = isRateLimited(err);
+    breakerReason = limited ? "upstash rate-limited" : (err instanceof Error ? err.message : String(err)).slice(0, 80);
+    const openMs = limited ? MAX_OPEN_MS : Math.min(MAX_OPEN_MS, FAILURE_OPEN_MS * 2 ** (consecutiveFailures - 1));
+    breakerOpenUntil = Date.now() + openMs;
+}
 
 /**
  * Cache-aside helper. Tries Redis first, falls back to fn() on miss.

@@ -1,0 +1,37 @@
+name: Env audit (names + fingerprints only)
+
+# Manual only. Prints which variables DOTENV_PRODUCTION and DOTENV_OVERRIDES
+# define and a short fingerprint of each value — never a value. Exists because
+# nobody can read these secrets back, only replace them wholesale, and on
+# 2026-10-03 production's Helius key was rejected (401) while the key in the
+# local .env.production worked: a stale override was the suspect, and this is
+# the only way to see what an override holds without rotating it blind.
+#
+# Fingerprint = first 6 hex chars of sha256(value). Enough to tell two values
+# apart across files, useless for recovering either.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: List variables and fingerprints
+        env:
+          DOTENV_PRODUCTION: ${{ secrets.DOTENV_PRODUCTION }}
+          DOTENV_OVERRIDES: ${{ secrets.DOTENV_OVERRIDES }}
+        run: |
+          fp() { printf '%s' "$1" | sha256sum | cut -c1-6; }
+          dump() {
+            local label="$1" body="$2"
+            echo "## $label"
+            if [ -z "$body" ]; then echo "(empty)"; return; fi
+            printf '%s\n' "$body" | while IFS= read -r line; do
+              case "$line" in ''|'#'*) continue;; esac
+              k="${line%%=*}"; v="${line#*=}"
+              echo "$k  len=${#v}  fp=$(fp "$v")"
+            done
+          }
+          dump DOTENV_PRODUCTION "$DOTENV_PRODUCTION"
+          dump DOTENV_OVERRIDES "$DOTENV_OVERRIDES"
