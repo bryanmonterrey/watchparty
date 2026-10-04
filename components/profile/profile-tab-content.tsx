@@ -223,7 +223,7 @@ export function ProfileTabContent({ activeTab, user, onTabChange }: ProfileTabCo
     const isOwner = session?.user?.id === user.id;
 
     return (
-        <div className="py-4 min-h-[500px] z-10">
+        <div className="pt-3 pb-4 min-h-[500px] z-10">
             <AnimatePresence mode="wait">
                 <motion.div
                     key={activeTab}

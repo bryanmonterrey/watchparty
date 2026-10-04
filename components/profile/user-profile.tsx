@@ -206,7 +206,10 @@ export function UserProfile({ user, initialFollowCounts, initialIsLive }: UserPr
             </div>
 
             {/* ── Content ───────────────────────────────────────────────────── */}
-            <div className="w-full px-8 py-4 min-h-screen">
+            {/* No top padding here: ProfileTabContent carries the gap under the
+                tabs (pt-3). The two py-4s stacked to ~32px (owner, 2026-10-04:
+                "padding top of like 20 which is too excessive"). */}
+            <div className="w-full px-8 pb-4 min-h-screen">
                 {/* Keyed by tab so the incoming panel fades in on switch. */}
                 <motion.div
                     key={activeTab}
