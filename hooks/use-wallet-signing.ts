@@ -43,12 +43,36 @@ export function useWalletSigning(): UseWalletSigningReturn {
     const frostCommit = trpc.wallet.frostCommit.useMutation();
     const frostSign = trpc.wallet.frostSign.useMutation();
     const serverSign = trpc.wallet.signAndSendTransaction.useMutation();
+    const ensureSwigAccount = trpc.wallet.ensureSwigAccount.useMutation();
 
     const signAndSubmit = useCallback(async ({ transaction }: SignAndSubmitOptions) => {
         setIsPending(true);
         setError(null);
 
         try {
+            // ── Tier 0: the Swig account must EXIST on-chain ──────────────────
+            // Its creation was split out of frostSetup into ensureSwigAccount
+            // ("call this from the paths that actually need it: signing") and
+            // the call was never added. Every v2 wallet since then sat at a
+            // plain address with no account: tiers 1 and 2 both read the
+            // account, got zero bytes ("cannot decode empty byte array") and
+            // fell to tier 3, which cannot sign for a Swig PDA — the owner's
+            // own wallet, 2026-10-04, with the message "Tier 1/2 both failed".
+            // Idempotent and cheap once created; the treasury pays the rent.
+            const ensured = await ensureSwigAccount.mutateAsync().catch((err: any) => {
+                // A v1 custodial wallet has no Swig account to ensure — that
+                // is tier 3's case, not an error here.
+                if (err?.data?.code === "PRECONDITION_FAILED") return { ready: true as const };
+                throw err;
+            });
+            if (ensured && !ensured.ready) {
+                throw new Error(
+                    "Your built-in wallet isn't set up on-chain yet and the account couldn't be created right now" +
+                    ((ensured as { error?: string }).error ? ` (${(ensured as { error?: string }).error})` : "") +
+                    ". Nothing was sent — please try again in a moment.",
+                );
+            }
+
             // ── Tier 1: Swig session key (no FROST round trips) ───────────────
             const activeSession = session ?? await ensureSession();
             if (activeSession) {
