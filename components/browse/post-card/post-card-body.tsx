@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { CreateIcon, BubbleIcon, RetweetIcon, HeartIcon, HeartFilledIcon, BookmarkIcon, BookmarkFilledIcon, BarsIcon, LinkIcon, VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components/icons";
+import { CreateIcon, BubbleIcon, RetweetIcon, BookmarkIcon, BookmarkFilledIcon, BarsIcon, LinkIcon, VerifiedBadgeIcon, BusinessBadgeIcon, GovBadgeIcon } from "@/components/icons";
 import { PostTickerPill } from "./post-ticker-pill";
 import { MediaGrid } from "@/components/browse/media-grid";
 import { AudioMessagePlayer } from "@/components/messages/audio-message-player";
@@ -12,6 +12,7 @@ import { PaywallGate } from "@/components/browse/paywall-gate";
 import { ImageViewer } from "@/components/ui/image-viewer";
 import { MoreHorizontal } from "lucide-react";
 import { ActionButton } from "./action-button";
+import { LikeActionButton } from "./like-action-button";
 import { QuotedPostView } from "./quoted-post-view";
 import type { PostCardPost } from "./post-card.types";
 import { compactCount } from "@/lib/utils";
@@ -215,7 +216,7 @@ export function PostCardBody({
                                 <div className="border-y border-white/10 py-3 flex items-center justify-between w-full">
                                     <ActionButton icon={<BubbleIcon className="w-[20px] h-[20px]" />} count={comments} hoverColor="hover:text-bleu text-zinc-500" />
                                     <ActionButton icon={<RetweetIcon className="w-[20px] h-[20px]" />} count={reposts} hoverColor="hover:text-green-500 text-zinc-500" />
-                                    <ActionButton icon={liked ? <HeartFilledIcon className="w-[20px] h-[20px]" /> : <HeartIcon className="w-[20px] h-[20px]" />} count={likeCount} hoverColor="hover:text-rose-500 text-zinc-500" onClick={handleLike} active={liked} activeColor="text-rose-500" />
+                                    <LikeActionButton liked={liked} count={likeCount} onClick={handleLike} size={20} idleClassName="text-zinc-500" />
                                     <ActionButton icon={bookmarked ? <BookmarkFilledIcon className="w-[20px] h-[20px]" /> : <BookmarkIcon className="w-[20px] h-[20px]" />} hoverColor="hover:text-bleu text-zinc-500" onClick={handleBookmark} active={bookmarked} activeColor="text-bleu" />
                                     <ActionButton icon={<LinkIcon className="w-[20px] h-[20px]" />} hoverColor="hover:text-bleu text-zinc-500" />
                                 </div>
@@ -233,7 +234,7 @@ export function PostCardBody({
                             <div className="flex items-center justify-between flex-1 pr-6 md:pr-12">
                                 <ActionButton icon={<BubbleIcon className="w-[20px] h-[20px]" />} count={comments} hoverColor="text-zinc-200 hover:text-bleu" />
                                 <ActionButton icon={<RetweetIcon className="w-[20px] h-[20px]" />} count={reposts} hoverColor="text-zinc-200 hover:text-green-500" />
-                                <ActionButton icon={liked ? <HeartFilledIcon className="w-[20px] h-[20px]" /> : <HeartIcon className="w-[20px] h-[20px]" />} count={likeCount} hoverColor="text-zinc-200 hover:text-rose-500 hover:bg-rose-500/10" onClick={handleLike} active={liked} activeColor="text-rose-500" />
+                                <LikeActionButton liked={liked} count={likeCount} onClick={handleLike} size={20} idleClassName="text-zinc-200" />
                                 <ActionButton icon={<BarsIcon className="w-[20px] h-[20px]" />} count={views} hoverColor="text-zinc-200 hover:text-twitter2" />
                             </div>
                             <div className="flex items-center gap-1">

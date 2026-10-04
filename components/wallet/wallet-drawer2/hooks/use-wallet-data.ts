@@ -358,7 +358,15 @@ export function useWalletData({ walletAddress, inUseEvmAddress, open, activeTab 
         priceData: [] as { timestamp: number; price: number }[],
         tokens: mergedTokens,
         allTokens: mergedAllTokens,
-        isLoadingTokens: isLoadingTokens || isLoadingChainAssets,
+        // Loading only while NOTHING is known. The header chip paints the
+        // Solana balance instantly (prefetched + snapshotted), and this used to
+        // hold a skeleton over the very same number until the slower
+        // every-other-chain request — which only starts when the drawer opens
+        // — came back. Now the Solana total shows at once and the other chains
+        // add to it when they land; the number can tick up a beat after opening,
+        // which beats a blank. With no Solana data at all (EVM wallet in use,
+        // or a first-ever open) the chain request is still the gate.
+        isLoadingTokens: assetData ? false : isLoadingTokens || isLoadingChainAssets,
         /** The list is empty because the upstream is down, not because the wallet is. */
         assetsUnavailable,
         // NFTs remain Solana-only.

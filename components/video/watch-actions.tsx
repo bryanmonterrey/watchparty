@@ -170,7 +170,10 @@ export function WatchActions({ user, post, likeButton, followFirst, giftSubs = t
             gooMenuItem({
                 key: "share",
                 onClick: () => {
-                    void navigator.clipboard.writeText(window.location.href);
+                    // The VIDEO's link, never the page's. This copied
+                    // window.location.href, which on /home (where the hero
+                    // plays the video in place) was the home page.
+                    void navigator.clipboard.writeText(`${window.location.origin}/video/${post.id}`);
                     toast.success("Link copied");
                 },
                 icon: <Link2Icon />,

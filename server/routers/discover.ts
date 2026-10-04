@@ -44,41 +44,40 @@ async function hotCoins(limit: number): Promise<HotCoin[]> {
         .limit(limit);
 }
 
-// 24h move for one major from the Pyth benchmarks TradingView shim — same
-// source lib/predictions/factory.ts uses. Hourly candles over ~26h; current =
-// last close, reference = the close nearest 24h ago.
-async function majorMove(symbol: string, label: string): Promise<Major | null> {
-    const now = Math.floor(Date.now() / 1000);
-    const from = now - 26 * 3600;
-    try {
-        const res = await fetch(
-            `https://benchmarks.pyth.network/v1/shims/tradingview/history` +
-            `?symbol=${encodeURIComponent(symbol)}&resolution=60&from=${from}&to=${now}`,
-        );
-        const d = (await res.json()) as { s: string; c: number[]; t: number[] };
-        if (d.s !== "ok" || d.c.length < 2) return null;
-        const price = d.c[d.c.length - 1];
-        const target = now - 24 * 3600;
-        let refIdx = 0;
-        for (let i = 0; i < d.t.length; i++) {
-            if (d.t[i] <= target) refIdx = i;
-            else break;
-        }
-        const ref = d.c[refIdx];
-        const change = ref ? ((price - ref) / ref) * 100 : 0;
-        return { label, price, change };
-    } catch {
-        return null;
-    }
-}
+// 24h moves for the majors, from CoinGecko's keyless simple-price endpoint.
+//
+// This read Pyth's TradingView shim until 2026-10-03. Pyth put every public
+// endpoint (benchmarks AND Hermes) behind an API key on 2026-08-26, so the
+// shim 404s and Hermes 401s; majors came back empty, and with the platform
+// coin list also empty the card returned `source: "empty"` and the UI hid
+// it — the "What's happening is just disappearing" report. The perps charts
+// (/api/pyth-udf) and the predictions resolver still read Pyth and still
+// need a PYTH_API_KEY; this card does not, so it gets the free source.
+// One request for all three, with a deadline — no default fetch timeout on
+// workerd, and a hung provider here would hold the whole card.
+const MAJORS = [
+    { id: "bitcoin", label: "BTC" },
+    { id: "ethereum", label: "ETH" },
+    { id: "solana", label: "SOL" },
+] as const;
 
 async function getMajors(): Promise<Major[]> {
-    const results = await Promise.all([
-        majorMove("Crypto.BTC/USD", "BTC"),
-        majorMove("Crypto.ETH/USD", "ETH"),
-        majorMove("Crypto.SOL/USD", "SOL"),
-    ]);
-    return results.filter((m): m is Major => m !== null);
+    try {
+        const res = await fetch(
+            `https://api.coingecko.com/api/v3/simple/price?ids=${MAJORS.map((m) => m.id).join(",")}` +
+            `&vs_currencies=usd&include_24hr_change=true`,
+            { signal: AbortSignal.timeout(5000), headers: { accept: "application/json" } },
+        );
+        if (!res.ok) return [];
+        const d = (await res.json()) as Record<string, { usd?: number; usd_24h_change?: number }>;
+        return MAJORS.flatMap(({ id, label }) => {
+            const row = d[id];
+            if (!row || typeof row.usd !== "number") return [];
+            return [{ label, price: row.usd, change: typeof row.usd_24h_change === "number" ? row.usd_24h_change : 0 }];
+        });
+    } catch {
+        return [];
+    }
 }
 
 // GLM (Cloudflare Workers AI) writes short crypto-news headlines GROUNDED in the

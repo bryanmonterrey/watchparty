@@ -2,7 +2,8 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
-import { BubbleIcon, HeartIcon, HeartFilledIcon, BarsIcon, BookmarkIcon, BookmarkFilledIcon, LinkIcon } from "@/components/icons";
+import { BubbleIcon, BarsIcon, BookmarkIcon, BookmarkFilledIcon, LinkIcon } from "@/components/icons";
+import { LikeActionButton } from "./like-action-button";
 import { ActionButton } from "./action-button";
 import { RepostMenu } from "./repost-menu";
 
@@ -64,14 +65,7 @@ export function PostCardActions({
                 onDoRepost={doRepost}
                 onDoQuote={doQuote}
             />
-            <ActionButton
-                icon={liked ? <HeartFilledIcon className="w-[18px] h-[18px]" /> : <HeartIcon className="w-[18px] h-[18px]" />}
-                count={likeCount}
-                hoverColor="hover:text-red1"
-                onClick={handleLike}
-                active={liked}
-                activeColor="text-red1"
-            />
+            <LikeActionButton liked={liked} count={likeCount} onClick={handleLike} />
             <ActionButton
                 icon={<BarsIcon className="w-[18px] h-[18px]"/>}
                 count={views}

@@ -77,7 +77,11 @@ function WalletButtonInner() {
     const handlePrefetch = useCallback(() => {
         if (!walletAddress) return;
         trpcUtils.wallet.getWalletAssets.prefetch({ address: walletAddress });
-    }, [trpcUtils, walletAddress]);
+        // The drawer's other-chains total. Same input the drawer's own query
+        // uses (use-wallet-data), so a hover warms the exact cache entry it
+        // reads — otherwise that request only started once the drawer opened.
+        trpcUtils.wallet.getAllChainAssets.prefetch({ evmAddress: selectedEvm ?? undefined }, { staleTime: 30_000 });
+    }, [trpcUtils, walletAddress, selectedEvm]);
 
     // Warm the wallet cache as soon as the session is available — before the user opens the drawer
     useEffect(() => {
