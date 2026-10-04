@@ -17,6 +17,7 @@ import {
     ActivationType,
     BaseFeeMode,
     CollectFeeMode,
+    MigratedCollectFeeMode,
     MigrationOption,
     MigrationFeeOption,
     DammV2DynamicFeeMode,
@@ -47,7 +48,7 @@ export interface TokenLaunchState {
 const STANDARD_CURVE_CONFIG_PARAMS = {
     fee: {
         baseFeeParams: {
-            baseFeeMode: BaseFeeMode.FeeSchedulerExponential,
+            baseFeeMode: BaseFeeMode.FeeSchedulerExponential as const,
             feeSchedulerParam: {
                 startingFeeBps: 9000, // 90% starting fee
                 endingFeeBps: 120, // 1.2% ending fee
@@ -69,7 +70,7 @@ const STANDARD_CURVE_CONFIG_PARAMS = {
             creatorFeePercentage: 0, // Adjusted based on strategy
         },
         migratedPoolFee: {
-            collectFeeMode: CollectFeeMode.QuoteToken,
+            collectFeeMode: MigratedCollectFeeMode.QuoteToken,
             dynamicFee: DammV2DynamicFeeMode.Enabled,
             poolFeeBps: 100, // 1%
             baseFeeMode: DammV2BaseFeeMode.FeeTimeSchedulerLinear,
@@ -314,14 +315,20 @@ export function useTokenLaunch() {
                     tokenType: TokenType.SPLToken,
                     tokenBaseDecimal: tokenBaseDecimal,
                     tokenQuoteDecimal: tokenQuoteDecimal,
-                    tokenUpdateAuthority: TokenAuthorityOption.Immutable,
+                    // Renamed from tokenUpdateAuthority in the SDK's 1.5.11+
+                    // line; the old key was silently dropped by the
+                    // destructure and every launch died in the SDK's validator
+                    // with "Invalid option for token update authority"
+                    // (2026-10-04, the owner's $BRYAN). The `as any` that hid it
+                    // is gone — the builder's params are typed now.
+                    tokenAuthorityOption: TokenAuthorityOption.Immutable,
                     totalTokenSupply,
                     leftover,
                 },
                 ...dynamicFeeConfigParams,
                 sqrtPrices,
                 liquidityWeights,
-            } as any);
+            });
 
             // Economic principal: the creator when buying someone's draft,
             // the connected wallet when self-launching.
