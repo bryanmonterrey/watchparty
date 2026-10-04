@@ -574,7 +574,10 @@ export const tradeRouter = router({
                     // stored image is what lets getCreatorCoin resolve the
                     // creator's CURRENT one, so the coin tracks their picture
                     // until the launch freezes it.
-                    imageUrl: publicStorageUrl(input.imageUrl) || undefined,
+                    // Avatar fallback resolved HERE, like create-post does: a creator
+                    // coin minted with no image carries none forever (the owner's
+                    // own $BRYAN sat imageless from 08-31 until the backfill re-ran).
+                    imageUrl: publicStorageUrl(input.imageUrl) || ctx.user.avatar_url || undefined,
                     creatorFeePercent: input.creatorFeePercent,
                     status: "draft",
                     earningsEnabled: true,

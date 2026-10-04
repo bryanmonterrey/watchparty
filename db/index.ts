@@ -50,7 +50,23 @@ function isRetryable(err: unknown, query: string): boolean {
     return /^\s*(select|with)\b/i.test(query);
 }
 
-function createClient(connectionString: string, { perRequest = false } = {}) {
+// A statement that outlives this is not slow, it is stuck: the 2026-08-06
+// failure mode was sockets alive-but-unresponsive against Supavisor with no
+// client-side timeout to notice. On the container's shared pool a deadline
+// miss POISONS the pool — it is ended and the next request builds a fresh one —
+// which is the self-heal that was missing then.
+const STATEMENT_DEADLINE_MS = 15_000;
+
+class StatementDeadlineError extends Error {
+    constructor(query: string) {
+        super(`statement exceeded ${STATEMENT_DEADLINE_MS}ms: ${query.slice(0, 80)}`);
+        this.name = "StatementDeadlineError";
+    }
+}
+
+type ClientOptions = { perRequest?: boolean; pooled?: boolean; onDeadline?: () => void };
+
+function createClient(connectionString: string, { perRequest = false, pooled = false, onDeadline }: ClientOptions = {}) {
     const sql = postgres(connectionString, {
         // A request-scoped client is never closed, and a live socket or idle
         // timer is a GC root — so each one stays in memory until its own
@@ -63,9 +79,13 @@ function createClient(connectionString: string, { perRequest = false } = {}) {
         // released after two idle seconds. The idle-close race that makes this
         // risky on its own is absorbed by the retry above, which is why this
         // is worth doing NOW and wasn't before.
-        max: perRequest ? 1 : 5,
+        max: perRequest ? 1 : pooled ? 10 : 5,
         idle_timeout: perRequest ? 2 : 20,
-        connect_timeout: 10,
+        // Pooled (container): recycle sockets on a schedule so a connection
+        // that Supavisor has silently abandoned cannot be held forever, and
+        // give up on a dial fast — a stuck dial used to be a stuck request.
+        max_lifetime: pooled ? 60 * 10 : undefined,
+        connect_timeout: pooled ? 5 : 10,
         prepare: false, // Supabase pooler / Hyperdrive: no prepared statements
     });
 
@@ -88,9 +108,22 @@ function createClient(connectionString: string, { perRequest = false } = {}) {
             const pending = rawUnsafe(query, params as never, options as never);
             return mode === "values" ? (pending as { values: () => Promise<unknown> }).values() : pending;
         };
+        // Deadline only where there is a pool to poison; the per-request
+        // client dies with its request anyway.
+        const guarded = (p: Promise<unknown>) => {
+            if (!pooled) return p;
+            let timer: ReturnType<typeof setTimeout>;
+            const deadline = new Promise<never>((_, reject) => {
+                timer = setTimeout(() => {
+                    onDeadline?.();
+                    reject(new StatementDeadlineError(query));
+                }, STATEMENT_DEADLINE_MS);
+            });
+            return Promise.race([p, deadline]).finally(() => clearTimeout(timer));
+        };
         const run = (mode?: "values") =>
             Promise.resolve()
-                .then(() => attempt(mode))
+                .then(() => guarded(Promise.resolve(attempt(mode))))
                 .catch((err: unknown) => {
                     if (!isRetryable(err, query)) throw err;
                     // One retry, on a connection postgres.js re-dials for us.
@@ -143,9 +176,27 @@ const getRequestDb = cache((connectionString: string): Db =>
 );
 
 // Off-Workers path: one reused client per process.
-const globalForDb = globalThis as unknown as { __pgDb?: Db };
+const globalForDb = globalThis as unknown as { __pgDb?: Db; __containerDb?: { db: Db; sql: ReturnType<typeof postgres> } };
 function getGlobalDb(): Db {
     return (globalForDb.__pgDb ??= drizzle(createClient(process.env.DATABASE_URL!), { schema }));
+}
+
+function getContainerDb(): Db {
+    if (globalForDb.__containerDb) return globalForDb.__containerDb.db;
+    const sql = createClient(process.env.DATABASE_URL!, {
+        pooled: true,
+        onDeadline: () => {
+            // Poison: drop the reference first so concurrent requests build a
+            // new pool immediately, then end the old one without waiting on
+            // the socket that just proved it will not answer.
+            const old = globalForDb.__containerDb;
+            globalForDb.__containerDb = undefined;
+            console.error("[db] statement deadline hit — recycling the container's connection pool");
+            void old?.sql.end({ timeout: 1 }).catch(() => undefined);
+        },
+    });
+    globalForDb.__containerDb = { db: drizzle(sql, { schema }), sql };
+    return globalForDb.__containerDb.db;
 }
 
 function resolveDb(): Db {
@@ -157,15 +208,22 @@ function resolveDb(): Db {
     // client; the global one reuses connections across requests, which the
     // Workers runtime does not allow.
     if (onWorkersRuntime()) return getRequestDb(process.env.DATABASE_URL!);
-    // The container (real Node serving HTTP — see container/Dockerfile) takes
-    // the per-request client too, BY CHOICE rather than runtime constraint:
-    // the global pool's sockets wedge silently against Supavisor (alive but
-    // unresponsive, and no client-side timeout ever fires), which hung every
-    // tRPC query on the 2026-08-06 cut-over attempt — the same mechanism as
-    // that morning's outage. Fresh connection per request + the statement
-    // retry above is the configuration that provably survives it. React
-    // cache() is request-scoped under the Next server here, same as Workers.
-    if (process.env.WATCHPARTY_CONTAINER) return getRequestDb(process.env.DATABASE_URL!);
+    // The container (real Node serving HTTP — see container/Dockerfile):
+    // ONE pooled client per process, since 2026-10-04.
+    //
+    // From 2026-08-06 until then it took the per-request client BY CHOICE:
+    // the global pool's sockets had wedged silently against Supavisor (alive
+    // but unresponsive, no client-side timeout ever fired) and hung every
+    // tRPC query. A fresh connection per request survived that — at the
+    // price of a TLS dial + auth on EVERY request, ~0.5 s before the first
+    // statement, which by October was the largest fixed cost on the site.
+    //
+    // The pool comes back with what was missing that morning: a statement
+    // deadline that poisons the pool (ended, rebuilt on the next request),
+    // a connection lifetime cap, a short dial timeout, and the retry above.
+    // Owner's call to switch ("go", 2026-10-04); the one-line revert is the
+    // getRequestDb branch below.
+    if (process.env.WATCHPARTY_CONTAINER) return getContainerDb();
     // Scripts, next build, next dev: long-lived Node processes with no request
     // scope — cache() wouldn't memoize, so per-request clients would leak a
     // connection per query. They keep the global client.
