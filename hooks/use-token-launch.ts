@@ -289,7 +289,14 @@ export function useTokenLaunch() {
             // Without splits, the creator keeps their portion via the creator
             // pot and the treasury (feeClaimer) keeps the platform's.
             const hasSplits = !!(launchState.splits && launchState.splits.length > 0);
-            const creatorTradingFeePercentage = hasSplits
+            // Who the coin BELONGS to (fees, leftover): the creator when a fan
+            // launches their draft, the paying wallet when self-launching.
+            const beneficiary = opts?.creatorWallet ?? payer!;
+            // Fees go through a DFS vault whenever they can't simply accrue to
+            // the pool creator: with splits, or when the beneficiary is not the
+            // wallet that signs (see poolCreator below).
+            const routeViaVault = hasSplits || !beneficiary.equals(payer!);
+            const creatorTradingFeePercentage = routeViaVault
                 ? 0
                 : totalFeeBps > 0 ? Math.floor((creatorFeeBps / totalFeeBps) * 100) : 0;
 
@@ -338,9 +345,17 @@ export function useTokenLaunch() {
                 liquidityWeights,
             });
 
-            // Economic principal: the creator when buying someone's draft,
-            // the connected wallet when self-launching.
-            const creatorPubkey = opts?.creatorWallet ?? payer;
+            // THE POOL CREATOR MUST SIGN. The DBC program's
+            // initialize_virtual_pool_* takes `creator` as a signer, so it has
+            // to be the wallet signing this transaction — not the draft's
+            // creator, who may be someone else, or (the owner's $BRYAN,
+            // 2026-10-04) the same person's OTHER wallet: the extension on
+            // file as creator, the custodial one paying. Every attempt died in
+            // serialize with 'Missing signature for public key <extension>'.
+            // So the payer creates the pool; the creator's economics
+            // (leftover, fee share) follow `beneficiary` through the vault.
+            const creatorPubkey = beneficiary;
+            const poolCreator = payer!;
 
             // The platform's 1% claims through the PARTNER pot (feeClaimer).
             // Historically this was set to the creator, which routed the
@@ -350,11 +365,12 @@ export function useTokenLaunch() {
             const preInstructions: TransactionInstruction[] = [];
             let feeClaimerPubkey = treasuryPubkey;
 
-            if (launchState.splits && launchState.splits.length > 0) {
+            if (routeViaVault) {
                 const dfsClient = new DynamicFeeSharingClient(connection, 'confirmed');
 
-                // 1. Resolve splits (DB check + Treasury fallback)
-                const resolvedSplits = await resolveSplitsMutation.mutateAsync(launchState.splits);
+                // 1. Resolve splits (DB check + Treasury fallback). None when the
+                // vault exists only to carry the creator's share past the payer.
+                const resolvedSplits = hasSplits ? await resolveSplitsMutation.mutateAsync(launchState.splits) : [];
 
                 // 2. With splits, ALL fees flow into one DFS vault
                 // (creatorTradingFeePercentage is forced to 0 below, so the
@@ -370,7 +386,7 @@ export function useTokenLaunch() {
                 }));
 
                 // Creator residual share of the creator portion
-                const totalSplit = launchState.splits.reduce((acc, curr) => acc + (curr.percentage || 0), 0);
+                const totalSplit = (launchState.splits ?? []).reduce((acc, curr) => acc + (curr.percentage || 0), 0);
                 const creatorResidual = Math.max(0, 100 - totalSplit);
                 if (creatorResidual > 0) {
                     userShares.push({
@@ -419,7 +435,7 @@ export function useTokenLaunch() {
                     name: metadata.name,
                     symbol: metadata.symbol,
                     uri: metadataUri,
-                    poolCreator: creatorPubkey,
+                    poolCreator,
                     baseMint: baseMintKeypair.publicKey,
                 },
                 firstBuyParam: {
