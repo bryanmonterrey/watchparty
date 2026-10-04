@@ -193,6 +193,13 @@ export function useTokenLaunch() {
                 return { success: false, error: "Insufficient custodial balance" };
             }
         }
+        // THE PAYER IS THE WALLET THAT SIGNS. `publicKey` prefers the extension
+        // when one is connected, so with an extension connected and a funded
+        // custodial wallet the fee payer was the extension while the custodial
+        // path signed — a transaction nobody could complete. Resolve it once and
+        // use it for every payer/buyer field and both fee payers below.
+        const payer = useCustodial && custodialWalletAddress ? new PublicKey(custodialWalletAddress) : publicKey;
+
         try {
             const dbcClient = new DynamicBondingCurveClient(connection, 'confirmed');
 
@@ -333,7 +340,7 @@ export function useTokenLaunch() {
 
             // Economic principal: the creator when buying someone's draft,
             // the connected wallet when self-launching.
-            const creatorPubkey = opts?.creatorWallet ?? publicKey;
+            const creatorPubkey = opts?.creatorWallet ?? payer;
 
             // The platform's 1% claims through the PARTNER pot (feeClaimer).
             // Historically this was set to the creator, which routed the
@@ -386,7 +393,7 @@ export function useTokenLaunch() {
                     tokenMint: NATIVE_MINT,
                     tokenProgram: TOKEN_PROGRAM_ID,
                     owner: creatorPubkey,
-                    payer: publicKey,
+                    payer,
                     userShare: userShares
                 });
 
@@ -405,7 +412,7 @@ export function useTokenLaunch() {
                 config: configKeypair.publicKey,
                 feeClaimer: feeClaimerPubkey,
                 leftoverReceiver: creatorPubkey,
-                payer: publicKey,
+                payer,
                 quoteMint: NATIVE_MINT,
                 ...curveConfig,
                 preCreatePoolParam: {
@@ -416,7 +423,7 @@ export function useTokenLaunch() {
                     baseMint: baseMintKeypair.publicKey,
                 },
                 firstBuyParam: {
-                    buyer: publicKey,
+                    buyer: payer,
                     buyAmount: buyAmountLamports,
                     minimumAmountOut: new BN(0), // No slippage protection for first buy (lazy)
                     referralTokenAccount: null,
@@ -441,7 +448,7 @@ export function useTokenLaunch() {
                 toast.loading("Setting up Coin Config (1/2)...", { id: "custodial-tx" });
                 const { blockhash: bh1, lastValidBlockHeight: lbh1 } = await connection.getLatestBlockhash();
                 setupTx.recentBlockhash = bh1;
-                setupTx.feePayer = publicKey!;
+                setupTx.feePayer = payer!;
                 setupTx.partialSign(configKeypair);
                 const base64Tx1 = setupTx.serialize({ requireAllSignatures: false, verifySignatures: false }).toString("base64");
                 const result1 = await signAndSendCustodialTx({ transaction: base64Tx1 });
@@ -453,7 +460,7 @@ export function useTokenLaunch() {
                 toast.loading("Deploying Coin Pool (2/2)...", { id: "custodial-tx" });
                 const { blockhash: bh2, lastValidBlockHeight: lbh2 } = await connection.getLatestBlockhash();
                 launchTx.recentBlockhash = bh2;
-                launchTx.feePayer = publicKey!;
+                launchTx.feePayer = payer!;
                 launchTx.partialSign(baseMintKeypair);
                 const base64Tx2 = launchTx.serialize({ requireAllSignatures: false, verifySignatures: false }).toString("base64");
                 const result2 = await signAndSendCustodialTx({ transaction: base64Tx2 });
@@ -466,16 +473,28 @@ export function useTokenLaunch() {
                 // Non-Custodial Wallet (Phantom, Solflare, WalletConnect)
                 const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
                 setupTx.recentBlockhash = blockhash;
-                setupTx.feePayer = publicKey!;
+                setupTx.feePayer = payer!;
                 launchTx.recentBlockhash = blockhash;
-                launchTx.feePayer = publicKey!;
+                launchTx.feePayer = payer!;
 
+                // Some wallets return the transactions from signAllTransactions
+                // WITHOUT their own signature (seen 2026-10-04: "Missing signature
+                // for public key <the fee payer>" from serialize). Verify before
+                // trusting it; otherwise take the two-prompt path, where the
+                // wallet signs and sends each transaction itself.
+                const signedByWallet = (tx: Transaction) =>
+                    tx.signatures.some((sig) => sig.publicKey.equals(payer!) && sig.signature != null);
+                let signedTxs: Transaction[] | null = null;
                 if (signAllTransactions) {
                     toast.loading("Please approve transactions...", { id: "tx-status" });
                     setupTx.partialSign(configKeypair);
                     launchTx.partialSign(baseMintKeypair);
-                    const signedTxs = await signAllTransactions([setupTx, launchTx]);
+                    const attempt = await signAllTransactions([setupTx, launchTx]);
+                    if (attempt.every(signedByWallet)) signedTxs = attempt;
+                    else console.warn("[launchToken] wallet returned unsigned transactions from signAllTransactions — falling back to sequential prompts");
+                }
 
+                if (signedTxs) {
                     toast.loading("Confirming Coin Setup (1/2)...", { id: "tx-status" });
                     const sig1 = await connection.sendRawTransaction(signedTxs[0].serialize());
                     const conf1 = await confirmSignature(connection, { signature: sig1, blockhash, lastValidBlockHeight }, "confirmed");
@@ -489,7 +508,7 @@ export function useTokenLaunch() {
                     finalSignature = sig2;
                     toast.dismiss("tx-status");
                 } else {
-                    // Fallback to sequential prompts
+                    // Sequential prompts: the wallet signs AND sends each one.
                     toast.loading("Sign Setup Transaction (1/2)...", { id: "tx-status" });
                     const sig1 = await sendTransaction(setupTx, connection, { signers: [configKeypair] });
                     toast.loading("Confirming Setup...", { id: "tx-status" });
