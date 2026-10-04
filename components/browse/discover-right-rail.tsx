@@ -293,13 +293,27 @@ function WhoToFollowCard() {
 }
 
 // ── What's happening (GLM coin news) ────────────────────────────────────────
-function TrendRow({ title, meta, ticker, tokenAddress }: { title: string; meta: string; ticker?: string; tokenAddress?: string | null }) {
-    // Deep-link to the coin when we know it, else search for the ticker.
-    const href = tokenAddress ? `/coin/${tokenAddress}` : ticker ? `/feed/search?q=${encodeURIComponent("$" + ticker)}` : "/trade";
-    return (
-        <Link href={href} className="block w-full px-6 py-2.5 text-left transition-colors hover:bg-foreground/[0.03]">
+function TrendRow({ title, meta, ticker, tokenAddress, url }: { title: string; meta: string; ticker?: string; tokenAddress?: string | null; url?: string }) {
+    const rowClass = "block w-full px-6 py-2.5 text-left transition-colors hover:bg-foreground/[0.03]";
+    const body = (
+        <>
             <p className="text-[14px] text-muted-foreground">{meta}</p>
             <p className="line-clamp-2 text-[16px] font-bold leading-snug">{title}</p>
+        </>
+    );
+    // A headline opens the article in a new tab; the market fallback
+    // deep-links to the coin when we know it, else searches the ticker.
+    if (url) {
+        return (
+            <a href={url} target="_blank" rel="noopener noreferrer" className={rowClass}>
+                {body}
+            </a>
+        );
+    }
+    const href = tokenAddress ? `/coin/${tokenAddress}` : ticker ? `/feed/search?q=${encodeURIComponent("$" + ticker)}` : "/trade";
+    return (
+        <Link href={href} className={rowClass}>
+            {body}
         </Link>
     );
 }
