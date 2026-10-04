@@ -3,7 +3,8 @@ import { router, publicProcedure } from "../trpc";
 import { db } from "@/db";
 import { tokens } from "@/db/schema/content/token";
 import { and, eq, isNotNull, sql } from "drizzle-orm";
-import { withCache } from "@/lib/cache";
+import { redis, redisBreakerOpen } from "@/lib/cache";
+import { after } from "next/server";
 
 export type TrendingItem = {
     title: string;
@@ -186,14 +187,33 @@ export const discoverRouter = router({
         .input(z.object({ limit: z.number().min(1).max(10).default(5) }).optional())
         .query(async ({ input }) => {
             const count = input?.limit ?? 5;
-            return withCache(`discover:crypto-news:v2:${count}`, 300, async () => {
-                const [coins, majors] = await Promise.all([hotCoins(12), getMajors()]);
-                if (coins.length === 0 && majors.length === 0) {
-                    return { source: "empty" as const, items: [] as TrendingItem[] };
-                }
-                const glm = await glmCryptoNews(coins, majors, count);
-                if (glm && glm.length) return { source: "glm" as const, items: glm };
-                return { source: "market" as const, items: marketMovers(coins, majors, count) };
+            // The model never blocks the card. GLM-5.2 is a reasoning model and
+            // regularly needs more than its 6 s budget here; while the Redis
+            // cache was down (2026-10-03) every request paid that timeout and
+            // the card took 7–8 s to settle on the movers fallback anyway. So:
+            // answer with the deterministic movers now, and let the model's
+            // version replace the cached entry for the next viewer (next/server
+            // `after` = waitUntil on Workers). With the cache unavailable the
+            // model's output has nowhere to go, so it is not even asked.
+            const key = `discover:crypto-news:v3:${count}`;
+            try {
+                const cached = await redis.get<{ source: "glm" | "market"; items: TrendingItem[] }>(key);
+                if (cached?.items?.length) return cached;
+            } catch { /* cache down — compute */ }
+
+            const [coins, majors] = await Promise.all([hotCoins(12), getMajors()]);
+            if (coins.length === 0 && majors.length === 0) {
+                return { source: "empty" as const, items: [] as TrendingItem[] };
+            }
+            const market = { source: "market" as const, items: marketMovers(coins, majors, count) };
+            if (redisBreakerOpen()) return market;
+            after(async () => {
+                try {
+                    await redis.set(key, market, { ex: 300, nx: true });
+                    const glm = await glmCryptoNews(coins, majors, count);
+                    if (glm && glm.length) await redis.set(key, { source: "glm" as const, items: glm }, { ex: 300 });
+                } catch { /* best-effort */ }
             });
+            return market;
         }),
 });

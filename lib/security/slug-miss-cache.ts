@@ -1,4 +1,3 @@
-import { Redis } from "@upstash/redis";
 
 /**
  * Negative cache for top-level slugs that turned out not to be usernames.
@@ -38,10 +37,11 @@ import { Redis } from "@upstash/redis";
  * local cache pays. Redis is the shared tier behind it.
  */
 
-const redis = new Redis({
-    url: process.env.UPSTASH_REDIS_REST_URL || "",
-    token: process.env.UPSTASH_REDIS_REST_TOKEN || "",
-});
+// The SHARED client, for its circuit breaker. This had its own
+// `new Redis(...)`, and the middleware runs it on every single-segment path —
+// so while Upstash was rate-limited (2026-10-03) every such request, /robots.txt
+// included, waited 0.5–0.7 s for Redis to say no before Next even started.
+import { redis } from "@/lib/cache";
 
 const KEY_PREFIX = "slugmiss:v1:";
 /**
