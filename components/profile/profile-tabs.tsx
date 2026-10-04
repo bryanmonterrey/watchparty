@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { ReactNode } from "react";
 import { motion } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -41,13 +42,27 @@ interface ProfileTabsProps {
     action?: ReactNode;
 }
 
+/** Where "Content" lands on the first click — the most-used variant. */
+const DEFAULT_CONTENT_VARIANT: ContentVariant = "Posts";
+
 export function ProfileTabs({ activeTab, onTabChange, isMinimized, action }: ProfileTabsProps) {
     const contentActive = isContentVariant(activeTab);
+    // Two-step Content tab (owner, 2026-10-04): the first click goes to
+    // Content (Posts); clicking it AGAIN, while already on a content variant,
+    // opens the picker for Streams / Posts / Media / Videos. The dropdown is
+    // controlled so the first click can be a plain tab change.
+    const [pickerOpen, setPickerOpen] = useState(false);
 
     return (
         <div className={cn("relative z-30 transition-all duration-300", isMinimized ? "mt-2" : "mt-5")}>
             <div className="flex items-center gap-4">
-                <div className="min-w-0 flex-1 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                {/* overflow-visible from sm up: this was a horizontal scroller
+                    at every width, and a scroll container clips everything
+                    inside it — the Content picker (no portal) opened under
+                    the edge and was never seen. The rail fits on desktop, so
+                    only phones keep the scroll (the app isn't served on mobile
+                    web anyway). */}
+                <div className="min-w-0 flex-1 max-sm:overflow-x-auto max-sm:overflow-y-hidden sm:overflow-visible [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                     <div className={cn("flex min-w-max items-center transition-all duration-300", isMinimized ? "gap-6" : "gap-9")}>
                         {TABS.map((tab) => {
                             const isContentTab = tab === "Content";
@@ -75,7 +90,16 @@ export function ProfileTabs({ activeTab, onTabChange, isMinimized, action }: Pro
                                         align="start"
                                         width={180}
                                         gap={10}
-                                        triggerAriaLabel="Choose content type"
+                                        open={pickerOpen}
+                                        onOpenChange={(next) => {
+                                            // Not on content yet: the click is a tab change, not a menu.
+                                            if (next && !contentActive) {
+                                                onTabChange(DEFAULT_CONTENT_VARIANT);
+                                                return;
+                                            }
+                                            setPickerOpen(next);
+                                        }}
+                                        triggerAriaLabel={contentActive ? "Choose content type" : "Content"}
                                         triggerClassName={cn(
                                             "relative cursor-pointer text-lg font-semibold transition-all",
                                             isActive ? "text-white" : "text-zinc-400 hover:text-zinc-300"
@@ -93,7 +117,7 @@ export function ProfileTabs({ activeTab, onTabChange, isMinimized, action }: Pro
                                         }
                                         items={CONTENT_VARIANTS.map((variant) => ({
                                             key: variant,
-                                            onClick: () => onTabChange(variant),
+                                            onClick: () => { onTabChange(variant); setPickerOpen(false); },
                                             className: cn(
                                                 "cursor-pointer px-4 text-[15px] font-semibold transition-colors",
                                                 activeTab === variant
