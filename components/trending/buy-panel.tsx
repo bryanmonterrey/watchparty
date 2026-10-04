@@ -31,7 +31,7 @@
 import * as React from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon, Wallet01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, Wallet01Icon } from "@hugeicons/core-free-icons";
 import { useQuickBuy } from "@/hooks/use-quick-buy";
 import { useFirstBuy, NO_DRAFT, FirstBuyNote, type FirstBuyTarget } from "@/hooks/use-first-buy";
 import { useActiveWallet } from "@/hooks/use-active-wallet";
@@ -42,13 +42,11 @@ import { trpc } from "@/lib/trpc/client";
 import { NATIVE_TOKEN } from "@/lib/chains/swap/types";
 import { WalletSetupCta } from "@/components/wallet/wallet-drawer2/views/setup/wallet-setup-cta";
 import { Squircle } from "@/components/ui/squircle";
-import { SettingsIcon } from "@/components/icons";
-import { GooDropdown, gooMenuItem, GOO_PANEL_FILL } from "@/components/ui/goo-dropdown";
 import { HoldButton } from "@/components/ui/hold-button";
 import { cn } from "@/lib/utils";
 import { compactUsd } from "./trending-format";
 import { PayWithSelect, PAY_WITH_CARD, payAssetKey, unitUsd, fmtUsd, type PayAsset } from "./pay-with-select";
-import { BigAmountInput } from "./amount-input";
+import { BigAmountInput, SlippageMenu } from "./amount-input";
 import { WalletPane } from "./wallet-pane";
 import {
     formatTokens,
@@ -728,41 +726,22 @@ export function BuyPanel({
             </>
         ) : tradeable ? (
             <>
-                {/* The amount, as the thing the panel is actually about. */}
+                {/* The amount, as the thing the panel is actually about.
+                    `relative` so the settings popover below can sit over the
+                    card's corner from OUTSIDE the Squircle: its clip-path clips
+                    every descendant, popover included, which is why the menu
+                    "went under the components" (owner, 2026-10-04). */}
+                <div className="relative">
                 <Squircle asChild radius={24}>
                 <div className="flex flex-col items-center gap-3 bg-white/[0.03] p-4">
                     {/* "You're PAYING", not "buying". The big number is what
                         LEAVES the wallet, and labelling it "You're buying 1 SOL"
                         said the opposite of what happens — the coin is what's
                         being bought, SOL is what it costs. */}
-                    <div className="flex w-full items-start justify-between">
+                    <div className="flex h-7 w-full items-start justify-between">
                         <span className="text-13 font-medium text-zinc-500">
                             {selling ? "You're selling" : "You're paying"}
                         </span>
-                        {/* A POPOVER off the card's own corner, not a swap of
-                            the preset row: settings are a side errand, and
-                            taking over the amount controls to show them made
-                            the main thing disappear to configure it. */}
-                        <GooDropdown
-                            align="end"
-                            width={220}
-                            gap={8}
-                            fill={GOO_PANEL_FILL}
-                            triggerAriaLabel="Trade settings"
-                            triggerClassName="-mt-1 -mr-1 cursor-pointer rounded-full p-1 text-zinc-500 transition-colors hover:text-white"
-                            trigger={<SettingsIcon filled className="size-5" />}
-                            items={SLIPPAGE_OPTIONS.map((bps) =>
-                                gooMenuItem({
-                                    key: bps,
-                                    label: `${bps / 100}% slippage`,
-                                    onClick: () => setSlippageBps(bps),
-                                    right:
-                                        bps === slippageBps ? (
-                                            <HugeiconsIcon icon={Tick02Icon} className="size-4 text-white" strokeWidth={2} />
-                                        ) : undefined,
-                                }),
-                            )}
-                        />
                     </div>
 
                     {/* DOLLARS lead when we can price the token, the token amount
@@ -823,7 +802,7 @@ export function BuyPanel({
                                             : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white",
                                     )}
                                 >
-                                    {selling ? `${p}%` : pricedInUsd ? `$${p}` : p}
+                                    {selling ? `${p}%` : pricedInUsd ? `${p}` : p}
                                 </button>
                                 </Squircle>
                             );
@@ -831,6 +810,12 @@ export function BuyPanel({
                     </div>
                 </div>
                 </Squircle>
+                {/* Settings: a popover off the card's corner, not a swap of the
+                    preset row — a side errand that must not hide the amount. */}
+                <div className="absolute right-3 top-3">
+                    <SlippageMenu value={slippageBps} onChange={setSlippageBps} />
+                </div>
+                </div>
 
                 {/* Caption OUT of the control, sharing its row with the wallet
                     switcher. */}

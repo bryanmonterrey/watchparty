@@ -1,7 +1,12 @@
 "use client";
 
 import * as React from "react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Tick02Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
+import { SettingsIcon } from "@/components/icons";
+import { GooDropdown, gooMenuItem, GOO_PANEL_FILL } from "@/components/ui/goo-dropdown";
+import { SLIPPAGE_OPTIONS } from "./buy-format";
 
 // The buy panel's headline number, typeable. It was a read-only figure with
 // the presets as the only way to set it — "$10 to $7" could not be done
@@ -63,5 +68,29 @@ export function BigAmountInput({
             />
             {suffix && <span className="ml-1.5 text-xl font-bold text-zinc-500">{suffix}</span>}
         </label>
+    );
+}
+
+// The slippage menu, as a popover off the amount card's corner. Rendered by
+// the panel OUTSIDE the card's Squircle (whose clip-path would cut it off).
+export function SlippageMenu({ value, onChange }: { value: number; onChange: (bps: number) => void }) {
+    return (
+        <GooDropdown
+            align="end"
+            width={220}
+            gap={8}
+            fill={GOO_PANEL_FILL}
+            triggerAriaLabel="Trade settings"
+            triggerClassName="cursor-pointer rounded-full p-1 text-zinc-500 transition-colors hover:text-white"
+            trigger={<SettingsIcon filled className="size-5" />}
+            items={SLIPPAGE_OPTIONS.map((bps) =>
+                gooMenuItem({
+                    key: bps,
+                    label: `${bps / 100}% slippage`,
+                    onClick: () => onChange(bps),
+                    right: bps === value ? <HugeiconsIcon icon={Tick02Icon} className="size-4 text-white" strokeWidth={2} /> : undefined,
+                }),
+            )}
+        />
     );
 }
