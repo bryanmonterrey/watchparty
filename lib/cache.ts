@@ -88,23 +88,59 @@ function trip(err: unknown) {
     breakerOpenUntil = Date.now() + openMs;
 }
 
+// ─── In-process tier ────────────────────────────────────────────────────────
+//
+// A small memory cache in front of Redis, same key, same TTL (capped at
+// MEMORY_MAX_TTL_MS so a long Redis TTL cannot pin a stale value in a process
+// that lives for days). On the container — one long-lived Node process serving
+// every request — this is what keeps withCache useful while Redis is
+// rate-limited or down (2026-10-03). On Workers it is per-isolate and merely
+// harmless. Bounded: oldest entry out past MEMORY_MAX_ENTRIES.
+const MEMORY_MAX_ENTRIES = 500;
+const MEMORY_MAX_TTL_MS = 5 * 60_000;
+const memory = new Map<string, { until: number; value: unknown }>();
+
+function memoryGet<T>(key: string): T | undefined {
+    const hit = memory.get(key);
+    if (!hit) return undefined;
+    if (hit.until <= Date.now()) { memory.delete(key); return undefined; }
+    return hit.value as T;
+}
+
+function memorySet(key: string, value: unknown, ttlSeconds: number) {
+    if (value === null || value === undefined) return;
+    if (memory.size >= MEMORY_MAX_ENTRIES) {
+        const oldest = memory.keys().next().value;
+        if (oldest !== undefined) memory.delete(oldest);
+    }
+    memory.delete(key); // re-insert at the end so eviction order stays by write time
+    memory.set(key, { until: Date.now() + Math.min(ttlSeconds * 1000, MEMORY_MAX_TTL_MS), value });
+}
+
 /**
- * Cache-aside helper. Tries Redis first, falls back to fn() on miss.
- * Silently bypasses cache if Redis is unavailable.
+ * Cache-aside helper. Memory, then Redis, then fn() on miss.
+ * Silently bypasses Redis if it is unavailable.
  */
 export async function withCache<T>(
     key: string,
     ttlSeconds: number,
     fn: () => Promise<T>
 ): Promise<T> {
+    const local = memoryGet<T>(key);
+    if (local !== undefined) return local;
+
     try {
         const cached = await redis.get<T>(key);
-        if (cached !== null && cached !== undefined) return cached;
+        if (cached !== null && cached !== undefined) {
+            memorySet(key, cached, ttlSeconds);
+            return cached;
+        }
     } catch {
         // Redis unavailable — fall through
     }
 
     const result = await fn();
+    memorySet(key, result, ttlSeconds);
 
     try {
         await redis.set(key, result, { ex: ttlSeconds });
@@ -180,6 +216,7 @@ export async function withSwrCache<T>(
  * Invalidate a cache key (e.g. after a mutation).
  */
 export async function invalidateCache(key: string): Promise<void> {
+    memory.delete(key);
     try {
         await redis.del(key);
     } catch {

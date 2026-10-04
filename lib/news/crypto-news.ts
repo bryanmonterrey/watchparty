@@ -27,7 +27,11 @@ const FEEDS: { source: string; url: string }[] = [
     { source: "The Defiant", url: "https://thedefiant.io/api/feed" },
 ];
 
-const FEED_TIMEOUT_MS = 4000;
+// Measured from this Mac every feed answers in ~0.2 s; from the container the
+// card still took 5.5 s, i.e. at least one outlet stalls to the deadline (a
+// bot challenge, most likely). Short enough that a stalled feed costs little,
+// long enough for a slow one — and the memo below means it is paid rarely.
+const FEED_TIMEOUT_MS = 2500;
 /** No outlet gets more than this many of the slots — the card is a digest, not one feed. */
 const PER_SOURCE_CAP = 2;
 /** Older than this is not "happening". */
@@ -84,11 +88,42 @@ async function fetchFeed(feed: { source: string; url: string }): Promise<NewsHea
 /** Near-duplicate key: same story syndicated under slightly different casing/punctuation. */
 const normTitle = (t: string) => t.toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/\s+/g, " ").trim().slice(0, 60);
 
+// In-process memo, fresh for 5 min, served stale for up to an hour while a
+// background refresh runs. The Redis cache in front of this is best-effort
+// (it was rate-limited the day this shipped), and the container is one
+// long-lived Node process, so this layer alone keeps the card at ~0 ms for
+// everyone after the first viewer. Keyed by nothing: the feeds are the same
+// for every viewer; `count` is applied after.
+const MEMO_FRESH_MS = 5 * 60_000;
+const MEMO_STALE_MS = 60 * 60_000;
+const MEMO_SIZE = 10;
+let memo: { at: number; items: NewsHeadline[] } | null = null;
+let refreshing: Promise<void> | null = null;
+
+function refreshMemo(): Promise<void> {
+    refreshing ??= pullFresh(MEMO_SIZE)
+        .then((items) => { if (items.length) memo = { at: Date.now(), items }; })
+        .catch(() => undefined)
+        .finally(() => { refreshing = null; });
+    return refreshing;
+}
+
 /**
  * The freshest `count` headlines across all feeds, newest first, at most
  * PER_SOURCE_CAP per outlet, de-duplicated. Empty only if every feed failed.
  */
 export async function fetchCryptoNews(count: number): Promise<NewsHeadline[]> {
+    const age = memo ? Date.now() - memo.at : Infinity;
+    if (memo && age < MEMO_FRESH_MS) return memo.items.slice(0, count);
+    if (memo && age < MEMO_STALE_MS) {
+        void refreshMemo();
+        return memo.items.slice(0, count);
+    }
+    await refreshMemo();
+    return (memo?.items ?? []).slice(0, count);
+}
+
+async function pullFresh(count: number): Promise<NewsHeadline[]> {
     const settled = await Promise.allSettled(FEEDS.map(fetchFeed));
     const cutoff = Date.now() - MAX_AGE_MS;
     const all = settled
