@@ -471,6 +471,8 @@ export function CommentComposer({
                         <VoiceRecorderTrigger
                             active={showVoiceRecorder || !!voiceBlob}
                             onClick={() => setShowVoiceRecorder((v) => !v)}
+                            className="grid size-8 place-items-center text-zinc-400 hover:bg-white/5 hover:text-white"
+                            iconClassName="size-5"
                         />
 
                         <button

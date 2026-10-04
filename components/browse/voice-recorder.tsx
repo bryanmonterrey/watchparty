@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Mic, Square, Play, Pause, Trash2, Check, Loader2 } from "lucide-react";
+import { Square, Play, Pause, Trash2, Check, Loader2 } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Mic01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -99,7 +101,7 @@ export function VoiceRecorder({ onAudioReady, onCancel }: VoiceRecorderProps) {
                     onClick={startRecording}
                     className="flex items-center gap-2 text-sm text-zinc-300 hover:text-lantern transition-colors"
                 >
-                    <Mic className="w-4 h-4 text-lantern" />
+                    <HugeiconsIcon icon={Mic01Icon} className="size-4 text-lantern" strokeWidth={2} />
                     <span>Record voice note</span>
                 </button>
             )}
@@ -151,18 +153,28 @@ export function VoiceRecorder({ onAudioReady, onCancel }: VoiceRecorderProps) {
 interface VoiceRecorderTriggerProps {
     active: boolean;
     onClick: () => void;
+    /** The host toolbar's resting look (size, colour, hover) — the comment
+     *  composer's icons are size-8 / zinc-400, the post composer's p-2 / 22px.
+     *  Without it the button had no resting colour and inherited white
+     *  (owner, 2026-10-04: "the microphone button is default white"). */
+    className?: string;
+    iconClassName?: string;
 }
-export function VoiceRecorderTrigger({ active, onClick }: VoiceRecorderTriggerProps) {
+export function VoiceRecorderTrigger({ active, onClick, className, iconClassName }: VoiceRecorderTriggerProps) {
     return (
         <button
+            type="button"
             onClick={onClick}
             className={cn(
-                "p-2 cursor-pointer rounded-full transition-colors",
-                active ? "text-flexwhite bg-white/10" : "hover:bg-white/10"
+                "cursor-pointer rounded-full transition-colors",
+                className ?? "p-2 hover:bg-white/10",
+                active && "bg-white/10 text-white",
             )}
             title="Voice note"
+            aria-label="voice note"
+            aria-pressed={active}
         >
-            <Mic className="w-[22px] h-[22px]" />
+            <HugeiconsIcon icon={Mic01Icon} className={iconClassName ?? "size-[22px]"} strokeWidth={2} />
         </button>
     );
 }
