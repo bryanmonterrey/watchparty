@@ -2,6 +2,7 @@
 
 import { UserType } from "@/db/schema/auth/user";
 import { HomeVideosRow } from "./home-videos-row";
+import { HomeCoinsRow } from "./home-coins-row";
 
 // The channel Home tab (Twitch/Kick model): a recap surface — content rows,
 // each a self-contained module; add future rows (clips, coins, categories)
@@ -15,6 +16,7 @@ export function ProfileHome({ user, onTabChange }: {
     return (
         <div className="flex flex-col gap-10">
             <HomeVideosRow user={user} onViewAll={() => onTabChange?.("Videos")} />
+            <HomeCoinsRow userId={user.id} onViewAll={() => onTabChange?.("Coins")} />
         </div>
     );
 }
