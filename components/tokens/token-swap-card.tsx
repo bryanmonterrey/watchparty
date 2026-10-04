@@ -1,16 +1,14 @@
 "use client"
 
 import React, { useState, useEffect, useCallback, useMemo } from "react"
-import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { useConnection, useWallet } from "@solana/wallet-adapter-react"
 import { toast } from "sonner"
 import { Token } from "@/db/schema/content"
-import { publicStorageUrl } from "@/lib/supabase/public-url"
 import { trpc } from "@/lib/trpc/client"
 import { useAuthSession } from "@/hooks/use-auth-session"
 import { useWalletSigning } from "@/hooks/use-wallet-signing"
-import { useTokenLaunch } from "@/hooks/use-token-launch"
+import { useFirstBuy } from "@/hooks/use-first-buy"
 import { toPublicKey } from "@/lib/solana/pubkey"
 import { showSwapToast } from "@/components/wallet/wallet-drawer/views/swap/swap-transaction-toast"
 import { OPEN_WALLET_DRAWER_EVENT } from "@/components/wallet/sol-balance-chip"
@@ -48,62 +46,12 @@ function formatAmount(v: number): string {
 const FIRST_BUY_PRESETS = [0.1, 0.5, 1] as const
 
 export function FirstBuyCard({ token, creatorWallet, creatorAvatar }: { token: Token; creatorWallet: string | null; creatorAvatar?: string | null }) {
-    const router = useRouter()
-    const { data: session } = useAuthSession()
-    const { publicKey: adapterPublicKey } = useWallet()
-    const { launchToken, isLaunching } = useTokenLaunch()
-    const activateToken = trpc.trade.activateToken.useMutation()
     const [amount, setAmount] = useState("")
-
-    const walletAddress = adapterPublicKey?.toBase58() || session?.user?.wallet_address || null
     const amountSol = parseFloat(amount) || 0
-
-    const firstBuy = async () => {
-        if (!walletAddress) {
-            window.dispatchEvent(new Event(OPEN_WALLET_DRAWER_EVENT))
-            return
-        }
-        if (amountSol <= 0 || isLaunching || activateToken.isPending) return
-
-        const creatorPk = toPublicKey(creatorWallet ?? undefined)
-        const result = await launchToken(
-            {
-                name: token.name,
-                symbol: token.ticker,
-                // Avatar as the fallback at LAUNCH, not just in the UI: whatever
-                // goes in here is the image the coin carries from then on, so a
-                // coin with no art of its own would otherwise mint with none at
-                // all. Same rule the stream's pill follows — the coin's own art
-                // wins, the creator's face fills the blank.
-                image: publicStorageUrl(token.imageUrl) || creatorAvatar || "",
-                description: token.description ?? "",
-            },
-            {
-                earningsEnabled: true,
-                ticker: token.ticker,
-                creatorFee: token.creatorFeePercent ?? 0,
-                splits: (token.splits as never[] | null) ?? [],
-                buyAmount: amountSol,
-            },
-            // Creator keeps the pool identity + fees even when a fan launches it
-            creatorPk ? { creatorWallet: creatorPk } : undefined,
-        )
-
-        if (result.success && result.status === "live" && result.tokenAddress && result.poolAddress) {
-            try {
-                await activateToken.mutateAsync({
-                    tokenId: token.id,
-                    tokenAddress: result.tokenAddress,
-                    poolAddress: result.poolAddress,
-                })
-                toast.success(`$${token.ticker} is live — you made the first buy`)
-                router.refresh()
-            } catch (e) {
-                console.error("activateToken failed after launch:", e)
-                toast.error("Launched on-chain but the page didn't update — refresh in a moment")
-            }
-        }
-    }
+    // The launch itself lives in hooks/use-first-buy, shared with the regular
+    // buy panel (which is what the coin page renders for a draft now).
+    const { firstBuy: runFirstBuy, launching, walletAddress } = useFirstBuy({ token, creatorWallet, creatorAvatar })
+    const firstBuy = () => void runFirstBuy(amountSol)
 
     return (
         <div className="bg-panel rounded-[25px] p-5 flex flex-col">
@@ -142,12 +90,12 @@ export function FirstBuyCard({ token, creatorWallet, creatorAvatar }: { token: T
 
             <button
                 onClick={firstBuy}
-                disabled={!!walletAddress && (amountSol <= 0 || isLaunching || activateToken.isPending)}
+                disabled={!!walletAddress && (amountSol <= 0 || launching)}
                 className="cursor-pointer w-full h-15 bg-white hover:bg-white/90 text-black font-bold rounded-full text-lg transition-colors disabled:opacity-40 disabled:cursor-default"
             >
                 {!walletAddress
                     ? "Connect wallet"
-                    : isLaunching || activateToken.isPending
+                    : launching
                         ? "Launching…"
                         : `Buy & launch $${token.ticker}`}
             </button>

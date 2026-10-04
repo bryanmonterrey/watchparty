@@ -32,15 +32,20 @@ import { cn } from "@/lib/utils";
 import { buyableChainId, chainLabel } from "@/lib/coin-feed/networks";
 import { getChain } from "@/lib/chains/registry";
 import type { CoinViewData } from "./coin-detail";
+import type { FirstBuyTarget } from "@/hooks/use-first-buy";
 
 export function CoinTradePanel({
     coin,
     marketUrl,
     cardClassName,
+    firstBuy,
 }: {
     coin: CoinViewData;
     marketUrl: string | null;
     cardClassName: string;
+    /** Set for a DRAFT: the same panel, but the buy launches the coin and
+     *  there is no sell side yet. See BuyPanel's prop of the same name. */
+    firstBuy?: FirstBuyTarget;
 }) {
     // The same slug → chain mapping the dialog uses, so "buyable on the board"
     // and "tradeable on the coin page" can never disagree about a chain.
@@ -88,8 +93,8 @@ export function CoinTradePanel({
             {/* buy / sell — matches the perps order-panel direction tabs: a
                 segmented pill with a subtle white wash on the active side +
                 its accent color (green buy / red sell), no solid fill. */}
-            <div className="grid grid-cols-2 gap-1 rounded-full bg-white/[0.04] p-1">
-                {(["buy", "sell"] as const).map((s) => (
+            <div className={cn("grid gap-1 rounded-full bg-white/[0.04] p-1", firstBuy ? "grid-cols-1" : "grid-cols-2")}>
+                {(firstBuy ? (["buy"] as const) : (["buy", "sell"] as const)).map((s) => (
                     <button
                         key={s}
                         type="button"
@@ -110,7 +115,7 @@ export function CoinTradePanel({
                 different things on each (dollars vs. a share of the position)
                 and a selection carried across would be a number in the wrong
                 unit. The coin itself is keyed one level up, in CoinSwap. */}
-            <BuyPanel key={side} coin={coin} side={side} />
+            <BuyPanel key={side} coin={coin} side={side} firstBuy={firstBuy} />
         </div>
     );
 }

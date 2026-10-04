@@ -243,10 +243,10 @@ export function CreateDialog({ children, open: openProp, onOpenChange, initialTa
                         .from('posts')
                         .uploadToSignedUrl(path, token, img)
                     if (error) throw error;
-                    if (data) imageUrls.push(data.fullPath);
+                    // Public URL from `path`: storing data.fullPath left posts imageless (2026-10-04).
+                    if (data) imageUrls.push(supabase.storage.from('posts').getPublicUrl(data.path).data.publicUrl);
                 }
-                const { data: publicUrlData } = supabase.storage.from('posts').getPublicUrl(imageUrls[0]);
-                primaryImageUrl = publicUrlData.publicUrl;
+                primaryImageUrl = imageUrls[0];
             } else {
                 // If text only, generate an OG Twitter-style Post Image and upload it
                 const generatedImageUrl = `${window.location.origin}/api/og/post?text=${encodeURIComponent(postContent.slice(0, 150))}&name=${encodeURIComponent(session?.user?.name || 'User')}&username=${encodeURIComponent(session?.user?.username || '')}&avatar=${encodeURIComponent(session?.user?.avatar_url || '')}`
@@ -269,7 +269,7 @@ export function CreateDialog({ children, open: openProp, onOpenChange, initialTa
 
                 if (error) throw error;
                 if (data) {
-                    const { data: publicUrlData } = supabase.storage.from('posts').getPublicUrl(data.fullPath);
+                    const { data: publicUrlData } = supabase.storage.from('posts').getPublicUrl(data.path);
                     primaryImageUrl = publicUrlData.publicUrl;
                 }
             }
@@ -344,7 +344,7 @@ export function CreateDialog({ children, open: openProp, onOpenChange, initialTa
                 const { data: vd, error: ve } = await supabase.storage.from('posts').uploadToSignedUrl(vp, vt, vf);
                 if (ve) throw ve;
                 if (vd) {
-                    const { data: vpub } = supabase.storage.from('posts').getPublicUrl(vd.fullPath);
+                    const { data: vpub } = supabase.storage.from('posts').getPublicUrl(vd.path);
                     voiceNoteUrl = vpub.publicUrl;
                 }
             }

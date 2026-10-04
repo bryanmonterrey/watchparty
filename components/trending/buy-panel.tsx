@@ -33,6 +33,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon, Wallet01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { useQuickBuy } from "@/hooks/use-quick-buy";
+import { useFirstBuy, NO_DRAFT, FirstBuyNote, type FirstBuyTarget } from "@/hooks/use-first-buy";
 import { useActiveWallet } from "@/hooks/use-active-wallet";
 import { useEvmQuickBuy, presetsForSymbol } from "@/hooks/use-evm-quick-buy";
 import { buyableChainId } from "@/lib/coin-feed/networks";
@@ -79,6 +80,7 @@ export type BuyPanelCoin = {
 
 export type TradeSide = "buy" | "sell";
 
+
 /** Selling is denominated in what you hold, so the presets are a share of it. */
 const SELL_PRESETS_PCT = [25, 50, 75, 100] as const;
 
@@ -110,9 +112,11 @@ export function BuyPanel({
     side = "buy",
     onSettled,
     onDismiss,
+    firstBuy,
 }: {
     coin: BuyPanelCoin;
     side?: TradeSide;
+    firstBuy?: FirstBuyTarget; // a DRAFT: this buy launches it (hooks/use-first-buy)
     /** A trade landed and the success state has had its moment on screen. The
      *  dialog closes here; the card just carries on. */
     onSettled?: () => void;
@@ -133,6 +137,8 @@ export function BuyPanel({
     const utils = trpc.useUtils();
     const { quickBuy, buyingId: solBuyingId } = useQuickBuy();
     const { evmBuy, buyingId: evmBuyingId } = useEvmQuickBuy();
+    const launch = useFirstBuy(firstBuy ?? NO_DRAFT);
+    const launching = !!firstBuy && launch.launching;
 
     /** Contract of the token being SPENT: null = the chain's native coin. */
     const [payWith, setPayWith] = React.useState<string | null>(null);
@@ -470,7 +476,7 @@ export function BuyPanel({
         if (session?.redirectUrl) window.open(session.redirectUrl, "_blank", "noopener,noreferrer");
     }, [chainId, fundSession]);
 
-    const buying = solBuyingId === coin.id || evmBuyingId === coin.id || crossSwap.isPending;
+    const buying = solBuyingId === coin.id || evmBuyingId === coin.id || crossSwap.isPending || launching;
     // Exactly one of the two queries is ever enabled, so this is a selection,
     // not a merge. Keeping it in one place stops the receive line and the CTA
     // gate from disagreeing about which route is live.
@@ -539,6 +545,13 @@ export function BuyPanel({
         // arbitrary memecoin, so this cannot be one uninterrupted flow.
         if (payingByCard) {
             await addFunds();
+            return;
+        }
+        // A draft's first buy is a launch, not a swap; `amount` is SOL here.
+        if (firstBuy) {
+            const result = await launch.firstBuy(amount);
+            if (result === "no-wallet") onDismiss?.();
+            else if (result === "done") settle();
             return;
         }
         if (isSolana) {
@@ -836,7 +849,7 @@ export function BuyPanel({
                         targetChain={chainId ?? undefined}
                         emptyReason={emptyReason}
                         cardEnabled={!!onramp.data?.supported}
-                        disabled={buying}
+                        disabled={buying || !!firstBuy} // a launch is paid in SOL only
                     />
                 ) : null}
 
@@ -844,7 +857,9 @@ export function BuyPanel({
                     the coin in general; every line is a fact about this
                     transaction at this amount. Hidden for card funding, which
                     is not a swap. */}
-                {!payingByCard ? (
+                {firstBuy && !payingByCard ? (
+                    <FirstBuyNote symbol={coinSymbol} />
+                ) : !payingByCard ? (
                     <Squircle asChild radius={24}>
                     <div className="flex flex-col gap-2 bg-white/[0.03] p-4">
                         <Row label="Rate">
@@ -932,11 +947,15 @@ export function BuyPanel({
                         : needsExtension
                           ? `Connect ${active?.name ?? "that wallet"} to spend from it`
                           : buying
-                            ? selling
-                                ? "Selling…"
-                                : "Buying…"
+                            ? launching
+                                ? "Launching…"
+                                : selling
+                                  ? "Selling…"
+                                  : "Buying…"
                             : overBalance
                               ? `Not enough ${spendSymbol}`
+                              : firstBuy
+                                ? `Hold to buy ${pricedInUsd && spendUsd ? spendUsd : `${formatTokens(amount)} SOL`} · first buy`
                               : payingByCard
                                 ? fundSession.isPending
                                     ? "Opening…"

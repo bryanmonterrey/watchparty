@@ -26,7 +26,6 @@ import { StatCarousel } from "./stat-carousel";
 import { PinkStarLogo, XIcon, TelegramIcon, GlobeIcon } from "@/components/icons";
 import { stableHoverColor } from "@/lib/stable-hover-color";
 import { CoinTradePanel } from "./coin-trade-panel";
-import { FirstBuyCard } from "@/components/tokens/token-swap-card";
 import { CoinRiskCard } from "./coin-risk-card";
 import { CopyTokenAddress } from "./copy-token-address";
 import { SwapsTable, MentionsTable } from "./coin-board-tables";
@@ -845,20 +844,10 @@ function CoinSwap({ coin, wpToken }: { coin: CoinViewData; wpToken?: WatchpartyT
     const marketUrl = tradeUrl(coin.network, coin.tokenAddress, coin.poolAddress);
 
     // A DRAFT has no pool to quote against (the swap panel asked Jupiter anyway,
-    // 2026-10-03). The first buy IS the launch; FirstBuyCard performs it.
-    if (coin.isDraft && wpToken) {
-        return (
-            <aside className="pr-0">
-                <div className="@4xl/coin:sticky @4xl/coin:top-0">
-                    <FirstBuyCard
-                        token={wpToken}
-                        creatorWallet={wpToken.creator.wallet_address ?? null}
-                        creatorAvatar={wpToken.creator.avatar_url}
-                    />
-                </div>
-            </aside>
-        );
-    }
+    // 2026-10-03). Same panel, first-buy mode: the buy launches the coin.
+    const firstBuy = coin.isDraft && wpToken
+        ? { token: wpToken, creatorWallet: wpToken.creator.wallet_address ?? null, creatorAvatar: wpToken.creator.avatar_url }
+        : undefined;
 
     // The buy/sell panel replaced the drawer's generic SwapView here — every
     // coin on every routable chain trades in place now (Jupiter for Solana,
@@ -870,7 +859,7 @@ function CoinSwap({ coin, wpToken }: { coin: CoinViewData; wpToken?: WatchpartyT
     return (
         <aside className="pr-0">
             <div className="@4xl/coin:sticky @4xl/coin:top-0">
-                <CoinTradePanel key={coin.id} coin={coin} marketUrl={marketUrl} cardClassName={SWAP_CARD} />
+                <CoinTradePanel key={coin.id} coin={coin} marketUrl={marketUrl} cardClassName={SWAP_CARD} firstBuy={firstBuy} />
                 <CoinRiskCard coin={coin} cardClassName={SWAP_CARD} enabled={!coin.isDraft} />
             </div>
         </aside>
