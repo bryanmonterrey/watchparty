@@ -1,4 +1,5 @@
 import { after } from "next/server";
+import { publicStorageUrl } from "@/lib/supabase/public-url";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure, protectedProcedure } from "@/server/trpc";
@@ -573,7 +574,7 @@ export const tradeRouter = router({
                     // stored image is what lets getCreatorCoin resolve the
                     // creator's CURRENT one, so the coin tracks their picture
                     // until the launch freezes it.
-                    imageUrl: input.imageUrl || undefined,
+                    imageUrl: publicStorageUrl(input.imageUrl) || undefined,
                     creatorFeePercent: input.creatorFeePercent,
                     status: "draft",
                     earningsEnabled: true,

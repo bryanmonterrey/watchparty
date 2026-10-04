@@ -6,6 +6,7 @@ import { motion } from "framer-motion"
 import { useConnection, useWallet } from "@solana/wallet-adapter-react"
 import { toast } from "sonner"
 import { Token } from "@/db/schema/content"
+import { publicStorageUrl } from "@/lib/supabase/public-url"
 import { trpc } from "@/lib/trpc/client"
 import { useAuthSession } from "@/hooks/use-auth-session"
 import { useWalletSigning } from "@/hooks/use-wallet-signing"
@@ -46,7 +47,7 @@ function formatAmount(v: number): string {
 // and leftover supply stay with the creator.
 const FIRST_BUY_PRESETS = [0.1, 0.5, 1] as const
 
-function FirstBuyCard({ token, creatorWallet, creatorAvatar }: { token: Token; creatorWallet: string | null; creatorAvatar?: string | null }) {
+export function FirstBuyCard({ token, creatorWallet, creatorAvatar }: { token: Token; creatorWallet: string | null; creatorAvatar?: string | null }) {
     const router = useRouter()
     const { data: session } = useAuthSession()
     const { publicKey: adapterPublicKey } = useWallet()
@@ -74,7 +75,7 @@ function FirstBuyCard({ token, creatorWallet, creatorAvatar }: { token: Token; c
                 // coin with no art of its own would otherwise mint with none at
                 // all. Same rule the stream's pill follows — the coin's own art
                 // wins, the creator's face fills the blank.
-                image: token.imageUrl || creatorAvatar || "",
+                image: publicStorageUrl(token.imageUrl) || creatorAvatar || "",
                 description: token.description ?? "",
             },
             {

@@ -26,6 +26,7 @@ import { StatCarousel } from "./stat-carousel";
 import { PinkStarLogo, XIcon, TelegramIcon, GlobeIcon } from "@/components/icons";
 import { stableHoverColor } from "@/lib/stable-hover-color";
 import { CoinTradePanel } from "./coin-trade-panel";
+import { FirstBuyCard } from "@/components/tokens/token-swap-card";
 import { CoinRiskCard } from "./coin-risk-card";
 import { CopyTokenAddress } from "./copy-token-address";
 import { SwapsTable, MentionsTable } from "./coin-board-tables";
@@ -216,11 +217,9 @@ function CoinHeader({ coin: initial }: { coin: CoinViewData }) {
                                 <HugeiconsIcon icon={LinkForwardIcon} className="size-3.5" strokeWidth={2} />
                             </a>
                         )}
-                        {/* Share = this page's own URL. The coin had no share
-                            of its own until 2026-10-03: the only "share" after a
-                            launch was the create dialog's preview link, which is
-                            the VIDEO. Drafts included — a draft's page is where
-                            the first buy (the launch) happens. */}
+                        {/* Share = this page's URL. Until 2026-10-03 the only
+                            "share" after a launch was the create dialog's preview
+                            link, which is the VIDEO. Drafts included. */}
                         <button
                             type="button"
                             aria-label="copy link to this coin"
@@ -842,8 +841,24 @@ function CoinChart({ coin }: { coin: CoinViewData }) {
     );
 }
 
-function CoinSwap({ coin }: { coin: CoinViewData }) {
+function CoinSwap({ coin, wpToken }: { coin: CoinViewData; wpToken?: WatchpartyToken }) {
     const marketUrl = tradeUrl(coin.network, coin.tokenAddress, coin.poolAddress);
+
+    // A DRAFT has no pool to quote against (the swap panel asked Jupiter anyway,
+    // 2026-10-03). The first buy IS the launch; FirstBuyCard performs it.
+    if (coin.isDraft && wpToken) {
+        return (
+            <aside className="pr-0">
+                <div className="@4xl/coin:sticky @4xl/coin:top-0">
+                    <FirstBuyCard
+                        token={wpToken}
+                        creatorWallet={wpToken.creator.wallet_address ?? null}
+                        creatorAvatar={wpToken.creator.avatar_url}
+                    />
+                </div>
+            </aside>
+        );
+    }
 
     // The buy/sell panel replaced the drawer's generic SwapView here — every
     // coin on every routable chain trades in place now (Jupiter for Solana,
@@ -910,7 +925,7 @@ export function CoinDetail({ coin, wpToken }: { coin: CoinViewData; wpToken?: Wa
                         <CoinChart coin={coin} />
                     </div>
                     <div className="flex min-w-0 flex-col gap-1">
-                        <CoinSwap coin={coin} />
+                        <CoinSwap coin={coin} wpToken={wpToken} />
                         {/* Creator + description: identity a coin we launched
                             has and a Dexscreener row never will. */}
                         {wpToken && <TokenDescription token={wpToken} compact cardClassName={SWAP_CARD} />}

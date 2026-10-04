@@ -11,6 +11,7 @@
  * path (trpc.content.*) is unchanged.
  */
 import { z } from "zod";
+import { publicStorageUrl } from "@/lib/supabase/public-url";
 import { protectedProcedure } from "../../trpc";
 import { db } from "@/db";
 import { writePostTags, postTagsInput } from "@/server/lib/write-post-tags";
@@ -127,12 +128,13 @@ export const createPostProcedures = {
                 // got created that way; see db/token-image-avatar-backfill.sql.
                 // The video path above already did this; now both do.
                 const postSessionUser = ctx.session.user as { avatar_url?: string | null; image?: string | null };
-                tokenImage =
+                tokenImage = publicStorageUrl(
                     input.token_image ||
                     input.imageUrl?.split(',')[0] ||
                     postSessionUser.avatar_url ||
                     postSessionUser.image ||
-                    undefined;
+                    undefined,
+                ) ?? undefined;
 
                 await db.insert(tokens).values({
                     id: tokenId,

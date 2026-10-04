@@ -10,6 +10,7 @@ import { CoinTabPrice } from "@/components/coins/coin-tab-price";
 import { resolveCoin } from "@/lib/coins/resolve";
 import { fallbackShareMetadata, shareMetadata } from "@/lib/share/metadata";
 import { ogImage } from "@/lib/share/og-url";
+import { publicStorageUrl } from "@/lib/supabase/public-url";
 
 // Coin pages live here, not at the top level. They used to share `/[slug]` with
 // user profiles — one route resolving a string to EITHER a user or a token —
@@ -71,7 +72,7 @@ function coinFromToken(token: NonNullable<Awaited<ReturnType<typeof getToken>>>)
         poolAddress: token.poolAddress ?? "",
         symbol: token.ticker,
         name: token.name,
-        imageUrl: token.imageUrl,
+        imageUrl: publicStorageUrl(token.imageUrl) ?? null,
         priceUsd: token.priceUsd,
         marketCapUsd: token.marketCapUsd,
         liquidityUsd: null,
