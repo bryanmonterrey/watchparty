@@ -179,10 +179,19 @@ export function useTokenLaunch() {
         // Custodial wallets are often unfunded — check balance and prefer adapter if available.
         let useCustodial = !!custodialWalletAddress;
         if (custodialWalletAddress && adapterPublicKey) {
-            const custodialBalance = await connection.getBalance(new PublicKey(custodialWalletAddress));
+            // A CONNECTED EXTENSION THAT CAN PAY IS PREFERRED. This used to pick
+            // the custodial wallet whenever IT could pay, so connecting an
+            // extension changed nothing — and when the custodial (Swig) signing
+            // path was failing there was no way to route around it (owner,
+            // 2026-10-04: "tried both"). The custodial wallet is the fallback
+            // for an extension that can't cover the buy.
             const requiredLamports = (launchState.buyAmount + 0.03) * 1_000_000_000; // buy + ~0.03 SOL for fees/rent
-            useCustodial = custodialBalance >= requiredLamports;
-            console.log("[launchToken] custodial balance:", custodialBalance / 1e9, "SOL, required:", (launchState.buyAmount + 0.03), "SOL, useCustodial:", useCustodial);
+            const [adapterBalance, custodialBalance] = await Promise.all([
+                connection.getBalance(adapterPublicKey),
+                connection.getBalance(new PublicKey(custodialWalletAddress)),
+            ]);
+            useCustodial = adapterBalance < requiredLamports && custodialBalance >= requiredLamports;
+            console.log("[launchToken] balances — extension:", adapterBalance / 1e9, "custodial:", custodialBalance / 1e9, "required:", launchState.buyAmount + 0.03, "useCustodial:", useCustodial);
         } else if (custodialWalletAddress && !adapterPublicKey) {
             // Only custodial available — check it has funds
             const custodialBalance = await connection.getBalance(new PublicKey(custodialWalletAddress));
