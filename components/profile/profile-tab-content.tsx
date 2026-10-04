@@ -18,6 +18,8 @@ import { LoadMore } from "@/components/interior/load-more";
 import { TradeRow } from "@/components/trades/trade-row";
 import { ProfilePnlCard } from "./profile-pnl-card";
 import { ProfileMediaGrid } from "./profile-media-grid";
+import { ProfileCoinsTable } from "./profile-coins-table";
+import { ProfileVideosGrid } from "./profile-videos-grid";
 import { profilePostsSnapshotStore } from "@/lib/snapshot/surfaces";
 import { viewerKey } from "@/lib/snapshot/keys";
 import { useSnapshot, useSnapshotPlaceholder } from "@/hooks/use-snapshot";
@@ -229,17 +231,35 @@ export function ProfileTabContent({ activeTab, user, onTabChange }: ProfileTabCo
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 1, y: 0 }}
                 >
-                    {/* About is the only tab that renders for now. Every other
-                        tab is deliberately blank — no content AND no empty
-                        state, so nothing is shown at all.
-
-                        Nothing below was deleted: ProfileHome, StreamViewer,
-                        ProfilePostsFeed, ProfileMediaGrid, ProfileTradesFeed
-                        and PredictionsView are all still wired up in this file,
-                        so restoring a tab is putting its branch back into this
-                        conditional. That's also why the imports and the two
-                        local feed components read as unused right now. */}
-                    {activeTab === "About" && <ProfileAbout user={user} />}
+                    {/* Every tab renders again (owner, 2026-10-04: "start putting
+                        content under people's profile pages and the tabs";
+                        "make sure media is added and posts at every tab").
+                        They had been blanked pending a redesign; the pieces
+                        were all kept wired, so this is their branches back.
+                        Coins is new — a table, not cards. */}
+                    {activeTab === "Home" ? (
+                        <ProfileHome user={user} onTabChange={onTabChange} />
+                    ) : activeTab === "About" ? (
+                        <ProfileAbout user={user} />
+                    ) : activeTab === "Streams" ? (
+                        <StreamViewer
+                            hostUserId={user.id}
+                            hostUsername={user.username ?? user.name ?? ""}
+                            viewerUsername={viewerUsername}
+                        />
+                    ) : activeTab === "Posts" ? (
+                        <ProfilePostsFeed userId={user.id} isOwner={isOwner} />
+                    ) : activeTab === "Media" ? (
+                        <ProfileMediaGrid userId={user.id} isOwner={isOwner} />
+                    ) : activeTab === "Videos" ? (
+                        <ProfileVideosGrid userId={user.id} username={user.username} isOwner={isOwner} />
+                    ) : activeTab === "Coins" ? (
+                        <ProfileCoinsTable userId={user.id} isOwner={isOwner} />
+                    ) : activeTab === "Trades" ? (
+                        <ProfileTradesFeed userId={user.id} name={user.name} />
+                    ) : activeTab === "Predictions" ? (
+                        <PredictionsView creatorId={user.id} />
+                    ) : null}
                 </motion.div>
             </AnimatePresence>
         </div>

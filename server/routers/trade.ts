@@ -105,6 +105,39 @@ export const TRADE_CHAINS = ["solana", "ethereum", "base", "polygon", "bnb", "hy
 
 export const tradeRouter = router({
     /**
+     * Every coin a creator has — the profile's Coins tab (a table, owner
+     * 2026-10-04). Live first, then drafts, newest first within each; a draft
+     * is a real row here because its page is where the first buy happens.
+     */
+    listByCreator: publicProcedure
+        .input(z.object({ creatorId: z.string(), limit: z.number().min(1).max(200).default(100) }))
+        .query(({ input }) =>
+            withCache(`tokens:by-creator:v1:${input.creatorId}:${input.limit}`, 60, async () =>
+                db
+                    .select({
+                        id: tokens.id,
+                        tokenAddress: tokens.tokenAddress,
+                        ticker: tokens.ticker,
+                        name: tokens.name,
+                        imageUrl: tokens.imageUrl,
+                        status: tokens.status,
+                        phase: tokens.phase,
+                        isCreatorCoin: tokens.isCreatorCoin,
+                        priceUsd: tokens.priceUsd,
+                        marketCapUsd: tokens.marketCapUsd,
+                        volume24hUsd: tokens.volume24hUsd,
+                        priceChange24h: tokens.priceChange24h,
+                        holderCount: tokens.holderCount,
+                        createdAt: tokens.createdAt,
+                    })
+                    .from(tokens)
+                    .where(eq(tokens.creatorId, input.creatorId))
+                    .orderBy(sql`case when ${tokens.status} = 'live' then 0 else 1 end`, desc(tokens.createdAt))
+                    .limit(input.limit),
+            ),
+        ),
+
+    /**
      * The creator's most recent live token — the pin above live chat
      * (design brief §2). Cached 60s; null when the creator has no live token.
      */
