@@ -74,10 +74,11 @@ export function RailShell({
                 // the skeleton rows painted inside a borderless box while the
                 // news card below — whose border is plain CSS — was outlined
                 // from the first frame. Same hairline recipe as that card
-                // (rounded-[25px] border-soft-gray/[0.12]), so the two boxes
+                // (rounded-[25px] border-xborder — the search bar's hairline,
+                // owner 2026-10-04), so the two boxes
                 // match in the loading state AND after it. The squircle still
                 // clips the content; only the hairline moved to CSS.
-                bordered && "rounded-[25px] border border-soft-gray/[0.12]",
+                bordered && "rounded-[25px] border border-xborder",
                 className,
             )}
         >

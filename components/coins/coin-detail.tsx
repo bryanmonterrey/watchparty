@@ -283,7 +283,7 @@ const compactAmount = (n: number) =>
  * canvas, and a second surface colour behind an outlined card reads as two
  * boxes stacked. The outline alone is the card.
  */
-const SWAP_CARD = "rounded-[25px] border border-soft-gray/12 bg-transparent";
+const SWAP_CARD = "rounded-[25px] border border-xborder bg-transparent";
 
 type TraderRow = {
     account: string;
