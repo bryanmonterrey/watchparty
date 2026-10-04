@@ -317,7 +317,7 @@ export function CommentComposer({
                     autoFocus={autoFocus}
                     rows={1}
                     placeholder={placeholder}
-                    className="w-full resize-none bg-transparent text-[14px] text-zinc-200 outline-none placeholder:text-zinc-500"
+                    className="w-full resize-none bg-transparent text-16 text-zinc-200 outline-none placeholder:text-zinc-500"
                 />
                 {cashtag && (
                     <CashtagAutocomplete
