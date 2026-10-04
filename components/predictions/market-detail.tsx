@@ -1,6 +1,7 @@
 "use client";
 
 import { useLoginRedirect } from "@/hooks/use-login-redirect";
+import { confirmSignature } from "@/lib/solana/confirm";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { isPast } from "date-fns";
@@ -104,7 +105,7 @@ export function MarketDetail({ marketId }: { marketId: string }) {
                 txSignature = (await signAndSubmit({ transaction: serialized })).signature;
             } else {
                 txSignature = await sendTransaction(tx, connection);
-                await connection.confirmTransaction(txSignature, "confirmed");
+                await confirmSignature(connection, txSignature, "confirmed");
             }
 
             await placeBet.mutateAsync({

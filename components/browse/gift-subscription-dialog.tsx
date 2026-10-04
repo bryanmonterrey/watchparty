@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { confirmSignature } from "@/lib/solana/confirm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
@@ -109,7 +110,7 @@ export function GiftSubscriptionDialog({ creatorId, creatorName, initialQuantity
                 txSignature = (await signAndSubmit({ transaction: serialized })).signature;
             } else {
                 txSignature = await sendTransaction(tx, connection);
-                await connection.confirmTransaction(txSignature, "confirmed");
+                await confirmSignature(connection, txSignature, "confirmed");
             }
 
             const result = await gift.mutateAsync({

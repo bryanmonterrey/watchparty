@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { confirmSignature } from "@/lib/solana/confirm";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import {
     PublicKey,
@@ -194,7 +195,7 @@ export function SendView({
                 transaction.recentBlockhash = blockhash;
                 transaction.feePayer = publicKey;
                 signature = await sendTransaction(transaction, connection);
-                await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
+                await confirmSignature(connection, { signature, blockhash, lastValidBlockHeight }, "confirmed");
             } else if (custodialWalletAddress) {
                 // Don't bake a blockhash here — the server refreshes it right before signing
                 // to avoid expiry during Swig/FROST session creation.
@@ -207,7 +208,7 @@ export function SendView({
                 signature = result.signature;
                 // Confirm using a fresh blockhash — the old one is stale by now.
                 const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-                await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
+                await confirmSignature(connection, { signature, blockhash, lastValidBlockHeight }, "confirmed");
             } else {
                 throw new Error("No wallet connected");
             }

@@ -48,6 +48,7 @@ import { HoldButton } from "@/components/ui/hold-button";
 import { cn } from "@/lib/utils";
 import { compactUsd } from "./trending-format";
 import { PayWithSelect, PAY_WITH_CARD, payAssetKey, unitUsd, fmtUsd, type PayAsset } from "./pay-with-select";
+import { BigAmountInput } from "./amount-input";
 import { WalletPane } from "./wallet-pane";
 import {
     formatTokens,
@@ -764,22 +765,25 @@ export function BuyPanel({
                         />
                     </div>
 
-                    {/* DOLLARS lead when we can price the token, with the token
-                        amount as the conversion beneath — the same order the
-                        presets are in, so the number you picked is the number
-                        you see. Falls back to token-first for anything we
-                        can't price. */}
+                    {/* DOLLARS lead when we can price the token, the token amount
+                        as the conversion beneath. Typeable on a buy; a sell is a
+                        share of the position, so it stays presets-only. */}
                     <div className="flex flex-col items-center gap-0.5">
-                        <div className="text-4xl leading-none font-bold tracking-tight tabular-nums text-white">
-                            {pricedInUsd && spendUsd ? (
-                                spendUsd
-                            ) : (
-                                <>
-                                    {formatTokens(amount)}
-                                    <span className="ml-1.5 text-xl font-bold text-zinc-500">{spendSymbol}</span>
-                                </>
-                            )}
-                        </div>
+                        {selling ? (
+                            <div className="text-4xl leading-none font-bold tracking-tight tabular-nums text-white">
+                                {pricedInUsd && spendUsd ? spendUsd : <>{formatTokens(amount)}<span className="ml-1.5 text-xl font-bold text-zinc-500">{spendSymbol}</span></>}
+                            </div>
+                        ) : (
+                            <BigAmountInput
+                                value={pricedInUsd ? usdAmount : tokenAmount}
+                                onChange={setAmount}
+                                prefix={pricedInUsd ? "$" : undefined}
+                                suffix={pricedInUsd ? undefined : spendSymbol}
+                                format={(n) => (pricedInUsd ? (Number.isInteger(n) ? String(n) : n.toFixed(2)) : formatTokens(n))}
+                                disabled={buying}
+                                ariaLabel={pricedInUsd ? "amount in dollars" : `amount in ${spendSymbol}`}
+                            />
+                        )}
                         <span className="text-13 font-medium text-zinc-500">
                             {receiveEstimate !== null
                                 ? `≈ ${formatTokens(receiveEstimate)} ${receiveSymbol}`
@@ -795,19 +799,14 @@ export function BuyPanel({
                         {presets.map((p) => {
                             const isSelected = p === selectedPreset;
                             return (
-                                // autoEffects={false}: with it on, Squircle injects a
-                                // wrapper div that becomes the GRID CHILD, leaving the
-                                // button inside with no width at all. These have no
-                                // border for the effects to preserve, so there is
-                                // nothing to trade away.
+                                // autoEffects={false}: the wrapper div it injects would
+                                // become the GRID CHILD and the button would have no width.
                                 <Squircle asChild autoEffects={false} radius={14} key={p}>
                                 <button
                                     type="button"
-                                    // Compared in whatever unit the preset is in —
-                                    // dollars against the holding's value, tokens
-                                    // against its balance. Mixing the two was how
-                                    // "$100" got disabled for a wallet holding 2 SOL.
-                                    // A share of a position is always affordable.
+                                    // Compared in the preset's own unit (dollars vs. the
+                                    // holding's value, tokens vs. its balance); mixing them
+                                    // once disabled "$100" for a wallet holding 2 SOL.
                                     disabled={
                                         buying ||
                                         (!selling &&

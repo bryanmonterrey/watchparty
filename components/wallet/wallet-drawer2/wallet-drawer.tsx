@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { confirmSignature } from "@/lib/solana/confirm";
 import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "motion/react";
@@ -648,7 +649,7 @@ export function WalletDrawer({
                                         signature = result.signature;
                                     }
 
-                                    await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
+                                    await confirmSignature(connection, { signature, blockhash, lastValidBlockHeight }, "confirmed");
                                     sendToast.success(signature);
                                 } catch (e) {
                                     console.error("NFT send error:", e);

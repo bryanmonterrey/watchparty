@@ -1,6 +1,7 @@
 "use client";
 
 import { useLoginRedirect } from "@/hooks/use-login-redirect";
+import { confirmSignature } from "@/lib/solana/confirm";
 import { useState } from "react";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
@@ -67,7 +68,7 @@ export function ShopView() {
                 txSignature = (await signAndSubmit({ transaction: serialized })).signature;
             } else {
                 txSignature = await sendTransaction(tx, connection);
-                await connection.confirmTransaction(txSignature, "confirmed");
+                await confirmSignature(connection, txSignature, "confirmed");
             }
 
             const { granted } = await purchase.mutateAsync({ txSignature, boosts: pack.boosts });

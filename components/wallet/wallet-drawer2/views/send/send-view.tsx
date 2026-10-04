@@ -1,6 +1,7 @@
 "use client";
 
 import { DrawerHeader } from "../../components/drawer-chrome";
+import { confirmSignature } from "@/lib/solana/confirm";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, Wallet01Icon } from "@hugeicons/core-free-icons";
 import * as React from "react";
@@ -371,7 +372,7 @@ export function SendView({
                     transaction.recentBlockhash = blockhash;
                     transaction.feePayer = publicKey!;
                     signature = await sendTransaction(transaction, connection);
-                    await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
+                    await confirmSignature(connection, { signature, blockhash, lastValidBlockHeight }, "confirmed");
                 } else if (custodialWalletAddress) {
                     // Don't bake a blockhash here — the server refreshes it right before signing
                     // to avoid expiry during Swig/FROST session creation.
@@ -384,7 +385,7 @@ export function SendView({
                     signature = result.signature;
                     // Confirm using a fresh blockhash — the old one is stale by now.
                     const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-                    await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
+                    await confirmSignature(connection, { signature, blockhash, lastValidBlockHeight }, "confirmed");
                 } else {
                     throw new Error("No wallet connected");
                 }

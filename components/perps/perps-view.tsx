@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { confirmSignature } from "@/lib/solana/confirm";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import { toast } from "sonner";
@@ -231,15 +232,14 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
         }
         if (!wallet.sendTransaction) throw new Error("Connect a wallet first");
         const sig = await wallet.sendTransaction(tx, connection);
-        await connection.confirmTransaction(sig, "confirmed");
+        await confirmSignature(connection, sig, "confirmed");
         return sig;
     }, [isSwig, signAndSubmit, wallet, connection]);
 
     /**
-     * Base-layer tx that a local keypair must co-sign (the Flash session
-     * grant / withdraw escrow). Extension wallets pass it as a signer; Swig
-     * wallets take the Tier-1 relay path with the extra signature added to
-     * the wrapped tx before relaying.
+     * Base-layer tx a local keypair must co-sign (Flash session grant / withdraw
+     * escrow). Extension wallets pass it as a signer; Swig wallets take the
+     * Tier-1 relay path with the extra signature added before relaying.
      */
     const submitCosigned = useCallback(async (tx: Transaction, cosigner: Keypair): Promise<string> => {
         if (isSwig) {
@@ -260,7 +260,7 @@ export function PerpsView({ geoBlocked = false }: { geoBlocked?: boolean }) {
         }
         if (!wallet.sendTransaction) throw new Error("Connect a wallet first");
         const sig = await wallet.sendTransaction(tx, connection, { signers: [cosigner] });
-        await connection.confirmTransaction(sig, "confirmed");
+        await confirmSignature(connection, sig, "confirmed");
         return sig;
     }, [isSwig, swigSession, relaySwig, wallet, connection]);
 
@@ -924,7 +924,7 @@ function OrderPanel({
                     } else {
                         swapSig = (await signAndSubmit({ transaction: swapTransaction })).signature;
                     }
-                    await connection.confirmTransaction(swapSig, "confirmed");
+                    await confirmSignature(connection, swapSig, "confirmed");
                 }
                 toast(`Depositing $${fmtUsd(amount)} USDC…`);
                 await ensureReady();

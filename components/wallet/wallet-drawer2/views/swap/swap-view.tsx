@@ -1,6 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
+import { confirmSignature } from "@/lib/solana/confirm";
 import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
 import { DrawerHeader } from "../../components/drawer-chrome";
 import * as React from "react";
@@ -225,7 +226,7 @@ export function SwapView({
             if (tradeId) reportSwapSignature.mutate({ tradeId, signature });
 
             swapToast.setStep("confirming");
-            await connection.confirmTransaction(signature, "confirmed");
+            await confirmSignature(connection, signature, "confirmed");
 
             swapToast.success(signature);
             setInputAmount("");

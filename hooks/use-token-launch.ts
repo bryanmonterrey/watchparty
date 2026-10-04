@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import { confirmSignature } from '@/lib/solana/confirm';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey, Keypair, Transaction, SystemProgram, TransactionInstruction } from '@solana/web3.js';
 import { toPublicKey } from '@/lib/solana/pubkey';
@@ -444,7 +445,7 @@ export function useTokenLaunch() {
                 setupTx.partialSign(configKeypair);
                 const base64Tx1 = setupTx.serialize({ requireAllSignatures: false, verifySignatures: false }).toString("base64");
                 const result1 = await signAndSendCustodialTx({ transaction: base64Tx1 });
-                const confirm1 = await connection.confirmTransaction({ signature: result1.signature, blockhash: bh1, lastValidBlockHeight: lbh1 }, "confirmed");
+                const confirm1 = await confirmSignature(connection, { signature: result1.signature, blockhash: bh1, lastValidBlockHeight: lbh1 }, "confirmed");
                 if (confirm1.value.err) throw new Error(`Config tx failed: ${JSON.stringify(confirm1.value.err)}`);
                 console.log("[launchToken] config tx confirmed:", result1.signature);
 
@@ -456,7 +457,7 @@ export function useTokenLaunch() {
                 launchTx.partialSign(baseMintKeypair);
                 const base64Tx2 = launchTx.serialize({ requireAllSignatures: false, verifySignatures: false }).toString("base64");
                 const result2 = await signAndSendCustodialTx({ transaction: base64Tx2 });
-                const confirm2 = await connection.confirmTransaction({ signature: result2.signature, blockhash: bh2, lastValidBlockHeight: lbh2 }, "confirmed");
+                const confirm2 = await confirmSignature(connection, { signature: result2.signature, blockhash: bh2, lastValidBlockHeight: lbh2 }, "confirmed");
                 if (confirm2.value.err) throw new Error(`Pool tx failed: ${JSON.stringify(confirm2.value.err)}`);
 
                 finalSignature = result2.signature;
@@ -477,12 +478,12 @@ export function useTokenLaunch() {
 
                     toast.loading("Confirming Coin Setup (1/2)...", { id: "tx-status" });
                     const sig1 = await connection.sendRawTransaction(signedTxs[0].serialize());
-                    const conf1 = await connection.confirmTransaction({ signature: sig1, blockhash, lastValidBlockHeight }, "confirmed");
+                    const conf1 = await confirmSignature(connection, { signature: sig1, blockhash, lastValidBlockHeight }, "confirmed");
                     if (conf1.value.err) throw new Error(`Config tx failed: ${JSON.stringify(conf1.value.err)}`);
 
                     toast.loading("Deploying Coin Pool (2/2)...", { id: "tx-status" });
                     const sig2 = await connection.sendRawTransaction(signedTxs[1].serialize());
-                    const conf2 = await connection.confirmTransaction({ signature: sig2, blockhash, lastValidBlockHeight }, "confirmed");
+                    const conf2 = await confirmSignature(connection, { signature: sig2, blockhash, lastValidBlockHeight }, "confirmed");
                     if (conf2.value.err) throw new Error(`Pool tx failed: ${JSON.stringify(conf2.value.err)}`);
 
                     finalSignature = sig2;
@@ -492,12 +493,12 @@ export function useTokenLaunch() {
                     toast.loading("Sign Setup Transaction (1/2)...", { id: "tx-status" });
                     const sig1 = await sendTransaction(setupTx, connection, { signers: [configKeypair] });
                     toast.loading("Confirming Setup...", { id: "tx-status" });
-                    await connection.confirmTransaction({ signature: sig1, blockhash, lastValidBlockHeight }, "confirmed");
+                    await confirmSignature(connection, { signature: sig1, blockhash, lastValidBlockHeight }, "confirmed");
 
                     toast.loading("Sign Launch Transaction (2/2)...", { id: "tx-status" });
                     const sig2 = await sendTransaction(launchTx, connection, { signers: [baseMintKeypair] });
                     toast.loading("Confirming Launch...", { id: "tx-status" });
-                    await connection.confirmTransaction({ signature: sig2, blockhash, lastValidBlockHeight }, "confirmed");
+                    await confirmSignature(connection, { signature: sig2, blockhash, lastValidBlockHeight }, "confirmed");
                     finalSignature = sig2;
                     toast.dismiss("tx-status");
                 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { confirmSignature } from "@/lib/solana/confirm";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { trpc } from "@/lib/trpc/client";
 import { useAuthSession } from "@/hooks/use-auth-session";
@@ -163,7 +164,7 @@ export function useQuickBuy() {
             if (tradeId) reportSwapSignature.mutate({ tradeId, signature });
 
             swapToast.setStep("confirming");
-            await connection.confirmTransaction(signature, "confirmed");
+            await confirmSignature(connection, signature, "confirmed");
             swapToast.success(signature);
 
             // Event-driven freshness: pull this token's market data right now

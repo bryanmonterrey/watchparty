@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useCallback, useMemo } from "react"
+import { confirmSignature } from "@/lib/solana/confirm"
 import { motion } from "framer-motion"
 import { useConnection, useWallet } from "@solana/wallet-adapter-react"
 import { toast } from "sonner"
@@ -264,7 +265,7 @@ export function TokenSwapCard({ token, creatorWallet = null, creatorAvatar = nul
             if (tradeId) reportSwapSignature.mutate({ tradeId, signature })
 
             swapToast.setStep("confirming")
-            await connection.confirmTransaction(signature, "confirmed")
+            await confirmSignature(connection, signature, "confirmed")
             swapToast.success(signature)
             setInput("")
             setQuote(null)

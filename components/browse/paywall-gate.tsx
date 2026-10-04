@@ -1,6 +1,7 @@
 "use client";
 
 import { useLoginRedirect } from "@/hooks/use-login-redirect";
+import { confirmSignature } from "@/lib/solana/confirm";
 import { useState } from "react";
 import { Lock, Unlock, Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
@@ -55,7 +56,7 @@ export function PaywallGate({ postId, paywallPrice, authorWalletAddress, onUnloc
                 txSignature = result.signature;
             } else {
                 txSignature = await sendTransaction(tx, connection);
-                await connection.confirmTransaction(txSignature, "confirmed");
+                await confirmSignature(connection, txSignature, "confirmed");
             }
 
             await unlockPost.mutateAsync({ postId, txSignature });

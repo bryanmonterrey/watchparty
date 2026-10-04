@@ -3,6 +3,7 @@
 // (see components/wallet/wallet-drawer/views/send/send-view.tsx) without
 // adopting kit signers / ConnectorKit on the client.
 import { isSignerRole, isWritableRole, type Instruction } from "@solana/kit";
+import { confirmSignature } from "@/lib/solana/confirm";
 import {
     ComputeBudgetProgram,
     type Connection,
@@ -52,7 +53,7 @@ export async function sendKitInstructions(
     tx.recentBlockhash = blockhash;
     tx.feePayer = ctx.feePayer;
     const signature = await ctx.sendTransaction(tx, ctx.connection);
-    await ctx.connection.confirmTransaction(
+    await confirmSignature(ctx.connection, 
         { signature, blockhash, lastValidBlockHeight },
         "confirmed",
     );

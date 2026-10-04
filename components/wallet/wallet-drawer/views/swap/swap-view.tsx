@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { confirmSignature } from "@/lib/solana/confirm";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { VersionedTransaction } from "@solana/web3.js";
 import { toPublicKey } from "@/lib/solana/pubkey";
@@ -200,7 +201,7 @@ export function SwapView({ walletAddress, onBack, walletTokens = [], initialInpu
             if (tradeId) reportSwapSignature.mutate({ tradeId, signature });
 
             swapToast.setStep("confirming");
-            await connection.confirmTransaction(signature, "confirmed");
+            await confirmSignature(connection, signature, "confirmed");
 
             swapToast.success(signature);
             setInputAmount("");

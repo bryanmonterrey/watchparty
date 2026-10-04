@@ -1,6 +1,7 @@
 'use client'
 
 import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from '@solana/spl-token'
+import { confirmSignature } from '@/lib/solana/confirm'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import {
   Connection,
@@ -72,7 +73,7 @@ export function useTransferSol({ address }: { address: PublicKey }) {
         signature = await wallet.sendTransaction(transaction, connection)
 
         // Send transaction and await for signature
-        await connection.confirmTransaction({ signature, ...latestBlockhash }, 'confirmed')
+        await confirmSignature(connection, { signature, ...latestBlockhash }, 'confirmed')
 
         console.log(signature)
         return signature
@@ -117,7 +118,7 @@ export function useRequestAirdrop({ address }: { address: PublicKey }) {
         connection.requestAirdrop(address, amount * LAMPORTS_PER_SOL),
       ])
 
-      await connection.confirmTransaction({ signature, ...latestBlockhash }, 'confirmed')
+      await confirmSignature(connection, { signature, ...latestBlockhash }, 'confirmed')
       return signature
     },
     onSuccess: async (signature) => {

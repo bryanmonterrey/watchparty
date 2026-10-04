@@ -1,6 +1,7 @@
 "use client";
 
 import { useLoginRedirect } from "@/hooks/use-login-redirect";
+import { confirmSignature } from "@/lib/solana/confirm";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
@@ -76,7 +77,7 @@ export function TipModal({ open, onOpenChange, recipient }: TipModalProps) {
                 txSignature = result.signature;
             } else {
                 txSignature = await sendTransaction(tx, connection);
-                await connection.confirmTransaction(txSignature, "confirmed");
+                await confirmSignature(connection, txSignature, "confirmed");
             }
 
             toast.success(`Tipped ${finalSol} SOL to ${recipient.name || recipient.username}!`);
