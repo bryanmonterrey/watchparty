@@ -123,6 +123,14 @@ const config = {
     updateAge: 60 * 60 * 24, // refresh daily
     cookieCache: { enabled: true, maxAge: 30 * 60 }, // 30min
     storeSessionInDatabase: true,
+    // "Fresh" = signed in within this window; better-auth gates sensitive
+    // endpoints on it (passkey registration, account deletion). The default
+    // is one day, and with a 7-day session that meant adding a passkey from
+    // settings 403'd (SESSION_NOT_FRESH) for anyone signed in more than a day
+    // ago — while the UI said success (owner, 2026-10-04). Matching the
+    // session lifetime makes a live session always fresh; re-auth prompts
+    // for sensitive actions are a product decision not yet made.
+    freshAge: 60 * 60 * 24 * 7,
   },
   rateLimit: {
     enabled: process.env.NODE_ENV === "production",

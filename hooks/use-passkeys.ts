@@ -18,7 +18,19 @@ export function useAddPasskey() {
             const passkeyName = name?.trim() || `Passkey ${passkeys.length + 1}`;
 
             try {
-                await authClient.passkey.addPasskey({ name: passkeyName });
+                // better-auth's client returns { data, error } rather than
+                // throwing, so a refused registration (403 SESSION_NOT_FRESH,
+                // 2026-10-04) sailed into the success toast while nothing was
+                // added. Treat a returned error as a thrown one.
+                const result = await authClient.passkey.addPasskey({ name: passkeyName });
+                if (result && "error" in result && result.error) {
+                    const code = (result.error as { code?: string; message?: string }).code;
+                    throw new Error(
+                        code === "SESSION_NOT_FRESH"
+                            ? "Please sign in again before adding a passkey."
+                            : (result.error as { message?: string }).message || "Failed to add passkey",
+                    );
+                }
                 utils.passkey.list.invalidate();
                 toast.success("Passkey added successfully!");
                 options?.onSuccess?.();
