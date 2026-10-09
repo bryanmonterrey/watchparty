@@ -30,6 +30,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Overlay private assets
+        # Licensed packs + runbooks live in the private watchparty-assets repo
+        # (scripts/ci/overlay-private-assets.sh); the public tree builds
+        # without them, just imageless.
+        env:
+          ASSETS_DEPLOY_KEY: ${{ secrets.ASSETS_DEPLOY_KEY }}
+        run: bash scripts/ci/overlay-private-assets.sh
 
       # Same rationale as deploy.yml — see the comment there.
       - name: Restore Turbopack build cache

@@ -200,5 +200,6 @@
   },
   "overrides": {
     "better-call": "1.4.0"
-  }
+  },
+  "license": "AGPL-3.0-only"
 }

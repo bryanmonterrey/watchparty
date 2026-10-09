@@ -30,3 +30,19 @@ The app is split into route groups so each section only loads what it needs:
 Heavy dependencies (Solana/EVM wallet SDKs, streaming, captions, media pickers) are lazy-loaded behind the interaction that needs them, so pages like login and landing stay fast.
 
 See [`CLAUDE.md`](./CLAUDE.md) for the full architecture and conventions.
+
+## Licence
+
+The code is licensed under the **GNU Affero General Public License v3.0** (see `LICENSE`).
+You may run, study, modify and redistribute it; if you run a modified version as a
+network service, you must make your modifications available under the same licence.
+
+The watchparty name, logo and original artwork (badges, brand icons) are © watchparty and
+are **not** covered by the AGPL — forks may not use them to present a service as watchparty.
+
+Some assets the production app ships are not in this repository because their licences
+forbid redistribution (purchased icon and badge packs, emoji.gg emote packs). They are laid
+over the tree at build time from a private repository (`scripts/ci/overlay-private-assets.sh`);
+a build without them works, minus that art. Third-party code keeps its own licence: the
+Phoenix ranker is Apache-2.0 (xAI), the vendored prompt-kit components MIT, the voxel
+emotes under the terms in `public/emotes/pack/NOTICE.md`.

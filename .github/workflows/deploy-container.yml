@@ -23,6 +23,13 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+      - name: Overlay private assets
+        # Licensed packs + runbooks live in the private watchparty-assets repo
+        # (scripts/ci/overlay-private-assets.sh); the public tree builds
+        # without them, just imageless.
+        env:
+          ASSETS_DEPLOY_KEY: ${{ secrets.ASSETS_DEPLOY_KEY }}
+        run: bash scripts/ci/overlay-private-assets.sh
 
       - uses: oven-sh/setup-bun@v2
         with:
