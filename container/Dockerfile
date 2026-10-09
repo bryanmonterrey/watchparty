@@ -9,11 +9,13 @@
 # linux/amd64 is required by Cloudflare Containers.
 
 # ── deps ────────────────────────────────────────────────────────────────────
-# Base images from registries without Docker Hub's anonymous-pull limit:
+# Base image from a registry without Docker Hub's anonymous-pull limit:
 # GitHub's shared runners hit 429 on docker.io on 2026-10-09 (two runs in a
-# row). ghcr.io/oven-sh/bun is Bun's own publish; public.ecr.aws mirrors the
-# official Node image.
-FROM --platform=linux/amd64 ghcr.io/oven-sh/bun:1 AS deps
+# row). public.ecr.aws mirrors the official Node image; Bun's own image is
+# only on Docker Hub (its ghcr.io copy refuses anonymous pulls), so Bun is
+# installed with npm instead — pinned to the repo's packageManager version.
+FROM --platform=linux/amd64 public.ecr.aws/docker/library/node:22-slim AS deps
+RUN npm install -g bun@1.3.14
 WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
