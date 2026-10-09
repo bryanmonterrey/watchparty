@@ -9,13 +9,17 @@
 # linux/amd64 is required by Cloudflare Containers.
 
 # ── deps ────────────────────────────────────────────────────────────────────
-FROM --platform=linux/amd64 oven/bun:1 AS deps
+# Base images from registries without Docker Hub's anonymous-pull limit:
+# GitHub's shared runners hit 429 on docker.io on 2026-10-09 (two runs in a
+# row). ghcr.io/oven-sh/bun is Bun's own publish; public.ecr.aws mirrors the
+# official Node image.
+FROM --platform=linux/amd64 ghcr.io/oven-sh/bun:1 AS deps
 WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 
 # ── build ───────────────────────────────────────────────────────────────────
-FROM --platform=linux/amd64 node:22-slim AS build
+FROM --platform=linux/amd64 public.ecr.aws/docker/library/node:22-slim AS build
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 # Turns on `output: "standalone"` in next.config.ts. Without it Next builds for
@@ -37,7 +41,7 @@ COPY . .
 RUN NODE_OPTIONS=--max-old-space-size=6144 npx next build
 
 # ── runtime ─────────────────────────────────────────────────────────────────
-FROM --platform=linux/amd64 node:22-slim AS runtime
+FROM --platform=linux/amd64 public.ecr.aws/docker/library/node:22-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
