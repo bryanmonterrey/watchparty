@@ -303,21 +303,48 @@ export function BrowseFeed({ showTabs = true, showComposer = true, headerOffset 
         // already owns — re-injecting them here is what replaced the feed.
         setListItems((prev) => {
             if (prev.length === 0) return full.slice(0, VIEW_COUNT);
-            const topIdx = full.findIndex((i) => keyOf(i) === keyOf(prev[0]));
-            if (topIdx <= 0) return prev; // window top is already the newest
+
+            // REFRESH WHAT IS ALREADY ON SCREEN, in place. The window is seeded
+            // from the localStorage snapshot on first paint, and this branch
+            // used to keep those exact objects forever — only ever folding
+            // NEWER posts in above them. So isLiked / like counts stayed at the
+            // snapshot's values after the real fetch landed, and after a like
+            // the card's optimistic flag cleared on success and the stale
+            // `initialLiked: false` won: the heart emptied itself (owner,
+            // 2026-10-09). Same key → fresh object; order and window untouched,
+            // so nothing shifts under the reader.
+            // assembleFeed builds new objects every time, so identity can't say
+            // "changed" — compare the fields a card actually renders from.
+            const byKey = new Map(full.map((i) => [keyOf(i), i]));
+            const sig = (i: FeedItem) => {
+                const d = i.data as Record<string, unknown>;
+                return `${d.isLiked}|${d.likes}|${d.isReposted}|${d.reposts}|${d.isBookmarked}|${d.comments}|${d.views}|${d.content}`;
+            };
+            let changed = false;
+            const refreshed = prev.map((i) => {
+                const fresh = byKey.get(keyOf(i));
+                if (!fresh || sig(fresh) === sig(i)) return i;
+                changed = true;
+                return fresh;
+            });
+            const base = changed ? refreshed : prev;
+            if (changed) tabItemsCache.current.set(activeTab, base);
+
+            const topIdx = full.findIndex((i) => keyOf(i) === keyOf(base[0]));
+            if (topIdx <= 0) return base; // window top is already the newest
             // Don't inject newer posts into the visible list while the user is
             // scrolled down — that shifts content under them (the bug). They stay
             // in `full` (reachable by scrolling up) and are surfaced by the
             // "new posts" pill. Only auto-fold when the user is already at the top.
-            if (!composerVisibleRef.current) return prev;
+            if (!composerVisibleRef.current) return base;
             // Even at the top, never fold in items sorted ABOVE the established top
             // (e.g. a repost dragged up by a later page's newer createdAt) — those
             // belong behind the pill. Only restore seen items between the pinned top
             // and the window top.
             const estIdx = establishedTopIdx(full);
-            if (estIdx >= topIdx) return prev;
+            if (estIdx >= topIdx) return base;
             const newer = full.slice(estIdx, topIdx);
-            const merged = dedupNewestFirst([...newer, ...prev]);
+            const merged = dedupNewestFirst([...newer, ...base]);
             tabItemsCache.current.set(activeTab, merged);
             return merged;
         });
