@@ -159,7 +159,13 @@ export function PostCard({
     const repostCount = Math.max(0, (reposts ?? 0) + (optReposted === null ? 0 : (optReposted ? 1 : 0) - (serverReposted ? 1 : 0)));
 
     // ── Cache patchers ───────────────────────────────────────────────────────
-    const patchFeedLike = (liked: boolean) => {
+    // The flag (isLiked / isReposted / isBookmarked) is patched alongside the
+    // count, not just the count. The feed row in the getFeed cache is what the
+    // localStorage snapshot mirrors, so a row left at isLiked:false after a
+    // like painted an EMPTY heart on the next visit until the refetch landed
+    // (owner, 2026-10-09). On screen it looked right only because the per-card
+    // getLikedPostIds entry below is written on success.
+    const patchFeedRow = (patch: (p: any) => Record<string, unknown>) => {
         (["for-you", "following", "news"] as const).forEach(type => {
             utils.content.getFeed.setInfiniteData({ type, limit: 20 }, (old) => {
                 if (!old) return old;
@@ -168,9 +174,7 @@ export function PostCard({
                     pages: old.pages.map(page => ({
                         ...page,
                         posts: page.posts.map((p: any) =>
-                            (p.repostOfId || p.id) === targetId
-                                ? { ...p, likes: Math.max(0, (p.likes || 0) + (liked ? 1 : -1)) }
-                                : p
+                            (p.repostOfId || p.id) === targetId ? { ...p, ...patch(p) } : p
                         ),
                     })),
                 };
@@ -178,24 +182,11 @@ export function PostCard({
         });
     };
 
-    const patchFeedRepost = (reposted: boolean) => {
-        (["for-you", "following", "news"] as const).forEach(type => {
-            utils.content.getFeed.setInfiniteData({ type, limit: 20 }, (old) => {
-                if (!old) return old;
-                return {
-                    ...old,
-                    pages: old.pages.map(page => ({
-                        ...page,
-                        posts: page.posts.map((p: any) =>
-                            (p.repostOfId || p.id) === targetId
-                                ? { ...p, reposts: Math.max(0, (p.reposts || 0) + (reposted ? 1 : -1)) }
-                                : p
-                        ),
-                    })),
-                };
-            });
-        });
-    };
+    const patchFeedLike = (liked: boolean) =>
+        patchFeedRow((p) => ({ isLiked: liked, likes: Math.max(0, (p.likes || 0) + (liked ? 1 : -1)) }));
+
+    const patchFeedRepost = (reposted: boolean) =>
+        patchFeedRow((p) => ({ isReposted: reposted, reposts: Math.max(0, (p.reposts || 0) + (reposted ? 1 : -1)) }));
 
     // ── Mutations ────────────────────────────────────────────────────────────
     const toggleLike = trpc.content.toggleLike.useMutation({
@@ -235,6 +226,7 @@ export function PostCard({
     const toggleBookmark = trpc.content.toggleBookmark.useMutation({
         onMutate: () => setOptBookmarked(prev => !(prev ?? serverBookmarked)),
         onSuccess: async (data) => {
+            patchFeedRow(() => ({ isBookmarked: data.bookmarked }));
             utils.content.getBookmarkedPostIds.setData(
                 { postIds: [targetId], contentType: "post" },
                 { bookmarkedIds: data.bookmarked ? [targetId] : [] }
