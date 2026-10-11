@@ -21,7 +21,7 @@ import { PostCardSkeleton } from "./post-card-skeleton";
 export function FeedSurfaceLoading() {
     return (
         <div className="flex flex-col bg-canvas">
-            <div className="flex w-full items-center border-b border-soft-gray/[0.12] bg-canvas">
+            <div className="flex w-full items-center border-b border-xborder bg-canvas">
                 {/* FeedTab's geometry: the invisible leading spacer mirrors the
                     chevron so the label centres exactly where the real tab
                     puts it — without it the text jumps ~12px on hydration. */}
@@ -46,7 +46,7 @@ export function FeedSurfaceLoading() {
             {/* The collapsed composer's frame (post-composer.tsx): p-4, the
                 10-avatar, and its real placeholder line — the mounted composer
                 shows exactly this, so nothing shifts when it hydrates in. */}
-            <div className="flex gap-4 border-b border-soft-gray/[0.12] bg-canvas p-4">
+            <div className="flex gap-4 border-b border-xborder bg-canvas p-4">
                 <div className="size-10 shrink-0 rounded-full shimmer-skeleton" />
                 <div className="flex flex-1 items-center">
                     <span className="text-xl text-zinc-400/85">What&apos;s happening?</span>

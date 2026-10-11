@@ -75,7 +75,7 @@ export function BookmarksFeed() {
                     <LoadMore
                         onLoad={() => fetchNextPage()}
                         hasMore={!!hasNextPage}
-                        className="py-8 border-t border-flexwhite/15"
+                        className="py-8 border-t border-xborder"
                         labels={{ end: "No more bookmarks" }}
                     />
                 </PollProvider>

@@ -691,7 +691,7 @@ export function BrowseFeed({ showTabs = true, showComposer = true, headerOffset 
                 them. */}
             {showTabs && (
                 <div className={cn(
-                    "sticky z-100 flex w-full items-center border-b border-soft-gray/[0.12] bg-canvas",
+                    "sticky z-100 flex w-full items-center border-b border-xborder bg-canvas",
                     homeTabsOffset
                         ? "top-12 md:top-[calc(var(--header-height)+3rem)]"
                         : headerOffset
@@ -757,7 +757,7 @@ export function BrowseFeed({ showTabs = true, showComposer = true, headerOffset 
             {newPostsCount > 0 && (
                 <button
                     onClick={loadNewPosts}
-                    className="flex items-center justify-center gap-2 w-full py-3.5 border-b border-flexwhite/15 text-twitter2 hover:bg-twitter2/5 transition-colors text-md cursor-pointer font-semibold"
+                    className="flex items-center justify-center gap-2 w-full py-3.5 border-b border-xborder text-twitter2 hover:bg-twitter2/5 transition-colors text-md cursor-pointer font-semibold"
                 >
                     Show {newPostsCount} post{newPostsCount !== 1 ? "s" : ""}
                 </button>

@@ -4,7 +4,7 @@
 // fallbacks) import it exactly as before.
 export function PostCardSkeleton({ withMedia = false }: { withMedia?: boolean }) {
     return (
-        <div className="flex flex-row items-start gap-3 border-b border-flexwhite/15 bg-canvas px-4 py-3">
+        <div className="flex flex-row items-start gap-3 border-b border-xborder bg-canvas px-4 py-3">
             {/* Avatar */}
             <div className="w-10 h-10 rounded-full shrink-0 mt-0.5 shimmer-skeleton" />
 

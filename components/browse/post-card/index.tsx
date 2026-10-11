@@ -278,7 +278,7 @@ export function PostCard({
     // ── Hidden state ─────────────────────────────────────────────────────────
     if (isHidden) {
         return (
-            <div className="px-4 py-3 border-b border-flexwhite/15 flex items-center justify-between text-sm text-zinc-600">
+            <div className="px-4 py-3 border-b border-xborder flex items-center justify-between text-sm text-zinc-600">
                 <span>Post hidden</span>
                 <button onClick={() => setIsHidden(false)} className="text-zinc-500 hover:text-zinc-300 transition-colors text-xs">Undo</button>
             </div>
@@ -298,7 +298,7 @@ export function PostCard({
                 }}
                 className={cn(
                     "group relative flex cursor-pointer flex-col bg-canvas px-4 pt-2.5 pb-1.5 transition-colors",
-                    connectBottom ? "border-none pb-0" : "border-b border-soft-gray/[0.12]",
+                    connectBottom ? "border-none pb-0" : "border-b border-xborder",
                     connectTop ? "pt-3" : "pt-2.5"
                 )}
                 style={{ animationDelay: `${index * 50}ms`, animationFillMode: "both" }}
