@@ -8,15 +8,21 @@ import { SITE_URL } from "@/lib/share/metadata";
 // /api/ is deliberately NOT disallowed: Googlebot renders pages with JS and
 // fetches the same tRPC calls a browser does. Blocking them would index the
 // skeleton instead of the content.
+
+// Signed-in-only surfaces (they bounce to /login anyway) and internal tooling.
+const PRIVATE = [...ALWAYS_PRIVATE_PREFIXES, "/dev", "/admin", "/studio"];
+
 export default function robots(): MetadataRoute.Robots {
     return {
         rules: [
             {
                 userAgent: "*",
                 allow: "/",
-                // Signed-in-only surfaces (they bounce to /login anyway) and
-                // internal tooling — nothing here is meant to be found.
-                disallow: [...ALWAYS_PRIVATE_PREFIXES, "/dev", "/admin", "/studio", "/login?"],
+                // robots.txt rules are PREFIX matches, and profiles live at
+                // /<username> — a bare "/dev" would also block /developer and
+                // a user called "devon". So each path is blocked exactly ($)
+                // and as a directory (/), never as a prefix.
+                disallow: PRIVATE.flatMap((p) => [`${p}$`, `${p}/`]),
             },
         ],
         sitemap: `${SITE_URL}/sitemap.xml`,

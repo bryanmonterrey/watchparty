@@ -16,6 +16,12 @@ import { MarketingFooter } from "@/components/marketing/footer"
 export const dynamic = "force-dynamic";
 
 // Landing page — to be designed separately. Intentionally minimal for now.
+//
+// ⚠️ Visitors with NO session cookie never reach this page: middleware.ts
+// redirects them first (a real 307 — here it can only be a soft redirect, see
+// the comment there). Only cookie-holders arrive, so the redirects below are
+// the signed-in / stale-cookie path. Bringing the landing back means changing
+// BOTH places.
 export default async function Home({
   searchParams,
 }: {

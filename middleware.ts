@@ -108,6 +108,14 @@ function hostOnlyCookieCleanup(request: NextRequest): string[] {
 // sidebar and adapted to watchparty's routes (/login, /home).
 // async now: the slug-miss lookup below is a network call. Next supports an
 // async middleware; every existing branch still returns synchronously.
+// /robots.txt and /sitemap.xml must reach app/robots.ts and app/sitemap.ts on
+// every host. The subdomain rewrites below would otherwise send them to
+// /developer/docs/robots.txt, /studio/robots.txt, … and 404 — leaving those
+// hosts with no crawl rules at all.
+function isCrawlerMetadata(pathname: string): boolean {
+  return pathname === "/robots.txt" || pathname === "/sitemap.xml";
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const session = getSessionCookie(request);
@@ -146,7 +154,7 @@ export async function middleware(request: NextRequest) {
   // /developer/docs, so future doc sub-pages get subdomain URLs for free.
   // /api passes through untouched — curl examples in the docs must behave
   // identically on every host.
-  if (host === "docs.watchparty.xyz" && !pathname.startsWith("/api")) {
+  if (host === "docs.watchparty.xyz" && !pathname.startsWith("/api") && !isCrawlerMetadata(pathname)) {
     return withCleanup(
       NextResponse.rewrite(new URL(`/developer/docs${pathname === "/" ? "" : pathname}`, request.url)),
     );
@@ -154,7 +162,7 @@ export async function middleware(request: NextRequest) {
   // studio.watchparty.xyz IS the creator studio: every non-/api path rewrites
   // under /studio (the (studio) route group self-gates on the session cookie).
   // /api passes through so the studio's tRPC calls reach the app's own handler.
-  if (host === "studio.watchparty.xyz" && !pathname.startsWith("/api")) {
+  if (host === "studio.watchparty.xyz" && !pathname.startsWith("/api") && !isCrawlerMetadata(pathname)) {
     return withCleanup(NextResponse.rewrite(new URL(prefixOnce("/studio", pathname), request.url)));
   }
   // admin.watchparty.xyz is the internal admin panel — same host-rewrite shape
@@ -164,20 +172,23 @@ export async function middleware(request: NextRequest) {
   // caches it, so a revoked role would linger), and every mutation behind it
   // goes through `adminProcedure`, which checks again server-side. This rewrite
   // is routing, never a security boundary.
-  if (host === "admin.watchparty.xyz" && !pathname.startsWith("/api")) {
+  if (host === "admin.watchparty.xyz" && !pathname.startsWith("/api") && !isCrawlerMetadata(pathname)) {
     return withCleanup(NextResponse.rewrite(new URL(prefixOnce("/admin", pathname), request.url)));
   }
-  // "/" is a pure redirect (the landing page in app/page.tsx is parked). Doing
-  // it in the page was a SOFT redirect: app/loading.tsx starts streaming before
-  // the page runs, so redirect() can no longer set a status and degrades to a
-  // 200 with an empty body and a 1s meta refresh — which is what Google indexed
-  // as the homepage. Same targets as app/page.tsx; ?ref= rides along in search.
-  // 307, not 308: the landing page is parked, not gone.
-  if (pathname === "/") {
-    const target = new URL(session || PUBLIC_BROWSING ? "/home" : "/login", request.url);
-    // Like the page: ?ref= is forwarded for signed-out visitors only.
+  // "/" for a visitor with NO session cookie (every crawler, every first-time
+  // visitor) is redirected here instead of in app/page.tsx. Doing it in the
+  // page was a SOFT redirect: app/loading.tsx starts streaming before the page
+  // runs, so redirect() can no longer set a status and degrades to a 200 with
+  // an empty body and a 1s meta refresh — which is what Google indexed as the
+  // homepage. 307, not 308: the landing page is parked, not gone.
+  //
+  // A cookie only proves a session MIGHT exist, so cookie-holders still go
+  // through app/page.tsx, which validates it — a stale cookie there is treated
+  // as signed out and keeps its ?ref=, which a cookie check here would drop.
+  if (pathname === "/" && !session) {
+    const target = new URL(PUBLIC_BROWSING ? "/home" : "/login", request.url);
     const ref = request.nextUrl.searchParams.get("ref");
-    if (ref && !session) target.searchParams.set("ref", ref);
+    if (ref) target.searchParams.set("ref", ref);
     return withCleanup(NextResponse.redirect(target, 307));
   }
   // Always allow better-auth + internal API routes (tRPC, webhooks) for the

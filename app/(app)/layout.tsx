@@ -34,10 +34,6 @@ import { TabNotificationBadge } from "@/components/app-ui/tab-notification-badge
 // surfaced only by an old diagnostic try/catch here, now removed).
 export const dynamic = "force-dynamic";
 
-// Search-engine crawlers only, not every bot: link unfurlers (Discord, X,
-// iMessage) read meta tags and never see the gate anyway.
-const SEARCH_CRAWLER_UA = /Googlebot|Google-InspectionTool|bingbot|DuckDuckBot|Applebot|YandexBot|Baiduspider/i;
-
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession();
 
@@ -57,13 +53,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     }
   }
 
-  // Google indexes the PHONE rendering of a page (mobile-first indexing), and
-  // below md the gate is an opaque full-screen overlay — so to Google every
-  // public post, profile and coin read "Desktop only". The content underneath
-  // is identical either way; search crawlers just skip the cover. Remove with
-  // the gate itself once the responsive pass lands.
-  const isSearchCrawler = SEARCH_CRAWLER_UA.test((await headers()).get("user-agent") ?? "");
-
   // Sidebar always starts fully collapsed (hover the rail to peek, trigger to
   // pin) — deliberately NOT restored from the cookie anymore.
   return (
@@ -71,7 +60,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <MotionConfigProvider>
       {/* Below md every signed-in route shows the desktop-only notice.
           Remove when the responsive pass lands. */}
-      {!isSearchCrawler && <DesktopOnlyGate />}
+      <DesktopOnlyGate />
       <MiniPlayerShell>
         <SidebarProvider defaultOpen={false}>
           <AppSidebar />

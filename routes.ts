@@ -27,6 +27,10 @@ export const publicRoutes: string[] = [
   "/guidelines",
   // "Get app" from the rail footer (app/(legal)/download).
   "/download",
+  // Crawler metadata routes (app/robots.ts, app/sitemap.ts). Without these, a
+  // PUBLIC_BROWSING flip would 307 crawlers to /login and serve them HTML.
+  "/robots.txt",
+  "/sitemap.xml",
 ];
 
 // Public PREFIXES (dynamic public pages, e.g. the embeddable server widget
