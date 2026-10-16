@@ -129,31 +129,50 @@ Package manager is **bun** (`bun.lock`). Runtime is Next.js 16 (App Router, Turb
   above — that number was measured on a swapping machine and reflects memory
   pressure, not the type-check itself.
 
-### TypeScript stays on 6.x — do NOT bump to 7 (evaluated 2026-07-28)
+### TypeScript 6 AND 7, side by side (adopted 2026-10-16)
 
-TS 7 (the native rewrite) is genuinely ~40x faster here (~10min → ~60s cold) and
-type-checks this repo clean. It was still rejected, on purpose:
+`package.json` carries both, per the TS 7.0 release post's own recipe:
 
-- **Zero production upside.** `tsconfig` is `noEmit` and Next transpiles with
-  SWC, so tsc never emits a byte — TS 6 and TS 7 ship an **identical bundle**.
-  The entire gain is local iteration speed.
-- **It breaks `next build`.** The build type-checks via TypeScript's *JavaScript
-  compiler API*, which the native rewrite doesn't expose: the build dies after a
-  full compile with "TypeScript 7.0.2 does not provide the compiler API required
-  by Next.js". The only fix is `experimental.useTypeScriptCli`, i.e. putting an
-  **experimental flag in the deploy path** ("behavior may change" per Next docs).
-- **It kills lint entirely** (below), so a second safety net goes down too.
-- tsc is the **only** automated gate here (no tests), and TS 7 is a from-scratch
-  reimplementation — a false negative wouldn't announce itself.
+```json
+"@typescript/native": "npm:typescript@^7.0.2",          // owns the `tsc` bin
+"typescript": "npm:@typescript/typescript6@^6.0.2"      // the 6.0 API + `tsc6`
+```
 
-Revisit when typescript-eslint supports TS 7 and `useTypeScriptCli` is stable.
+- **`npx tsc` is TS 7** — the verify command above. Cold full check: **19s**
+  total, zero errors, ~2.3GB RSS (TS 6 was ~40s checking + startup).
+- **`next build` still type-checks on TS 6.** Since Next 16.4 the build runs the
+  project-local tsc CLI by default (`experimental.useTypeScriptCli` defaults to
+  true — no flag set here). It resolves `typescript/package.json`, which is the
+  typescript6 shim, and picks its `tsc6` bin (Next matches `/^tsc\d+$/`).
+  Confirm with `getTypeScriptPackageInfo` in
+  `next/dist/lib/typescript/runTypeScriptCli.js`. So the DEPLOY gate never
+  moved to the from-scratch TS 7 checker — only the local one did.
+- **Lint runs on the TS 6 API.** typescript-eslint still refuses TS 7
+  ("typescript-eslint does not support TS 7.0"; peer `<6.1.0`) and imports
+  `typescript`, which is the shim. Verified: identical lint output either way.
+- **Never un-alias `typescript` to plain 7.x.** That kills lint outright and
+  hands `next build` a package with no 6.0 API.
 
-- **`bun run lint` works — keep eslint on 9.x, do NOT bump to 10.** eslint 10
-  crashes on `eslint-plugin-react`, which hasn't adopted its rule API
-  (`TypeError: contextOrFilename.getFilename is not a function`). Verified
-  2026-07-28. Lint currently reports ~650 errors / ~17k warnings (pre-existing,
-  mostly `no-explicit-any`), and runs in neither CI nor `next build` — Next 16
-  removed `next lint`.
+Why this replaced the 2026-07-28 "stay on 6" rule: both of its blockers were
+gone or routable — Next 16.4 dropped the compiler-API requirement, and the
+alias keeps every API consumer on 6. Collapse back to one `typescript` when
+typescript-eslint supports TS ≥ 7.1 (its issue #10940).
+
+- **eslint is on 10 (2026-10-16).** Two things were needed and both are easy to
+  lose:
+  - **`settings.react.version` is a literal** (`"19.3"`) in BOTH
+    `eslint.config.mjs` and `console/eslint.config.mjs`. eslint-config-next
+    sets `"detect"`, and eslint-plugin-react 7.37.5 detects via
+    `context.getFilename()`, which eslint 10 removed — every component rule
+    crashed (`contextOrFilename.getFilename is not a function`, the 2026-07-28
+    blocker). Bump the literal with React.
+  - **eslint 10 resolves the config NEAREST each file**, so `console/**` is
+    linted by `console/eslint.config.mjs` with console's own node_modules. Its
+    eslint-config-next must be ≥ 16.4.2 — that release's babel parser shim adds
+    `scopeManager.addGlobals`; 16.3.8 crashes with `addGlobals is not a function`.
+  Verified: 1,822 files, 763 errors / 645 warnings — the same as eslint 9.
+  Lint is pre-existing-dirty (mostly `no-explicit-any`) and runs in neither CI
+  nor `next build`.
 
 Tests: `bun test ./tests` (bun's built-in runner — quests/xp logic, money-path
 base-unit conversion, memescope filters, chain maps). CI runs it as the `test`

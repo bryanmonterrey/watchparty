@@ -83,15 +83,12 @@ const nextConfig: NextConfig = {
     // cache has been deleted because we previously detected an internal error",
     // then 25-70s cache writes and ~28s compactions on every run.
     turbopackFileSystemCacheForDev: false,
-    // NOT enabling experimental.useTypeScriptCli — deliberately, and it's tied
-    // to staying on TypeScript 6 (see CLAUDE.md). TS 7 REQUIRES that flag,
-    // because `next build` type-checks through TypeScript's JavaScript compiler
-    // API which the TS 7 native rewrite doesn't expose; without it the build
-    // dies after a full compile ("TypeScript 7.0.2 does not provide the
-    // compiler API required by Next.js"). We stay on TS 6 instead: tsc emits
-    // nothing here (noEmit + SWC transpile), so TS 7 buys a faster local check
-    // and an identical bundle — not worth putting an experimental flag in the
-    // deploy path and losing every typescript-eslint rule. Revisit together.
+    // experimental.useTypeScriptCli is deliberately NOT set: since Next 16.4 it
+    // defaults to true, so `next build` type-checks by running the project-local
+    // tsc CLI. `typescript` is aliased to @typescript/typescript6, so that CLI
+    // is `tsc6` — the build gate stays on TS 6 while `npx tsc` locally is TS 7
+    // (CLAUDE.md, "TypeScript 6 AND 7, side by side"). Setting this to false
+    // would also work today (the shim keeps the 6.0 API), but nothing needs it.
   },
   // /discover became /feed. Permanent, and :path* so the whole subtree comes
   // with it — /discover/post/<id> is the canonical share URL for every post

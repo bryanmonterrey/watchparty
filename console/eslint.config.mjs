@@ -6,5 +6,9 @@ import nextVitals from "eslint-config-next/core-web-vitals";
 
 export default defineConfig([
   ...nextVitals,
+  // Literal React version, not "detect": eslint-plugin-react's detection calls
+  // context.getFilename(), which eslint 10 removed. The root lint run picks up
+  // this file for console/** under eslint 10, so it needs the same pin.
+  { settings: { react: { version: "19.3" } } },
   globalIgnores([".next/**", ".open-next/**", ".wrangler/**", "out/**", "next-env.d.ts"]),
 ]);
