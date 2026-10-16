@@ -3,6 +3,7 @@ import Link from "next/link";
 import { LegalDoc, type LegalSection } from "@/components/legal/legal-doc";
 
 export const metadata: Metadata = {
+    alternates: { canonical: "/ads-info" },
     title: "Ads info",
     description: "How ads on watchparty work, what they're targeted with, and how to advertise.",
 };

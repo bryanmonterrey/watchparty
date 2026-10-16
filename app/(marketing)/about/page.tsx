@@ -4,7 +4,10 @@ import { ColorScrollPage, BgZone } from "@/components/marketing/color-scroll-pag
 import { CardCarousel } from "@/components/marketing/card-carousel";
 import { HeroBento, EarningsCard, MiniLive, MiniFeed, MiniChart } from "@/components/marketing/mocks";
 
-export const metadata: Metadata = { title: "About" };
+export const metadata: Metadata = {
+    alternates: { canonical: "/about" },
+    title: "About",
+};
 
 // The manifesto page: centered hero, word-reveal statement, the card spread,
 // then an editorial ledger. Spine is deliberately different from every other

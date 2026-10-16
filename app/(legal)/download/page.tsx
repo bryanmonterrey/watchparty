@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PinkStarLogo } from "@/components/icons";
 
 export const metadata: Metadata = {
+    alternates: { canonical: "/download" },
     title: "Get the app",
     description: "watchparty for iOS.",
 };

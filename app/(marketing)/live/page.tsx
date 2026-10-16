@@ -4,7 +4,10 @@ import { ColorScrollPage, BgZone } from "@/components/marketing/color-scroll-pag
 import { CardCarousel } from "@/components/marketing/card-carousel";
 import { HeroLandscape, EarningsCard, MiniLive, MiniChat, MiniShort, StackedCard, BlobArt } from "@/components/marketing/mocks";
 
-export const metadata: Metadata = { title: "Go live" };
+export const metadata: Metadata = {
+    alternates: { canonical: "/live" },
+    title: "Go live",
+};
 
 // The broadcast page: hero, numbered steps, card spread, an asymmetric
 // earnings showcase, and a light poster close on discovery.

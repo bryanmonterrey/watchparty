@@ -3,6 +3,7 @@ import Link from "next/link";
 import { LegalDoc, type LegalSection } from "@/components/legal/legal-doc";
 
 export const metadata: Metadata = {
+    alternates: { canonical: "/cookies" },
     title: "Cookie Policy",
     description: "The cookies and local storage watchparty uses, and what each one does.",
 };

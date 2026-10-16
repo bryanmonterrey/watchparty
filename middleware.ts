@@ -41,10 +41,15 @@ const RESERVED_SLUGS = new Set([
   "category", "status", "notifications", "wallet", "explore", "about",
   "developer", "studio", "apps", "oauth", "admin",
   "terms", "privacy", "cookies", "accessibility", "ads-info", "guidelines", "download", "investors",
+  // Metadata routes (app/robots.ts, app/sitemap.ts). Crawlers asked for these
+  // long before they existed, while the path still fell through to the
+  // profile page, so the slug-miss cache had already learned them as missing
+  // usernames and 404'd the new routes before they could run.
+  "robots.txt", "sitemap.xml",
 ]);
 import { getSessionCookie } from "better-auth/cookies";
 import { apiAuthPrefix, authRoutes, publicRoutes, publicPrefixes } from "./routes";
-import { allowsAnonymous } from "./lib/auth/public-browsing";
+import { allowsAnonymous, PUBLIC_BROWSING } from "./lib/auth/public-browsing";
 import { apiGate } from "./lib/api-gate";
 import { limitOrPass, oauthTokenLimiter, oauthInteractiveLimiter } from "./lib/rate-limit";
 
@@ -123,6 +128,15 @@ export async function middleware(request: NextRequest) {
   // through untouched below. developer.watchparty.xyz still 308s to console
   // here because the old host remains attached to THIS worker.
   const host = request.headers.get("host")?.toLowerCase() ?? "";
+  // www served the whole site with a 200 — a second copy of every page, so
+  // search engines split ranking between the two hosts. One permanent hop to
+  // the apex. /api is left alone: a POST that follows a redirect is a gamble
+  // on the caller, and nothing should be calling www's API anyway.
+  if (host === "www.watchparty.xyz" && !pathname.startsWith("/api")) {
+    return withCleanup(
+      NextResponse.redirect(new URL(pathname + request.nextUrl.search, "https://watchparty.xyz"), 308),
+    );
+  }
   if (host === "developer.watchparty.xyz") {
     return withCleanup(
       NextResponse.redirect(new URL(pathname + request.nextUrl.search, "https://console.watchparty.xyz"), 308),
@@ -152,6 +166,19 @@ export async function middleware(request: NextRequest) {
   // is routing, never a security boundary.
   if (host === "admin.watchparty.xyz" && !pathname.startsWith("/api")) {
     return withCleanup(NextResponse.rewrite(new URL(prefixOnce("/admin", pathname), request.url)));
+  }
+  // "/" is a pure redirect (the landing page in app/page.tsx is parked). Doing
+  // it in the page was a SOFT redirect: app/loading.tsx starts streaming before
+  // the page runs, so redirect() can no longer set a status and degrades to a
+  // 200 with an empty body and a 1s meta refresh — which is what Google indexed
+  // as the homepage. Same targets as app/page.tsx; ?ref= rides along in search.
+  // 307, not 308: the landing page is parked, not gone.
+  if (pathname === "/") {
+    const target = new URL(session || PUBLIC_BROWSING ? "/home" : "/login", request.url);
+    // Like the page: ?ref= is forwarded for signed-out visitors only.
+    const ref = request.nextUrl.searchParams.get("ref");
+    if (ref && !session) target.searchParams.set("ref", ref);
+    return withCleanup(NextResponse.redirect(target, 307));
   }
   // Always allow better-auth + internal API routes (tRPC, webhooks) for the
   // app's own traffic — external (session-less, off-site) callers go through

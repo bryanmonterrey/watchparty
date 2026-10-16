@@ -3,6 +3,7 @@ import Link from "next/link";
 import { LegalDoc, type LegalSection } from "@/components/legal/legal-doc";
 
 export const metadata: Metadata = {
+    alternates: { canonical: "/privacy" },
     title: "Privacy Policy",
     description: "What watchparty collects, why, and what you can do about it.",
 };

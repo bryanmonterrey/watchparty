@@ -9,7 +9,10 @@ import { CardCarousel } from "@/components/marketing/card-carousel";
 import { type Feature } from "@/components/marketing/feature-card";
 import { HeroCollage, PhoneMock, CoinScreen, MiniLive, MiniShort, MiniFeed } from "@/components/marketing/mocks";
 
-export const metadata: Metadata = { title: "Explore" };
+export const metadata: Metadata = {
+    alternates: { canonical: "/explore" },
+    title: "Explore",
+};
 
 // The discovery page: split hero, kinetic marquee divider, card spread, an
 // asymmetric feed showcase, varied bento, and a dark poster close.

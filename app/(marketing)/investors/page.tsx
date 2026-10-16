@@ -4,6 +4,7 @@ import { ColorScrollPage, BgZone } from "@/components/marketing/color-scroll-pag
 import { EarningsCard } from "@/components/marketing/mocks";
 
 export const metadata: Metadata = {
+    alternates: { canonical: "/investors" },
     title: "Investors",
     description: "Invest in watchparty.",
 };

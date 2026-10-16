@@ -3,6 +3,7 @@ import Link from "next/link";
 import { LegalDoc, type LegalSection } from "@/components/legal/legal-doc";
 
 export const metadata: Metadata = {
+    alternates: { canonical: "/accessibility" },
     title: "Accessibility",
     description: "How watchparty works with assistive technology, and what we're still fixing.",
 };

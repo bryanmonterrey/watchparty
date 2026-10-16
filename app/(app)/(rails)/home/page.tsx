@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { shareMetadata } from "@/lib/share/metadata";
 import { HomeFeedProvider } from "@/components/home/home-feed-context";
 import { HomePageSurface } from "@/components/home/home-page-surface";
 
@@ -15,8 +16,17 @@ import { HomePageSurface } from "@/components/home/home-page-surface";
 // The previous centre-column content still lives in components/home/
 // desktop-home2.tsx (hero + categories + IRL); render <DesktopHome /> inside
 // <main> to bring it back.
+// /home is the de facto homepage — "/" redirects here (middleware.ts) — so it
+// carries the search title and description, not just the tab label. Absolute
+// title: the "%s / watchparty" template would read "watchparty / watchparty".
 export const metadata: Metadata = {
-    title: "home",
+    ...shareMetadata({
+        title: "watchparty",
+        path: "/home",
+        description:
+            "Watch live streams, follow creators, and back them directly with USDC subscriptions and creator coins. The timeline, the stream, and the trade in one app.",
+    }),
+    title: { absolute: "watchparty: live streams, creators, and coins in one app" },
 };
 
 export default function AppHome() {

@@ -5,7 +5,10 @@ import { CardCarousel } from "@/components/marketing/card-carousel";
 import { ShieldKeyIcon } from "@hugeicons/core-free-icons";
 import { SecurityCard, InsetInfoCard, MiniShield, MiniChat, MiniVerified } from "@/components/marketing/mocks";
 
-export const metadata: Metadata = { title: "Safety" };
+export const metadata: Metadata = {
+    alternates: { canonical: "/safety" },
+    title: "Safety",
+};
 
 // The trust page: reverse hero, word-reveal promise, card spread, an editorial
 // ledger of the guarantees, and a floating privacy panel. Calm and factual.

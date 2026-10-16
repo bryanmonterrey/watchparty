@@ -6,7 +6,10 @@ import {
     MiniLive, MiniVerified, MiniFees,
 } from "@/components/marketing/mocks";
 
-export const metadata: Metadata = { title: "Creators" };
+export const metadata: Metadata = {
+    alternates: { canonical: "/creators" },
+    title: "Creators",
+};
 
 // The business page: reverse hero, two bold panels, an editorial ledger of the
 // toolkit, and a dark payout poster. No carousel here on purpose; the ledger

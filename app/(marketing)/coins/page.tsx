@@ -19,7 +19,10 @@ import {
     CoinScreen,
 } from "@/components/marketing/mocks";
 
-export const metadata: Metadata = { title: "Coins" };
+export const metadata: Metadata = {
+    alternates: { canonical: "/coins" },
+    title: "Coins",
+};
 
 const FAQ = [
     { q: "What chain are coins on?", a: "Coins launch on Solana, with trading and fees handled in-app." },

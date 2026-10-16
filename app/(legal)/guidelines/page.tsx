@@ -3,6 +3,7 @@ import Link from "next/link";
 import { LegalDoc, type LegalSection } from "@/components/legal/legal-doc";
 
 export const metadata: Metadata = {
+    alternates: { canonical: "/guidelines" },
     title: "Community Guidelines",
     description: "What's allowed on watchparty, what isn't, and what happens when someone crosses the line.",
 };
