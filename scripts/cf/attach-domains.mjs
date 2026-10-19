@@ -31,7 +31,18 @@ if (!account || !token) throw new Error("need CLOUDFLARE_ACCOUNT_ID and CLOUDFLA
 const ZONE_ID = "08d8c49c6cf32031f1c006507565ac7f"; // watchparty.xyz
 const SERVICE = process.argv[2] ?? "watchparty";
 
-for (const hostname of ["watchparty.xyz", "www.watchparty.xyz"]) {
+// Every hostname the app worker serves (studio/admin/developer/docs are
+// host-rewritten by middleware). console.* and realtime.* are separate workers.
+const HOSTNAMES = [
+  "watchparty.xyz",
+  "www.watchparty.xyz",
+  "studio.watchparty.xyz",
+  "admin.watchparty.xyz",
+  "developer.watchparty.xyz",
+  "docs.watchparty.xyz",
+];
+
+for (const hostname of HOSTNAMES) {
   const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/workers/domains`, {
     method: "PUT",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
