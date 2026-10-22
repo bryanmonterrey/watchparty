@@ -626,7 +626,7 @@ export const walletRouter = router({
             const chain = getChain(quote?.chain);
             if (!chain) throw new TRPCError({ code: "BAD_REQUEST", message: "Unknown chain" });
 
-            if (!(await checkRateLimit(ctx.user.id, "sign_transaction"))) {
+            if (await checkRateLimit(ctx.user.id, "sign_transaction")) { // true = over the limit
                 throw new TRPCError({
                     code: "TOO_MANY_REQUESTS",
                     message: `Too many transactions. Try again after ${await getResetTime(ctx.user.id, "sign_transaction")}`,
@@ -756,7 +756,7 @@ export const walletRouter = router({
                 throw new TRPCError({ code: "BAD_REQUEST", message: "Unsupported chain" });
             }
 
-            if (!(await checkRateLimit(ctx.user.id, "sign_transaction"))) {
+            if (await checkRateLimit(ctx.user.id, "sign_transaction")) { // true = over the limit
                 throw new TRPCError({
                     code: "TOO_MANY_REQUESTS",
                     message: `Too many transactions. Try again after ${await getResetTime(ctx.user.id, "sign_transaction")}`,
@@ -824,7 +824,7 @@ export const walletRouter = router({
             const ipAddress = headersList.get("x-forwarded-for") || "unknown";
             const userAgent = headersList.get("user-agent") || "unknown";
 
-            if (!(await checkRateLimit(ctx.user.id, "sign_transaction"))) {
+            if (await checkRateLimit(ctx.user.id, "sign_transaction")) { // true = over the limit
                 throw new TRPCError({
                     code: "TOO_MANY_REQUESTS",
                     message: `Too many transactions. Try again after ${await getResetTime(ctx.user.id, "sign_transaction")}`,

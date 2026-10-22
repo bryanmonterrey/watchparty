@@ -67,7 +67,7 @@ export function CommenterPicker({ whoCanComment, comments, allowedCommenters, on
                                         key={u.id}
                                         onClick={() => {
                                             if (!allowedCommenters.find(c => c.id === u.id)) {
-                                                onChange([...allowedCommenters, { id: u.id, name: u.name || u.email || "", avatar_url: u.avatar_url || undefined }])
+                                                onChange([...allowedCommenters, { id: u.id, name: u.name || u.username || "", avatar_url: u.avatar_url || undefined }])
                                             }
                                             setCommenterSearch("")
                                             setCommenterSearchOpen(false)

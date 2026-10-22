@@ -114,9 +114,13 @@ const config = {
     "https://ads.watchparty.xyz",
     // Developer console subdomain (console/ app) — same delegation model.
     "https://console.watchparty.xyz",
-    // React Native app (mobile/): release scheme + Expo Go dev client.
+    // React Native app (mobile/): release scheme everywhere; the Expo Go dev
+    // client only outside production. A bare "exp://" matches ANY exp:// host,
+    // and the expo plugin appends the session cookie to trusted non-http
+    // callback redirects — so in production it handed sessions to whatever
+    // exp:// URL a sign-in was started with. Upstream expo() adds it in dev only.
     "watchparty://",
-    "exp://",
+    ...(process.env.NODE_ENV === "production" ? [] : ["exp://"]),
   ],
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7d
@@ -151,7 +155,11 @@ const config = {
   user: {
     additionalFields: {
       avatar_url: { type: "string" as const, required: false },
-      wallet_address: { type: "string" as const, required: false },
+      // input:false — otherwise better-auth's own POST /update-user lets any
+      // session set these with no ownership proof or username rules. The app
+      // writes them only through its validated paths (wallet linking, tRPC
+      // user/profile, /api/update-profile) and never calls update-user.
+      wallet_address: { type: "string" as const, required: false, input: false },
       bio: { type: "string" as const, required: false },
       role: { type: "string" as const, defaultValue: "user", input: false },
       // Read-only like `role`: the badge is awarded, never self-assigned. Here
@@ -167,7 +175,7 @@ const config = {
       // on every session (measured on 1.7.1 and 1.7.7), and 1.7.7's schema
       // check refused every request with "Missing columns: user.verified_tier".
       verifiedTier: { type: "string" as const, required: false, input: false },
-      username: { type: "string" as const, required: false },
+      username: { type: "string" as const, required: false, input: false },
       gender: { type: "boolean" as const, required: false },
       last_signed_in: { type: "date" as const, input: false },
       hideVerifiedBadge: { type: "boolean" as const, defaultValue: false, input: false },

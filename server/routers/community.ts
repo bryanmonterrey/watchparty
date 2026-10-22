@@ -950,8 +950,11 @@ export const communityRouter = router({
             const [updated] = await db
                 .update(communityMembers)
                 .set({ role: input.role, updatedAt: new Date() })
-                .where(eq(communityMembers.id, input.memberId))
+                // Scoped to the server the role check ran against — the id alone
+                // let an admin of one server re-role members of another.
+                .where(and(eq(communityMembers.id, input.memberId), eq(communityMembers.serverId, input.serverId)))
                 .returning();
+            if (!updated) throw new TRPCError({ code: "NOT_FOUND", message: "Member not found" });
 
             if (updated) {
                 const [u] = await db.select({ name: user.name }).from(user).where(eq(user.id, updated.userId)).limit(1);
@@ -972,18 +975,21 @@ export const communityRouter = router({
             await requireRole(input.serverId, ctx.user.id, "ADMIN");
             await require2faIfEnforced(input.serverId, ctx.user.id);
 
-            // Prevent kicking yourself
+            // Same server-scoping as banMember: the target must belong to the
+            // server the role check ran against.
             const target = await db
                 .select()
                 .from(communityMembers)
-                .where(eq(communityMembers.id, input.memberId))
+                .where(and(eq(communityMembers.id, input.memberId), eq(communityMembers.serverId, input.serverId)))
                 .limit(1);
+            if (!target.length) throw new TRPCError({ code: "NOT_FOUND", message: "Member not found" });
 
-            if (target.length && target[0].userId === ctx.user.id) {
+            // Prevent kicking yourself
+            if (target[0].userId === ctx.user.id) {
                 throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot kick yourself" });
             }
 
-            await db.delete(communityMembers).where(eq(communityMembers.id, input.memberId));
+            await db.delete(communityMembers).where(and(eq(communityMembers.id, input.memberId), eq(communityMembers.serverId, input.serverId)));
             if (target.length) {
                 const [u] = await db.select({ name: user.name }).from(user).where(eq(user.id, target[0].userId)).limit(1);
                 await logAudit(input.serverId, ctx.user.id, "member.kick", `kicked ${u?.name ?? "a member"}`);
@@ -2013,18 +2019,21 @@ export const communityRouter = router({
             await requireRole(input.serverId, ctx.user.id, "ADMIN", "MODERATOR");
             await require2faIfEnforced(input.serverId, ctx.user.id);
 
-            // Prevent deleting "general"
+            // Scoped like updateChannel: the channel must belong to the server
+            // the role check ran against.
             const channel = await db
                 .select()
                 .from(communityChannels)
-                .where(eq(communityChannels.id, input.channelId))
+                .where(and(eq(communityChannels.id, input.channelId), eq(communityChannels.serverId, input.serverId)))
                 .limit(1);
+            if (!channel.length) throw new TRPCError({ code: "NOT_FOUND", message: "Channel not found" });
 
-            if (channel.length && channel[0].name === "general") {
+            // Prevent deleting "general"
+            if (channel[0].name === "general") {
                 throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot delete the general channel" });
             }
 
-            await db.delete(communityChannels).where(eq(communityChannels.id, input.channelId));
+            await db.delete(communityChannels).where(and(eq(communityChannels.id, input.channelId), eq(communityChannels.serverId, input.serverId)));
             if (channel.length) {
                 await logAudit(input.serverId, ctx.user.id, "channel.delete", `deleted #${channel[0].name}`);
             }
@@ -2621,13 +2630,17 @@ export const communityRouter = router({
                 .select({
                     id: communityMessages.id,
                     userId: communityMembers.userId,
+                    serverId: communityChannels.serverId,
                 })
                 .from(communityMessages)
+                .innerJoin(communityChannels, eq(communityMessages.channelId, communityChannels.id))
                 .leftJoin(communityMembers, eq(communityMessages.memberId, communityMembers.id))
                 .where(eq(communityMessages.id, input.messageId))
                 .limit(1);
 
-            if (!msg.length) {
+            // The server comes from the message's channel, never the caller —
+            // the bot endpoint already works this way (bot.ts deleteMessage).
+            if (!msg.length || msg[0].serverId !== input.serverId) {
                 throw new TRPCError({ code: "NOT_FOUND", message: "Message not found" });
             }
 

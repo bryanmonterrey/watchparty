@@ -158,7 +158,7 @@ export const swapRouter = router({
         // AWAITED. Both helpers are async, and `!promise` is always false —
         // the same omission at three call sites in wallet.ts has left the
         // signing rate limit inert there (fixed in this commit).
-        if (!(await checkRateLimit(ctx.user.id, "sign_transaction"))) {
+        if (await checkRateLimit(ctx.user.id, "sign_transaction")) { // true = over the limit
             throw new TRPCError({
                 code: "TOO_MANY_REQUESTS",
                 message: `Too many transactions. Try again after ${await getResetTime(ctx.user.id, "sign_transaction")}`,

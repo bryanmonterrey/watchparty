@@ -159,13 +159,25 @@ async function fetchLiveViewers(channelArn: string): Promise<{ isLive: boolean; 
     return data;
 }
 
+/**
+ * A streams row as anyone may see it. streamKey / serverUrl / ingressId are
+ * the broadcaster's ingest credentials — whoever holds them can push video to
+ * the creator's channel — so public getters never return them. The owner reads
+ * them through getMine (protected).
+ */
+function publicStream(row: typeof streams.$inferSelect | undefined) {
+    if (!row) return null;
+    const { streamKey: _k, serverUrl: _u, ingressId: _i, ...rest } = row;
+    return rest;
+}
+
 export const streamRouter = router({
     // Get stream config for a user (by userId or username)
     getByUserId: publicProcedure
         .input(z.object({ userId: z.string() }))
         .query(async ({ input }) => {
             const row = await db.select().from(streams).where(eq(streams.userId, input.userId)).limit(1);
-            return row[0] ?? null;
+            return publicStream(row[0]);
         }),
 
     getByUsername: publicProcedure
@@ -174,7 +186,7 @@ export const streamRouter = router({
             const [u] = await db.select({ id: user.id }).from(user).where(eq(user.username, input.username)).limit(1);
             if (!u) return null;
             const row = await db.select().from(streams).where(eq(streams.userId, u.id)).limit(1);
-            return row[0] ?? null;
+            return publicStream(row[0]);
         }),
 
     // Live viewer count for a host — watch pages poll this (~30s interval)

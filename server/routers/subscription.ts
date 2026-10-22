@@ -691,23 +691,41 @@ export const subscriptionRouter = router({
 
     // ─── Claim: pay net USDC (gross − 5% fee) from treasury to creator wallet ───
     claimEarnings: protectedProcedure.mutation(async ({ ctx }) => {
-        // Snapshot the exact unclaimed rows so concurrent earnings aren't swept.
-        const rows = await db.select({ id: creatorEarnings.id, amountUsdc: creatorEarnings.amountUsdc })
-            .from(creatorEarnings)
-            .where(and(eq(creatorEarnings.creatorId, ctx.user.id), eq(creatorEarnings.claimed, false)));
-        const gross = rows.reduce((s, r) => s + Number(r.amountUsdc ?? 0), 0);
-        if (gross <= 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Nothing to claim" });
-
         const destination = await payoutDestinationFor(ctx.user.id, ctx.user.wallet_address);
         if (!destination) throw new TRPCError({ code: "BAD_REQUEST", message: "No wallet on file to receive USDC" });
+
+        // Claim FIRST, pay second. The old read-then-pay-then-mark let N
+        // concurrent calls all read the same unclaimed rows and each send the
+        // full amount. A conditional UPDATE ... RETURNING hands each row to
+        // exactly one caller (same pattern as referral / predictions claims).
+        const payoutId = nanoid();
+        const rows = await db.update(creatorEarnings)
+            .set({ claimed: true, payoutId })
+            .where(and(eq(creatorEarnings.creatorId, ctx.user.id), eq(creatorEarnings.claimed, false)))
+            .returning({ id: creatorEarnings.id, amountUsdc: creatorEarnings.amountUsdc });
+        const release = () => db.update(creatorEarnings)
+            .set({ claimed: false, payoutId: null })
+            .where(and(eq(creatorEarnings.creatorId, ctx.user.id), eq(creatorEarnings.payoutId, payoutId)));
+
+        const gross = rows.reduce((s, r) => s + Number(r.amountUsdc ?? 0), 0);
+        if (gross <= 0) {
+            await release();
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Nothing to claim" });
+        }
 
         const fee = Math.floor((gross * PLATFORM_FEE_BPS) / 10000);
         const net = gross - fee;
 
-        const { transferUsdcFromTreasury } = await import("@/lib/chains/solana/subscriptions/collector");
-        const sig = await transferUsdcFromTreasury(destination, BigInt(net));
+        let sig: string;
+        try {
+            const { transferUsdcFromTreasury } = await import("@/lib/chains/solana/subscriptions/collector");
+            sig = await transferUsdcFromTreasury(destination, BigInt(net));
+        } catch (err) {
+            // Hand the rows back so the creator can retry.
+            await release();
+            throw err;
+        }
 
-        const payoutId = nanoid();
         await db.insert(payouts).values({
             id: payoutId,
             creatorId: ctx.user.id,
@@ -720,15 +738,6 @@ export const subscriptionRouter = router({
             note: "Creator subscription earnings claim",
             completedAt: new Date(),
         });
-
-        // Mark exactly the snapshotted rows claimed.
-        await db.update(creatorEarnings)
-            .set({ claimed: true, payoutId })
-            .where(and(
-                eq(creatorEarnings.creatorId, ctx.user.id),
-                eq(creatorEarnings.claimed, false),
-                inArray(creatorEarnings.id, rows.map((r) => r.id)),
-            ));
 
         return { success: true, netUsdc: net, feeUsdc: fee, signature: sig };
     }),

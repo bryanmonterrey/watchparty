@@ -1132,7 +1132,7 @@ export function VideoDetailsStep({ file, uploadedUrl, isUploading, uploadProgres
                                                                                     key={u.id}
                                                                                     onClick={() => {
                                                                                         if (!allowedCommenters.find(c => c.id === u.id)) {
-                                                                                            setAllowedCommenters(prev => [...prev, { id: u.id, name: u.name || u.email || "", avatar_url: u.avatar_url || undefined }])
+                                                                                            setAllowedCommenters(prev => [...prev, { id: u.id, name: u.name || u.username || "", avatar_url: u.avatar_url || undefined }])
                                                                                         }
                                                                                         setCommenterSearch("")
                                                                                         setCommenterSearchOpen(false)

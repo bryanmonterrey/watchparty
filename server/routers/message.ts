@@ -211,7 +211,11 @@ export const messageRouter = router({
                 content: z.string(), // Encrypted ciphertext (base64)
                 encryptionIv: z.string(), // IV (base64)
                 messageType: z.enum(["text", "image", "file", "audio", "system", "transaction_send", "transaction_request"]).default("text"),
-                attachmentUrl: z.string().optional(),
+                // https only — the recipient's client opens this with window.open,
+                // which (unlike a React href) will run a javascript: URL.
+                attachmentUrl: z.string().max(2048).refine((u) => {
+                    try { return new URL(u).protocol === "https:"; } catch { return false; }
+                }, "Attachment must be an https URL").optional(),
                 replyToId: z.string().uuid().optional(),
             })
         )

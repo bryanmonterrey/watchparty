@@ -33,7 +33,7 @@ export const userRouter = router({
         }),
 
     /**
-     * Search for users by name, username, or email
+     * Search for users by name or username (never email — this is public)
      */
     search: publicProcedure
         .input(
@@ -51,7 +51,6 @@ export const userRouter = router({
                             id: user.id,
                             name: user.name,
                             username: user.username,
-                            email: user.email,
                             avatar_url: user.avatar_url,
                             wallet_address: user.wallet_address,
                             verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
@@ -67,7 +66,6 @@ export const userRouter = router({
                         id: user.id,
                         name: user.name,
                         username: user.username,
-                        email: user.email,
                         avatar_url: user.avatar_url,
                         wallet_address: user.wallet_address,
                         verifiedTier: effectiveVerifiedTier(user.verifiedTier, user.hideVerifiedBadge),
@@ -77,8 +75,7 @@ export const userRouter = router({
                     .where(
                         or(
                             like(user.name, pattern),
-                            like(user.username, pattern),
-                            like(user.email, pattern)
+                            like(user.username, pattern)
                         )
                     )
                     .limit(input.limit);

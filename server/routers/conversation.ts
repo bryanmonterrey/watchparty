@@ -323,7 +323,6 @@ export const conversationRouter = router({
                     isMuted: conversationParticipants.isMuted,
                     name: userTable.name,
                     username: userTable.username,
-                    email: userTable.email,
                     avatar_url: userTable.avatar_url,
                 })
                 .from(conversationParticipants)

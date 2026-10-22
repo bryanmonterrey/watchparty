@@ -100,7 +100,7 @@ export function NewConversationDialog({
                         </div>
                     )}
 
-                    {!isLoading && (data?.users || []).map((user: { id: string; name: string; username: string | null; email: string; avatar_url: string | null }) => {
+                    {!isLoading && (data?.users || []).map((user: { id: string; name: string; username: string | null; avatar_url: string | null }) => {
                         const isPending = pendingId === user.id;
                         return (
                             <button
@@ -121,7 +121,7 @@ export function NewConversationDialog({
                                 </Avatar>
                                 <div className="min-w-0 flex-1">
                                     <p className="truncate text-[14px] font-bold text-white">{user.name}</p>
-                                    <p className="truncate text-[12px] font-medium text-zinc-500">@{user.username || user.email}</p>
+                                    <p className="truncate text-[12px] font-medium text-zinc-500">@{user.username}</p>
                                 </div>
                                 {isPending && (
                                     <span className="size-4 shrink-0 animate-spin rounded-full border-2 border-white/20 border-t-white" />
