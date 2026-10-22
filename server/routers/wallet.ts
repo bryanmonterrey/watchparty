@@ -69,6 +69,7 @@ import { getLifiTokenInfo } from "@/lib/chains/swap/lifi";
 const subtle = globalThis.crypto?.subtle;
 
 import { humanToBaseUnits } from "@/lib/wallet/base-units";
+import { assertSponsorOnlyPaysFees, RelayRejected } from "@/lib/swig/relay-guard";
 
 /** humanToBaseUnits with the router's error vocabulary — the lib throws
  *  RangeError so it stays unit-testable without tRPC in the graph. */
@@ -1252,12 +1253,46 @@ export const walletRouter = router({
 
             const txBytes = Buffer.from(input.transaction, "base64");
 
+            const paymasterApiKey = process.env.SWIG_API_KEY;
+            const paymasterPubkey = process.env.SWIG_PAYMASTER_PUBKEY;
+            const treasuryKey = process.env.SWIG_TREASURY_PRIVATE_KEY;
+            if (!treasuryKey) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "No fee payer configured" });
+            const { Keypair, Transaction } = await web3();
+            const treasury = Keypair.fromSecretKey(Buffer.from(treasuryKey, "base64"));
+            // Clients always build against the treasury as fee payer (the
+            // session hands out treasury.publicKey), on both paths below.
+            const sponsor = treasury.publicKey.toBase58();
+
+            // The sponsor signs as fee payer ONLY. Without this check any
+            // signed-in user could send a transfer out of the treasury and
+            // have it co-signed here (lib/swig/relay-guard.ts).
+            let tx: InstanceType<typeof Transaction>;
+            try {
+                tx = Transaction.from(txBytes);
+                assertSponsorOnlyPaysFees({
+                    feePayer: tx.feePayer?.toBase58(),
+                    instructions: tx.instructions.map((ix) => ({
+                        programId: ix.programId.toBase58(),
+                        keys: ix.keys.map((k) => ({ pubkey: k.pubkey.toBase58(), isSigner: k.isSigner, isWritable: k.isWritable })),
+                        data: ix.data,
+                    })),
+                    sponsor,
+                    swigAddress: walletData.swig_address,
+                });
+            } catch (err) {
+                await logWalletAccess({
+                    userId: ctx.user.id, action: "sign_transaction", ipAddress, userAgent,
+                    success: false, errorMessage: `relay rejected: ${err instanceof Error ? err.message : "unparseable"}`,
+                });
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: err instanceof RelayRejected ? err.message : "Malformed transaction",
+                });
+            }
+
             try {
                 const connection = await serverConnection();
                 let signature: string;
-
-                const paymasterApiKey = process.env.SWIG_API_KEY;
-                const paymasterPubkey = process.env.SWIG_PAYMASTER_PUBKEY;
 
                 if (paymasterApiKey && paymasterPubkey) {
                     // Swig hosted paymaster path
@@ -1271,12 +1306,6 @@ export const walletRouter = router({
                     signature = await paymaster.signAndSendSerializedTransaction(txBytes);
                 } else {
                     // Treasury fee-payer path — free, fully on-chain
-                    const treasuryKey = process.env.SWIG_TREASURY_PRIVATE_KEY;
-                    if (!treasuryKey) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "No fee payer configured" });
-
-                    const { Keypair, Transaction } = await web3();
-                    const treasury = Keypair.fromSecretKey(Buffer.from(treasuryKey, "base64"));
-                    const tx = Transaction.from(txBytes);
                     tx.partialSign(treasury);
 
                     signature = await connection.sendRawTransaction(tx.serialize(), { skipPreflight: true });

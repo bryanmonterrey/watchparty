@@ -19,7 +19,7 @@ import { getBoostTreasuryOwner } from "@/lib/premium/boosts";
 import { verifyUsdcPaymentToTreasury, getTreasuryUsdcAta } from "@/lib/chains/solana/verify-usdc-payment";
 import { verifySolPayment } from "@/lib/chains/solana/verify-sol-payment";
 import { createNotification } from "@/server/lib/notify";
-import { payoutDestinationFor } from "@/server/lib/user-wallet";
+import { ownsWallet, payoutDestinationFor } from "@/server/lib/user-wallet";
 
 const LAMPORTS_PER_SOL = 1_000_000_000;
 const PLATFORM_FEE_BPS = 500; // 5% platform fee, taken at claim time
@@ -176,6 +176,13 @@ export const subscriptionRouter = router({
             const planId = annual ? tier.planIdAnnual : tier.planIdMonthly;
             const priceUsdc = annual ? tier.priceUsdcAnnual : tier.priceUsdcMonthly;
             if (!planId || !priceUsdc) throw new TRPCError({ code: "BAD_REQUEST", message: "Tier has no plan for this cycle" });
+
+            // Same binding as premium.recordSubscription: the pull hits the named
+            // wallet's delegation, and the result is claimable creator earnings —
+            // so an unowned wallet here is a direct USDC theft from that wallet.
+            if (!(await ownsWallet(ctx.user.id, input.subscriberWallet))) {
+                throw new TRPCError({ code: "FORBIDDEN", message: "Subscribe with a wallet linked to your account" });
+            }
 
             const now = new Date();
             const periodHours = annual ? PERIOD_HOURS.annual : PERIOD_HOURS.monthly;

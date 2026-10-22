@@ -20,6 +20,7 @@ import { isEntitled } from "@/server/lib/premium-entitlement";
 import { getBoostTreasuryOwner } from "@/lib/premium/boosts";
 import { verifyUsdcPaymentToTreasury, getTreasuryUsdcAta } from "@/lib/chains/solana/verify-usdc-payment";
 import { createNotification } from "@/server/lib/notify";
+import { ownsWallet } from "@/server/lib/user-wallet";
 
 const TIER_KEYS = Object.keys(TIERS) as [TierKey, ...TierKey[]];
 
@@ -140,6 +141,13 @@ export const premiumRouter = router({
                 )
                 .limit(1);
             if (!plan) throw new TRPCError({ code: "NOT_FOUND", message: "Plan not provisioned" });
+
+            // The collector pulls from whichever wallet is named here, under that
+            // wallet's own on-chain delegation. Unbound, anyone could point it at
+            // another user's live delegation and get premium on their USDC.
+            if (!(await ownsWallet(ctx.user.id, input.subscriberWallet))) {
+                throw new TRPCError({ code: "FORBIDDEN", message: "Subscribe with a wallet linked to your account" });
+            }
 
             const now = new Date();
 

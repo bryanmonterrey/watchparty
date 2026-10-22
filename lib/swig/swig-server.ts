@@ -351,6 +351,18 @@ export async function prepareSwigExecuteTransaction(
     const userInstructions = innerInstructions.filter(
         ix => !ix.programId.equals(ComputeBudgetProgram.programId)
     );
+    // The treasury signs the outer tx as payer, and the Swig SDK keeps inner
+    // signer flags — an inner ix naming the treasury would run with its
+    // authority. Client instructions may never reference it.
+    const { assertInnerInstructionsAvoidSponsor } = await import('./relay-guard');
+    assertInnerInstructionsAvoidSponsor(
+        userInstructions.map(ix => ({
+            programId: ix.programId.toBase58(),
+            keys: ix.keys.map(k => ({ pubkey: k.pubkey.toBase58(), isSigner: k.isSigner, isWritable: k.isWritable })),
+            data: ix.data,
+        })),
+        treasury.publicKey.toBase58(),
+    );
 
     const { getRecommendedMicrolamports } = await import('@/lib/solana/priority-fees');
     const microLamports = await getRecommendedMicrolamports([swigAddress]);
