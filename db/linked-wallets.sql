@@ -37,13 +37,13 @@ CREATE POLICY linked_wallets_select_own ON linked_wallets
   FOR SELECT TO authenticated USING (user_id = (SELECT auth.uid()::text));
 
 DROP POLICY IF EXISTS linked_wallets_insert_own ON linked_wallets;
-CREATE POLICY linked_wallets_insert_own ON linked_wallets
-  FOR INSERT TO authenticated WITH CHECK (user_id = (SELECT auth.uid()::text));
+-- [disabled 2026-10-22, see rls-lockdown-2026-10-22.sql] CREATE POLICY linked_wallets_insert_own ON linked_wallets
+-- [disabled 2026-10-22, see rls-lockdown-2026-10-22.sql]   FOR INSERT TO authenticated WITH CHECK (user_id = (SELECT auth.uid()::text));
 
 DROP POLICY IF EXISTS linked_wallets_update_own ON linked_wallets;
-CREATE POLICY linked_wallets_update_own ON linked_wallets
-  FOR UPDATE TO authenticated USING (user_id = (SELECT auth.uid()::text));
+-- [disabled 2026-10-22, see rls-lockdown-2026-10-22.sql] CREATE POLICY linked_wallets_update_own ON linked_wallets
+-- [disabled 2026-10-22, see rls-lockdown-2026-10-22.sql]   FOR UPDATE TO authenticated USING (user_id = (SELECT auth.uid()::text));
 
 DROP POLICY IF EXISTS linked_wallets_delete_own ON linked_wallets;
-CREATE POLICY linked_wallets_delete_own ON linked_wallets
-  FOR DELETE TO authenticated USING (user_id = (SELECT auth.uid()::text));
+-- [disabled 2026-10-22, see rls-lockdown-2026-10-22.sql] CREATE POLICY linked_wallets_delete_own ON linked_wallets
+-- [disabled 2026-10-22, see rls-lockdown-2026-10-22.sql]   FOR DELETE TO authenticated USING (user_id = (SELECT auth.uid()::text));

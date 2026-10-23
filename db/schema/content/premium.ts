@@ -61,8 +61,8 @@ export const premiumSubscriptions = pgTable("premium_subscriptions", {
     uniqueIndex("idx_premium_sub_user").on(table.userId),
     index("idx_premium_sub_due").on(table.status, table.currentPeriodEnd),
     pgPolicy("premium_sub_owner_select", { for: "select", to: "authenticated", using: sql`"userId" = (SELECT auth.uid()::text)` }),
-    pgPolicy("premium_sub_owner_insert", { for: "insert", to: "authenticated", withCheck: sql`"userId" = (SELECT auth.uid()::text)` }),
-    pgPolicy("premium_sub_owner_update", { for: "update", to: "authenticated", using: sql`"userId" = (SELECT auth.uid()::text)` }),
+    // owner insert/update policies dropped 2026-10-22 — entitlement is server-written only
+    // (db/rls-lockdown-2026-10-22.sql): the minted Supabase JWT made them a direct PostgREST path.
 ]).enableRLS();
 
 // ─── Enterprise / Custom contact-sales leads ───────────────────────────────────

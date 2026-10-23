@@ -10,7 +10,7 @@
 
 ALTER TABLE "user" ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "users_select_own" ON "user" FOR SELECT TO authenticated USING (id = auth.uid()::text);
-CREATE POLICY "users_update_own" ON "user" FOR UPDATE TO authenticated USING (id = auth.uid()::text);
+-- [disabled 2026-10-22, see rls-lockdown-2026-10-22.sql] CREATE POLICY "users_update_own" ON "user" FOR UPDATE TO authenticated USING (id = auth.uid()::text);
 
 ALTER TABLE session ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "sessions_select_own" ON session FOR SELECT TO authenticated USING ("userId" = auth.uid()::text);

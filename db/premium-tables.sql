@@ -53,9 +53,9 @@ ALTER TABLE "premium_subscriptions" ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "premium_sub_owner_select" ON "premium_subscriptions";
 CREATE POLICY "premium_sub_owner_select" ON "premium_subscriptions" FOR SELECT TO authenticated USING ("userId" = (SELECT auth.uid()::text));
 DROP POLICY IF EXISTS "premium_sub_owner_insert" ON "premium_subscriptions";
-CREATE POLICY "premium_sub_owner_insert" ON "premium_subscriptions" FOR INSERT TO authenticated WITH CHECK ("userId" = (SELECT auth.uid()::text));
+-- [disabled 2026-10-22, see rls-lockdown-2026-10-22.sql] CREATE POLICY "premium_sub_owner_insert" ON "premium_subscriptions" FOR INSERT TO authenticated WITH CHECK ("userId" = (SELECT auth.uid()::text));
 DROP POLICY IF EXISTS "premium_sub_owner_update" ON "premium_subscriptions";
-CREATE POLICY "premium_sub_owner_update" ON "premium_subscriptions" FOR UPDATE TO authenticated USING ("userId" = (SELECT auth.uid()::text));
+-- [disabled 2026-10-22, see rls-lockdown-2026-10-22.sql] CREATE POLICY "premium_sub_owner_update" ON "premium_subscriptions" FOR UPDATE TO authenticated USING ("userId" = (SELECT auth.uid()::text));
 
 -- ── Enterprise / Custom contact-sales leads ──────────────────────────────────
 CREATE TABLE IF NOT EXISTS "premium_leads" (

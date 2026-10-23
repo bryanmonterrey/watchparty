@@ -1,4 +1,4 @@
-import { boolean, index, integer, jsonb, pgEnum, pgPolicy, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { boolean, index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import type { SocialLinks } from "@/lib/profile/socials";
 
@@ -61,8 +61,8 @@ export const user = pgTable("user", {
   index("idx_user_username_lower").on(sql`lower(${table.username})`),
   uniqueIndex("idx_user_referral_code").on(table.referralCode),
   uniqueIndex("uq_user_referral_slug_lower").on(sql`lower(${table.referralSlug})`),
-  pgPolicy("users_select_public", { for: "select", to: "public", using: sql`true` }),
-  pgPolicy("users_update_own", { for: "update", to: "authenticated", using: sql`id = (SELECT auth.uid()::text)` }),
+  // users_select_public / users_update_own were dropped on 2026-10-22
+  // (db/rls-lockdown-2026-10-22.sql): the minted Supabase JWT made them a direct PostgREST path.
 ]).enableRLS();
 
 export type UserType = typeof user.$inferSelect;
