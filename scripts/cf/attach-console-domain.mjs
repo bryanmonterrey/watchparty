@@ -32,7 +32,7 @@ if (!account || !token) throw new Error("need CLOUDFLARE_ACCOUNT_ID and CLOUDFLA
 const ZONE_ID = "08d8c49c6cf32031f1c006507565ac7f"; // watchparty.xyz
 const HOSTNAME = "console.watchparty.xyz";
 const API_ROUTE_PATTERN = `${HOSTNAME}/api/*`;
-const API_SERVICE = "watchparty-app"; // the worker that owns /api (main container)
+const API_SERVICE = "watchparty"; // the Worker that owns /api (container deleted 2026-10-23)
 const SERVICE = process.argv[2] ?? "console-app";
 
 const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };

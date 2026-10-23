@@ -1,6 +1,6 @@
 // Point admin.watchparty.xyz at the main app worker — the internal admin panel.
 //
-//   node scripts/cf/attach-admin-domain.mjs                # → watchparty-app
+//   node scripts/cf/attach-admin-domain.mjs                # → watchparty
 //   node scripts/cf/attach-admin-domain.mjs watchparty     # rollback target
 //
 // Same shape as attach-studio-domain.mjs, and for the same reason: the admin
@@ -38,7 +38,7 @@ if (!account || !token) throw new Error("need CLOUDFLARE_ACCOUNT_ID and CLOUDFLA
 
 const ZONE_ID = "08d8c49c6cf32031f1c006507565ac7f"; // watchparty.xyz
 const HOSTNAME = "admin.watchparty.xyz";
-const SERVICE = process.argv[2] ?? "watchparty-app"; // the container worker that serves the main app
+const SERVICE = process.argv[2] ?? "watchparty"; // the Worker that serves the main app (container deleted 2026-10-23)
 
 const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/workers/domains`, {
   method: "PUT",

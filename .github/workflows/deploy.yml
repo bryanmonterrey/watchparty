@@ -442,94 +442,15 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-  # THE ONE THAT SERVES THE SITE.
-  #
-  # watchparty.xyz is attached to `watchparty-app`, the Worker that fronts the
-  # container — so a push that only rebuilt the `deploy` job above would leave
-  # the live site on old code. That happened once already, within an hour of
-  # the cutover: a change deployed green and wasn't on the site, because the
-  # container image was still the previous commit.
-  #
-  # The `deploy` job above stays, and stays current, precisely so it remains a
-  # working rollback target — reattach the domain to `watchparty` and it's
-  # serving this same commit.
-  deploy-container:
-    needs: [test]
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v4
-      - name: Overlay private assets
-        # Licensed packs + runbooks live in the private watchparty-assets repo
-        # (scripts/ci/overlay-private-assets.sh); the public tree builds
-        # without them, just imageless.
-        env:
-          ASSETS_DEPLOY_KEY: ${{ secrets.ASSETS_DEPLOY_KEY }}
-        run: bash scripts/ci/overlay-private-assets.sh
-
-      - uses: oven-sh/setup-bun@v2
-        id: setup-bun
-        continue-on-error: true
-        with:
-          bun-version: latest
-      # setup-bun failed with "socket hang up" on FIVE separate jobs on
-      # 2026-08-12 (test, deploy-cron, deploy-og, deploy-realtime,
-      # deploy-container) — a transient network error reaching its CDN, not
-      # anything about this repo. Because `test` gates the deploy jobs, one
-      # flake there skips every deployment.
-      #
-      # Strictly additive: the action still runs first and this is skipped
-      # unless it actually failed, so the normal path is unchanged.
-      - name: Install bun (fallback for a flaky setup-bun)
-        if: steps.setup-bun.outcome == 'failure'
-        run: |
-          curl -fsSL https://bun.sh/install | bash
-          echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      # Needed twice over: NEXT_PUBLIC_* are inlined into the client bundle
-      # during the image build, and the rest are pushed as Worker secrets below,
-      # which is where the container reads its runtime env from.
-      - name: Restore .env
-        # DOTENV_OVERRIDES is appended AFTER, and later wins: gen-secrets.mjs
-        # parses line by line with `out[k] = v`, so the last occurrence of a key
-        # is the one that ships. That makes it possible to change a few values
-        # without rewriting DOTENV_PRODUCTION — which nobody can read, only
-        # replace wholesale, so a targeted edit is otherwise impossible.
-        #
-        # Used 2026-08-10 for the Helius key rotation: the key is embedded in
-        # four RPC URLs as well as HELIUS_API_KEY, and three of those live ONLY
-        # as Worker secrets, so editing .env.production would have missed them.
-        # Empty/unset is a no-op, so this is safe to leave wired up.
-        run: |
-          printf '%s\n' "$DOTENV_PRODUCTION" > .env
-          if [ -n "$DOTENV_OVERRIDES" ]; then printf '%s\n' "$DOTENV_OVERRIDES" >> .env; fi
-        env:
-          DOTENV_PRODUCTION: ${{ secrets.DOTENV_PRODUCTION }}
-          DOTENV_OVERRIDES: ${{ secrets.DOTENV_OVERRIDES }}
-
-      - name: Build image and deploy container worker
-        run: bunx wrangler deploy --config container/wrangler.jsonc
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      - name: Generate runtime secrets bundle
-        run: node scripts/cf/gen-secrets.mjs
-
-      - name: Push secrets to the container worker
-        run: bunx wrangler secret bulk .cf-secrets.json --config container/wrangler.jsonc
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  # deploy-container removed 2026-10-23: the site runs on the plain `watchparty`
+  # Worker (+ `watchparty-jobs` for crons) and the container was deleted. To bring
+  # it back: .github/workflows/deploy-container.yml (manual) + container/.
 
   # Loud failure signal: if any deploy job above fails, open (or append to) a
   # sticky GitHub issue so a broken build can't silently leave production stale.
   # A failed deploy means prod keeps serving the last *successful* build.
   notify-failure:
-    needs: [deploy, deploy-realtime, deploy-cron, deploy-container, deploy-console]
+    needs: [deploy, deploy-realtime, deploy-cron, deploy-console]
     if: failure()
     runs-on: ubuntu-latest
     permissions:

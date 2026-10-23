@@ -1,6 +1,6 @@
 // Point studio.watchparty.xyz at the main app worker — the studio cutover.
 //
-//   node scripts/cf/attach-studio-domain.mjs                # → watchparty-app
+//   node scripts/cf/attach-studio-domain.mjs                # → watchparty
 //   node scripts/cf/attach-studio-domain.mjs watchparty     # rollback target
 //
 // UNLIKE the console (a separate `console-app` worker that needs a /api zone
@@ -30,7 +30,7 @@ if (!account || !token) throw new Error("need CLOUDFLARE_ACCOUNT_ID and CLOUDFLA
 
 const ZONE_ID = "08d8c49c6cf32031f1c006507565ac7f"; // watchparty.xyz
 const HOSTNAME = "studio.watchparty.xyz";
-const SERVICE = process.argv[2] ?? "watchparty-app"; // the container worker that serves the main app
+const SERVICE = process.argv[2] ?? "watchparty"; // the Worker that serves the main app (container deleted 2026-10-23)
 
 const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/workers/domains`, {
   method: "PUT",
