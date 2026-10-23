@@ -190,13 +190,32 @@ jobs:
           DBURL="${DBURL%\"}"; DBURL="${DBURL#\"}"
           DBURL="${DBURL%\'}"; DBURL="${DBURL#\'}"
           export CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE="$DBURL"
-          bunx wrangler deploy
+          # Source maps are >60 MiB encoded (Cloudflare's cap, error 10021, first hit
+          # 2026-10-22); they only prettify stack traces, so they stay local.
+          bunx wrangler deploy --upload-source-maps=false
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Push runtime secrets to the Worker
         run: bunx wrangler secret bulk .cf-secrets.json
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      # Same build, second Worker: watchparty-jobs serves ONLY the cron worker's
+      # /api/cron/* calls (cron/wrangler.jsonc TARGET_BASE_URL). A Worker isolate
+      # is shared by every in-flight request and capped at 128 MB, and an OOM
+      # kills all of them — the minute-long crons (coin-alerts above all) were
+      # taking user requests down with them. Separate Worker = separate isolates.
+      - name: Deploy jobs worker (cron isolation)
+        run: |
+          DBURL="$(grep -E '^DATABASE_URL=' .env | cut -d= -f2-)"
+          DBURL="${DBURL%\"}"; DBURL="${DBURL#\"}"
+          DBURL="${DBURL%\'}"; DBURL="${DBURL#\'}"
+          export CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE="$DBURL"
+          bunx wrangler deploy --name watchparty-jobs --upload-source-maps=false
+          bunx wrangler secret bulk .cf-secrets.json --name watchparty-jobs
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

@@ -13,7 +13,12 @@
   // predictions-factory hourly at :07 (AI market generation + auto-resolve).
   // Dispatched by event.cron in code.
   "triggers": { "crons": ["0 * * * *", "*/30 * * * *", "17 * * * *", "30 4 * * *", "*/10 * * * *", "* * * * *", "7 * * * *"] },
-  "vars": { "TARGET_BASE_URL": "https://watchparty.xyz", "ALERT_EMAIL": "bryan@watchparty.xyz" },
+  // TARGET_BASE_URL is the watchparty-jobs Worker — the SAME app build as
+  // watchparty.xyz, deployed under a second name (deploy.yml) so the crons run
+  // in their own isolates. They used to share watchparty.xyz's: one OOM there
+  // (128 MB cap) killed every in-flight user request with it. monitor.ts still
+  // probes watchparty.xyz itself.
+  "vars": { "TARGET_BASE_URL": "https://watchparty-jobs.takingpay.workers.dev", "ALERT_EMAIL": "bryan@watchparty.xyz" },
   "observability": { "enabled": true }
   // CRON_SECRET is a secret and MUST equal the app's CRON_SECRET. Set out-of-band:
   //   cd cron && wrangler secret put CRON_SECRET

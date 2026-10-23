@@ -928,8 +928,11 @@ export const walletRouter = router({
         }
         if (w.swig_account_created) return { created: false, ready: true };
 
+        // One import site: a second `await import()` of the same module can make
+        // Turbopack emit another copy of it (and the Swig/Solana SDKs) — enough to
+        // push the worker past its 10 MiB upload cap.
+        const { createSwigAccount, swigAccountExists } = await import("@/lib/swig/swig-server");
         try {
-            const { createSwigAccount } = await import("@/lib/swig/swig-server");
             await createSwigAccount(w.swig_id, w.frost_public_key);
         } catch (err: any) {
             const msg = err?.message ?? String(err);
@@ -937,7 +940,6 @@ export const walletRouter = router({
             // deposit sent before the Swig existed. Trust the chain, not the
             // error text: the string check alone marked the owner's wallet
             // created on 2026-10-10 when it wasn't, and nothing ever retried.
-            const { swigAccountExists } = await import("@/lib/swig/swig-server");
             const exists = msg.includes("already in use") && await swigAccountExists(w.swig_id).catch(() => false);
             if (!exists) {
                 console.error("[ensureSwigAccount] failed", { userId: ctx.user.id, error: msg });
