@@ -933,8 +933,13 @@ export const walletRouter = router({
             await createSwigAccount(w.swig_id, w.frost_public_key);
         } catch (err: any) {
             const msg = err?.message ?? String(err);
-            // A prior partial attempt already made it — that's success.
-            if (!msg.includes("already in use")) {
+            // "already in use" only means the ADDRESS holds lamports — e.g. a
+            // deposit sent before the Swig existed. Trust the chain, not the
+            // error text: the string check alone marked the owner's wallet
+            // created on 2026-10-10 when it wasn't, and nothing ever retried.
+            const { swigAccountExists } = await import("@/lib/swig/swig-server");
+            const exists = msg.includes("already in use") && await swigAccountExists(w.swig_id).catch(() => false);
+            if (!exists) {
                 console.error("[ensureSwigAccount] failed", { userId: ctx.user.id, error: msg });
                 alertSwigTreasury("wallet.ensureSwigAccount → createSwigAccount", msg);
                 return { created: false, ready: false, error: msg };

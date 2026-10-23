@@ -137,6 +137,18 @@ export async function createSwigAccount(swigId: string, frostGroupPubkeyBase64: 
     await sendWithRetry(tx, [treasury]);
 }
 
+/**
+ * Does the Swig account for this id actually exist on-chain (owned by the Swig
+ * program)? The address can hold lamports without being a Swig — funds sent
+ * to a not-yet-created Swig make createAccount fail with "already in use",
+ * which is NOT proof the Swig was created (the 2026-10-10 owner-wallet case).
+ */
+export async function swigAccountExists(swigId: string): Promise<boolean> {
+    const pda = findSwigPda(Buffer.from(swigId, 'hex'));
+    const info = await getRpc().getAccountInfo(new PublicKey(pda.toBase58 ? pda.toBase58() : String(pda)));
+    return !!info && info.owner.toBase58() === SWIG_PROGRAM_ID;
+}
+
 /** @deprecated Use computeSwigPda + createSwigAccount separately. */
 export async function createSwigWallet(frostGroupPubkeyBase64: string): Promise<SwigWalletInfo> {
     const info = computeSwigPda();
