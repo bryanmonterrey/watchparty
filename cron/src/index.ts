@@ -21,6 +21,10 @@ import { runMonitor, type MonitorEnv } from "./monitor";
 interface Env extends MonitorEnv {
     CRON_SECRET: string;
     TARGET_BASE_URL: string;
+    /** Service binding to the watchparty-jobs Worker. A Worker may not fetch()
+     *  another Worker's workers.dev URL on the same account (error 1042), so the
+     *  crons reach it through the binding; TARGET_BASE_URL only supplies the URL. */
+    JOBS?: Fetcher;
 }
 
 // Every cron call hits the app over its PUBLIC url, so each one is an inbound
@@ -40,7 +44,7 @@ async function call(env: Env, path: string): Promise<void> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), CALL_TIMEOUT_MS);
     try {
-        const res = await fetch(`${env.TARGET_BASE_URL}${path}`, {
+        const res = await (env.JOBS ? env.JOBS.fetch.bind(env.JOBS) : fetch)(`${env.TARGET_BASE_URL}${path}`, {
             headers: { Authorization: `Bearer ${env.CRON_SECRET}` },
             signal: controller.signal,
         });

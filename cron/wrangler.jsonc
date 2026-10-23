@@ -19,6 +19,9 @@
   // (128 MB cap) killed every in-flight user request with it. monitor.ts still
   // probes watchparty.xyz itself.
   "vars": { "TARGET_BASE_URL": "https://watchparty-jobs.takingpay.workers.dev", "ALERT_EMAIL": "bryan@watchparty.xyz" },
+  // Calls reach watchparty-jobs through this binding (cron/src/index.ts call());
+  // a plain fetch() of its workers.dev URL is refused with error 1042.
+  "services": [{ "binding": "JOBS", "service": "watchparty-jobs" }],
   "observability": { "enabled": true }
   // CRON_SECRET is a secret and MUST equal the app's CRON_SECRET. Set out-of-band:
   //   cd cron && wrangler secret put CRON_SECRET
