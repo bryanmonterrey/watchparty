@@ -118,7 +118,7 @@ export const ROBINHOOD: ChainConfig = {
   // Robinhood's public RPC is rate-limited; set the env var to a dedicated
   // provider before this sees real traffic.
   rpcUrl: process.env.NEXT_PUBLIC_ROBINHOOD_RPC_URL ?? "https://rpc.mainnet.chain.robinhood.com",
-  explorer: "https://explorer.chain.robinhood.com",
+  explorer: "https://robinhoodchain.blockscout.com",
   nativeCurrency: { symbol: "ETH", decimals: 18 },
 };
 
