@@ -281,34 +281,18 @@ export const auth = betterAuth({
   advanced: {
     useSecureCookies: process.env.NODE_ENV === "production",
     generateId: () => crypto.randomUUID(),
-    // Read the client IP from Cloudflare's headers, NOT x-forwarded-for.
+    // Read the client IP from x-real-ip, which Vercel sets to the connecting
+    // client and overwrites if the client sent its own. Without an explicit
+    // list better-auth 1.7 reads x-forwarded-for alone; on the Cloudflare
+    // stack that header was missing or an internal hop, and the rate limiter
+    // fell back to a SINGLE SHARED per-path bucket — one user scrolling /home
+    // 429'd get-session for every user at once (2026-08-19).
     //
-    // better-auth 1.7's default is x-forwarded-for alone — and on this stack
-    // that header does not exist at the edge (verified from the worker's
-    // logged request headers: cf-connecting-ip and x-real-ip carry the real
-    // client IP, x-forwarded-for is absent). The only XFF better-auth ever
-    // saw was the one the container synthesizes for its internal hop, which
-    // is how every session recorded ipAddress 10.1.0.0 — and why 1.7's rate
-    // limiter warned "could not determine a client IP" and fell back to a
-    // SINGLE SHARED per-path bucket: one user scrolling /home could (and on
-    // 2026-08-19, did) 429 get-session for every user at once.
-    //
-    // Order matters, and each entry covers one deployment shape:
-    // - cf-connecting-ip: set by Cloudflare at the edge, unspoofable, present
-    //   on the plain-worker path (workers.dev / rollback worker). Checked
-    //   first so a client-sent copy of the headers below can never win where
-    //   this one exists.
-    // - x-watchparty-client-ip: the CONTAINER path. The container-port proxy
-    //   strips cf-connecting-ip and rewrites x-real-ip to its internal hop
-    //   (10.1.0.0), so container/src/index.ts relays the edge's
-    //   cf-connecting-ip in this header — set or deleted unconditionally
-    //   there, so on the only path that reaches the container its value is
-    //   always bridge-controlled.
-    // - x-real-ip: last resort for any shape not covered above.
-    // x-forwarded-for stays OFF the list on purpose: inside the container it
-    // holds the proxy's internal hop, not a client.
+    // Never list cf-connecting-ip or x-watchparty-client-ip here again: they
+    // were trustworthy only behind Cloudflare's edge. On Vercel they are
+    // client-controlled, so a caller could choose a fresh bucket per request.
     ipAddress: {
-      ipAddressHeaders: ["cf-connecting-ip", "x-watchparty-client-ip", "x-real-ip"],
+      ipAddressHeaders: ["x-real-ip", "x-forwarded-for"],
     },
     // Share the session cookie across subdomains. ads.watchparty.xyz has no
     // login of its own — its proxy checks for this cookie and bounces to

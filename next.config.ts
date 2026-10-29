@@ -1,5 +1,4 @@
 import type { NextConfig } from "next";
-import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 
 const nextConfig: NextConfig = {
   // Pin the workspace root: a stray bun.lock one level up (~/Documents/projects,
@@ -19,13 +18,11 @@ const nextConfig: NextConfig = {
       "@better-auth/sso": "./lib/absent-optional-module-stub.js",
     },
   },
-  // `standalone` ONLY for the container build.
-  //
-  // opennextjs-cloudflare does its own packaging and does not want this set;
-  // the container image does, because it runs `node server.js` directly. The
-  // env var keeps the two builds from fighting over one field — the Worker
-  // deploy is byte-for-byte what it was.
-  output: process.env.BUILD_TARGET === "container" ? "standalone" : undefined,
+  // The OG route reads its .ttf files from disk (lib/og/fonts.ts); nothing
+  // imports them, so the tracer has to be told they belong to the function.
+  outputFileTracingIncludes: {
+    "/api/og/[template]": ["./lib/og/fonts/*.ttf"],
+  },
   experimental: {
     // Client router cache for page segments. The whole (app) tree is
     // force-dynamic (the layout reads the session cookie), and Next's default
@@ -105,15 +102,6 @@ const nextConfig: NextConfig = {
   //
   // Ordering matters: /discover/post/<id> hits the second rule first and lands
   // on /feed/post/<id>, which the third then forwards to /status/<id>.
-  // Local dev only: the generated share cards render on the standalone
-  // og-worker (og-worker/, `bun run dev` there → :8787). In production the
-  // zone route watchparty.xyz/api/og/* reaches that worker before the app
-  // ever sees the request, so this rewrite is dev's stand-in for the route.
-  async rewrites() {
-    if (process.env.NODE_ENV === "production") return [];
-    const og = process.env.OG_WORKER_DEV_URL ?? "http://127.0.0.1:8787";
-    return [{ source: "/api/og/:path*", destination: `${og}/api/og/:path*` }];
-  },
   async redirects() {
     return [
       { source: "/discover", destination: "/feed", permanent: true },
@@ -125,11 +113,3 @@ const nextConfig: NextConfig = {
 
 export default nextConfig;
 
-// Wire getCloudflareContext() into the `next dev` server only. This must NOT run
-// during `next build`: it spins up a wrangler/miniflare proxy of every binding,
-// and the Hyperdrive binding then demands a local Postgres connection string,
-// crashing the production build. Dev-only avoids that; the deployed Worker sets
-// up its own context, so init isn't needed in prod.
-if (process.env.NODE_ENV === "development") {
-  initOpenNextCloudflareForDev();
-}

@@ -1,13 +1,13 @@
 import { SITE_URL } from "./metadata";
 
-// Builds the URL of a generated share card. The renderer is og-worker/
+// Builds the URL of a generated share card. The renderer is app/api/og/[template]/route.ts
 // (docs/share-cards-plan.md §3): every field the card needs travels in the
 // query string, so a card URL is immutable and the edge caches it hard.
 //
-// Field names here MUST match what og-worker/src/templates/<name>.ts reads.
+// Field names here MUST match what lib/og/templates/<name>.ts reads.
 // Caps are applied here first so the URL stays short; the worker caps again.
 
-/** Bump together with TEMPLATE_VERSION in og-worker/src/index.ts. */
+/** Bump together with TEMPLATE_VERSION in app/api/og/[template]/route.ts. */
 export const OG_TEMPLATE_VERSION = 1;
 
 type Num = number | null | undefined;

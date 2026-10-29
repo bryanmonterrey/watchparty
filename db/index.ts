@@ -1,18 +1,19 @@
 import * as schema from "./schema";
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
-import { cache } from "react";
-import { getCloudflareContext } from "@opennextjs/cloudflare";
 
-// One drizzle client, two runtimes:
+// One drizzle client per process, two flavours:
 //
-// - Cloudflare Workers (prod): the connection string comes from the Hyperdrive
-//   binding and a FRESH client is made per request — Workers must not reuse a
-//   DB connection across requests (subsequent requests fail). React `cache()`
-//   scopes exactly one client to the current request.
-// - Everywhere else (next dev, bun scripts): no Hyperdrive binding, so we fall
-//   back to DATABASE_URL and reuse a single global client (cached on globalThis
-//   so Turbopack hot-reload doesn't leak Supabase pooler slots — see history).
+// - Vercel (prod, Fluid compute): an instance serves many requests concurrently
+//   and lives across them, so it gets ONE pooled client with a statement
+//   deadline that recycles the pool if Supavisor wedges (see getPooledDb).
+// - Everywhere else (next dev, bun scripts): a plain global client against
+//   DATABASE_URL (cached on globalThis so Turbopack hot-reload doesn't leak
+//   Supabase pooler slots — see history).
+//
+// Until 2026-10 production ran on Cloudflare Workers, which needed a FRESH
+// client per request (Workers kill sockets reused across requests); that path
+// and its Hyperdrive binding went with the move back to Vercel.
 //
 // All ~40 call sites keep `import { db } from "@/db"`: the exported `db` is a
 // Proxy that resolves the right client on each property access.
@@ -64,29 +65,18 @@ class StatementDeadlineError extends Error {
     }
 }
 
-type ClientOptions = { perRequest?: boolean; pooled?: boolean; onDeadline?: () => void };
+type ClientOptions = { pooled?: boolean; onDeadline?: () => void };
 
-function createClient(connectionString: string, { perRequest = false, pooled = false, onDeadline }: ClientOptions = {}) {
+function createClient(connectionString: string, { pooled = false, onDeadline }: ClientOptions = {}) {
     const sql = postgres(connectionString, {
-        // A request-scoped client is never closed, and a live socket or idle
-        // timer is a GC root — so each one stays in memory until its own
-        // timeout fires. With almost no traffic one isolate serves everything
-        // for a long time, so these pile up and the isolate is eventually
-        // killed for exceededMemory, taking whatever request happens to be
-        // running with it (get-session, heartbeat — bystanders, not causes).
-        //
-        // So a request-scoped client holds as little as possible: one socket,
-        // released after two idle seconds. The idle-close race that makes this
-        // risky on its own is absorbed by the retry above, which is why this
-        // is worth doing NOW and wasn't before.
-        max: perRequest ? 1 : pooled ? 10 : 5,
-        idle_timeout: perRequest ? 2 : 20,
-        // Pooled (container): recycle sockets on a schedule so a connection
+        max: pooled ? 10 : 5,
+        idle_timeout: 20,
+        // Pooled (Vercel): recycle sockets on a schedule so a connection
         // that Supavisor has silently abandoned cannot be held forever, and
         // give up on a dial fast — a stuck dial used to be a stuck request.
         max_lifetime: pooled ? 60 * 10 : undefined,
         connect_timeout: pooled ? 5 : 10,
-        prepare: false, // Supabase pooler / Hyperdrive: no prepared statements
+        prepare: false, // Supabase transaction pooler: no prepared statements
     });
 
     // Every drizzle query goes through client.unsafe() — sometimes awaited
@@ -108,8 +98,8 @@ function createClient(connectionString: string, { perRequest = false, pooled = f
             const pending = rawUnsafe(query, params as never, options as never);
             return mode === "values" ? (pending as { values: () => Promise<unknown> }).values() : pending;
         };
-        // Deadline only where there is a pool to poison; the per-request
-        // client dies with its request anyway.
+        // Deadline only where there is a pool to poison; scripts and dev
+        // would rather wait than have their client torn down.
         const guarded = (p: Promise<unknown>) => {
             if (!pooled) return p;
             let timer: ReturnType<typeof setTimeout>;
@@ -149,84 +139,40 @@ function createClient(connectionString: string, { perRequest = false, pooled = f
     return sql;
 }
 
-// True only on the Cloudflare Workers runtime (deployed Worker or local
-// `wrangler`/`cf:preview` via miniflare). During `next build`, `next dev`, and
-// bun scripts this is false — those run in Node and must use DATABASE_URL.
-// (Accessing the Hyperdrive binding off-Workers throws an unhandled rejection.)
-function onWorkersRuntime(): boolean {
-    return typeof navigator !== "undefined" && navigator.userAgent === "Cloudflare-Workers";
-}
-
-// Returns the Hyperdrive connection string when running on Workers, else undefined.
-function hyperdriveConnectionString(): string | undefined {
-    if (!onWorkersRuntime()) return undefined;
-    try {
-        // Cast until `cf:typegen` regenerates CloudflareEnv with the HYPERDRIVE binding.
-        const env = getCloudflareContext().env as { HYPERDRIVE?: { connectionString: string } };
-        return env.HYPERDRIVE?.connectionString;
-    } catch {
-        // Binding unavailable for some reason — fall back to DATABASE_URL.
-        return undefined;
-    }
-}
-
-// Workers path: one client per request (React cache resets between requests).
-const getRequestDb = cache((connectionString: string): Db =>
-    drizzle(createClient(connectionString, { perRequest: true }), { schema }),
-);
-
-// Off-Workers path: one reused client per process.
-const globalForDb = globalThis as unknown as { __pgDb?: Db; __containerDb?: { db: Db; sql: ReturnType<typeof postgres> } };
+const globalForDb = globalThis as unknown as { __pgDb?: Db; __pooledDb?: { db: Db; sql: ReturnType<typeof postgres> } };
 function getGlobalDb(): Db {
     return (globalForDb.__pgDb ??= drizzle(createClient(process.env.DATABASE_URL!), { schema }));
 }
 
-function getContainerDb(): Db {
-    if (globalForDb.__containerDb) return globalForDb.__containerDb.db;
+// The pool came back on 2026-10-04 (then on the container) with what was
+// missing on 2026-08-06, when the global pool's sockets wedged silently against
+// Supavisor — alive but unresponsive, no client-side timeout — and hung every
+// tRPC query: a statement deadline that poisons the pool (ended, rebuilt on the
+// next request), a connection lifetime cap, a short dial timeout, and the retry
+// above. The alternative, a client per request, cost a TLS dial + auth (~0.5 s)
+// before every first statement.
+function getPooledDb(): Db {
+    if (globalForDb.__pooledDb) return globalForDb.__pooledDb.db;
     const sql = createClient(process.env.DATABASE_URL!, {
         pooled: true,
         onDeadline: () => {
             // Poison: drop the reference first so concurrent requests build a
             // new pool immediately, then end the old one without waiting on
             // the socket that just proved it will not answer.
-            const old = globalForDb.__containerDb;
-            globalForDb.__containerDb = undefined;
-            console.error("[db] statement deadline hit — recycling the container's connection pool");
+            const old = globalForDb.__pooledDb;
+            globalForDb.__pooledDb = undefined;
+            console.error("[db] statement deadline hit — recycling the connection pool");
             void old?.sql.end({ timeout: 1 }).catch(() => undefined);
         },
     });
-    globalForDb.__containerDb = { db: drizzle(sql, { schema }), sql };
-    return globalForDb.__containerDb.db;
+    globalForDb.__pooledDb = { db: drizzle(sql, { schema }), sql };
+    return globalForDb.__pooledDb.db;
 }
 
 function resolveDb(): Db {
-    const cfConn = hyperdriveConnectionString();
-    if (cfConn) return getRequestDb(cfConn);
-    // Workers WITHOUT a Hyperdrive binding — the emergency bypass used when
-    // Hyperdrive itself is the wedged tier (2026-08-06): connect straight to
-    // the transaction pooler in DATABASE_URL. Must still be the per-request
-    // client; the global one reuses connections across requests, which the
-    // Workers runtime does not allow.
-    if (onWorkersRuntime()) return getRequestDb(process.env.DATABASE_URL!);
-    // The container (real Node serving HTTP — see container/Dockerfile):
-    // ONE pooled client per process, since 2026-10-04.
-    //
-    // From 2026-08-06 until then it took the per-request client BY CHOICE:
-    // the global pool's sockets had wedged silently against Supavisor (alive
-    // but unresponsive, no client-side timeout ever fired) and hung every
-    // tRPC query. A fresh connection per request survived that — at the
-    // price of a TLS dial + auth on EVERY request, ~0.5 s before the first
-    // statement, which by October was the largest fixed cost on the site.
-    //
-    // The pool comes back with what was missing that morning: a statement
-    // deadline that poisons the pool (ended, rebuilt on the next request),
-    // a connection lifetime cap, a short dial timeout, and the retry above.
-    // Owner's call to switch ("go", 2026-10-04); the one-line revert is the
-    // getRequestDb branch below.
-    if (process.env.WATCHPARTY_CONTAINER) return getContainerDb();
-    // Scripts, next build, next dev: long-lived Node processes with no request
-    // scope — cache() wouldn't memoize, so per-request clients would leak a
-    // connection per query. They keep the global client.
+    // VERCEL is set on every Vercel build AND function; skip the build so
+    // static generation doesn't arm deadlines it has no request to recycle for.
+    if (process.env.VERCEL && process.env.NEXT_PHASE !== "phase-production-build") return getPooledDb();
     return getGlobalDb();
 }
 

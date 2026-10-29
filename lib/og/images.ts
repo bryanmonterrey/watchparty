@@ -75,8 +75,8 @@ async function fetchOne(url: string): Promise<string | null> {
         const res = await fetch(url, {
             headers: { accept: "image/*" },
             signal: AbortSignal.timeout(TIMEOUT_MS),
-            cf: { cacheEverything: true, cacheTtl: 3600 },
-        } as RequestInit);
+            next: { revalidate: 3600 },
+        });
         if (res.status !== 200) return null;
         const type = res.headers.get("content-type")?.split(";")[0].trim() ?? "";
         // resvg decodes PNG, JPEG and GIF only. A WebP/AVIF/SVG body makes

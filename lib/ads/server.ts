@@ -11,12 +11,18 @@ import type { Ad, AdRequestParams } from "./types";
 // and returns `{ ads: [...] , count }`. We adapt to/from our internal single-Ad
 // shape here so the rest of the app stays decoupled from the upstream schema.
 
-/** Pull coarse geo from Cloudflare's edge headers (set by the CF network). */
+/** Pull coarse geo from Vercel's edge headers (set by the Vercel network). */
 export function geoFromHeaders(headers: Headers): { country?: string; city?: string } {
-    const country = headers.get("cf-ipcountry") ?? undefined;
-    const city = headers.get("cf-ipcity") ?? undefined;
-    // CF uses "XX"/"T1" for unknown/Tor — treat those as no signal.
-    const clean = country && country.length === 2 && country !== "XX" && country !== "T1" ? country : undefined;
+    const country = headers.get("x-vercel-ip-country") ?? undefined;
+    const rawCity = headers.get("x-vercel-ip-city");
+    // Vercel URL-encodes the city ("S%C3%A3o%20Paulo").
+    let city: string | undefined;
+    try {
+        city = rawCity ? decodeURIComponent(rawCity) : undefined;
+    } catch {
+        city = undefined;
+    }
+    const clean = country && country.length === 2 ? country : undefined;
     return { country: clean, city: city || undefined };
 }
 

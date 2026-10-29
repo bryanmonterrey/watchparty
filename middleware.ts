@@ -195,7 +195,7 @@ export async function middleware(request: NextRequest) {
         pathname === "/api/auth/oauth2/end-session"
       ) {
         const ip =
-          request.headers.get("cf-connecting-ip") ??
+          request.headers.get("x-real-ip") ??
           request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
           "unknown";
         const limiter = strictLimited ? oauthTokenLimiter : oauthInteractiveLimiter;

@@ -3,56 +3,26 @@ import { NextRequest } from "next/server";
 import { headers as getHeaders } from "next/headers";
 
 /**
- * Extract client IP address from request headers
- * Checks multiple headers in order of priority:
- * 1. x-watchparty-client-ip — the CONTAINER path. Production serves from a
- *    Cloudflare container behind a Worker (container/src/index.ts), and the
- *    container-port proxy strips cf-connecting-ip and rewrites x-real-ip AND
- *    x-forwarded-for to its internal hop (10.1.0.0). The Worker copies the
- *    real client IP into this header, set or deleted unconditionally, so it
- *    cannot be spoofed on that path. Before it was read here (2026-09-04)
- *    every anonymous visitor resolved to the same address — one shared
- *    rate-limit bucket, and one shared "viewer" for view counts.
- * 2. cf-connecting-ip (Cloudflare, the plain-Worker path)
- * 3. x-forwarded-for (most common proxy header)
- * 4. x-real-ip (nginx)
- * 5. x-client-ip (other proxies)
- * 
+ * Extract the client IP address from request headers.
+ *
+ * Production is on Vercel, which sets x-real-ip and x-forwarded-for to the
+ * connecting client and OVERWRITES any client-sent copy, so both are
+ * trustworthy there. The Cloudflare-era headers (cf-connecting-ip, and the
+ * container's x-watchparty-client-ip relay) are deliberately NOT read: with
+ * no Cloudflare edge in front, they are whatever the client chose to send,
+ * which would let anyone pick their own rate-limit bucket.
+ *
  * @param req - NextRequest object or null to use headers()
  * @returns IP address or "unknown" if not found
  */
 export async function getClientIp(req?: NextRequest | null): Promise<string> {
-    if (req) {
-        // From NextRequest
-        const relayed = req.headers.get("x-watchparty-client-ip") || req.headers.get("cf-connecting-ip");
-        if (relayed) return relayed;
-        const forwardedFor = req.headers.get("x-forwarded-for");
-        if (forwardedFor) {
-            // x-forwarded-for can contain multiple IPs, take the first one
-            return forwardedFor.split(",")[0].trim();
-        }
+    const h = req ? req.headers : await getHeaders();
+    return clientIpFromHeaders(h) ?? "unknown";
+}
 
-        return (
-            req.headers.get("x-real-ip") ||
-            req.headers.get("x-client-ip") ||
-            "unknown"
-        );
-    } else {
-        // From headers() - for Server Components/Actions
-        const headersList = await getHeaders();
-        const relayed = headersList.get("x-watchparty-client-ip") || headersList.get("cf-connecting-ip");
-        if (relayed) return relayed;
-        const forwardedFor = headersList.get("x-forwarded-for");
-        if (forwardedFor) {
-            return forwardedFor.split(",")[0].trim();
-        }
-
-        return (
-            headersList.get("x-real-ip") ||
-            headersList.get("x-client-ip") ||
-            "unknown"
-        );
-    }
+/** Sync form for callers that already hold the headers. */
+export function clientIpFromHeaders(h: Headers): string | null {
+    return h.get("x-real-ip") || h.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
 }
 
 /**

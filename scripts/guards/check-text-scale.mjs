@@ -52,8 +52,11 @@ const CSS_FONT_SIZE = /font-size:\s*(-?[\d.]+(?:px|rem|em|pt))\b/g;
  */
 const JS_FONT_SIZE = /\bfontSize:\s*["']?(-?[\d.]+(?:px|rem|em|pt)?)["']?/g;
 
+// lib/og/ draws share cards into a fixed 1200×630 satori canvas — pixel sizes
+// on an image, not UI text, so the theme scale has nothing to say about them.
 const files = (await Promise.all(ROOTS.map((r) => walk(path.join(root, r))))).flat()
-    .filter((f) => /\.(ts|tsx|css)$/.test(f));
+    .filter((f) => /\.(ts|tsx|css)$/.test(f))
+    .filter((f) => !rel(root, f).startsWith("lib/og/"));
 
 const allow = await loadAllowlist(ALLOWLIST);
 const violations = [];
