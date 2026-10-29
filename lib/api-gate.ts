@@ -55,10 +55,14 @@ export function gateMode(): GateMode {
 // Never gated: login flows (web + Expo), self-authed cron endpoints, every
 // webhook provider (Helius, Alchemy, IVS, community), IVS caption delivery,
 // ad delivery (VAST is fetched by video players with no cookies), and the
-// browser error-log sink. This is the same traffic inventory behind the
-// "leave Bot Fight Mode OFF" decision in CLAUDE.md.
+// browser error-log sink, and the OG share-card renderer (fetched by
+// Twitterbot/Discordbot/iMessage with no cookies; it was a separate Cloudflare
+// worker until the Vercel move, so the gate never saw it before). This is the
+// same traffic inventory behind the "leave Bot Fight Mode OFF" decision in
+// CLAUDE.md.
 const EXEMPT = [
     "/api/auth",
+    "/api/og",
     "/api/cron",
     "/api/webhooks",
     "/api/captions/webhook",
