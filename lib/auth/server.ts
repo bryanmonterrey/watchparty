@@ -299,8 +299,9 @@ export const auth = betterAuth({
     // watchparty's login when missing, so a host-only cookie loops that
     // bounce forever (login sees a session, ads never does). Production only:
     // a ".watchparty.xyz" Domain attribute on localhost is rejected by the
-    // browser and would break dev login.
-    ...(process.env.NODE_ENV === "production"
+    // browser and would break dev login — and the same goes for Vercel
+    // preview deploys (*.vercel.app), which also build with NODE_ENV=production.
+    ...(process.env.NODE_ENV === "production" && process.env.VERCEL_ENV !== "preview"
       ? { crossSubDomainCookies: { enabled: true, domain: ".watchparty.xyz" } }
       : {}),
   },
