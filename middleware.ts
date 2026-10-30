@@ -311,7 +311,10 @@ export const config = {
   // Skip static assets, icons, and the web manifest; run on everything else.
   // (Without excluding manifest.webmanifest the proxy redirects it to /login and
   // the browser sees HTML -> "manifest is not valid JSON data".)
+  // parties/ = the realtime WebSocket endpoint (app/parties/[party]/[room]);
+  // it authenticates with its own token, and a signed-out upgrade must not be
+  // redirected to /login.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|webmanifest)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|parties/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|webmanifest)$).*)",
   ],
 };

@@ -89,6 +89,7 @@
     "@upstash/ratelimit": "^2.2.0",
     "@upstash/redis": "^1.39.0",
     "@vercel/analytics": "^2.0.1",
+    "@vercel/functions": "^3.10.5",
     "@walletconnect/ethereum-provider": "^2.26.0",
     "@walletconnect/solana-adapter": "^0.0.9",
     "@wingleeio/mugen": "^0.8.0",
@@ -161,6 +162,7 @@
     "video-ambient-glow": "^1.2.6",
     "viem": "^2.57.11",
     "wagmi": "^3.7.9",
+    "ws": "^8.22.0",
     "zod": "^4.6.7",
     "zustand": "^5.0.16"
   },
@@ -170,6 +172,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@types/ws": "^8.18.2",
     "dotenv": "^18.0.9",
     "drizzle-kit": "^0.31.11",
     "eslint": "^9.39.5",

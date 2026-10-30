@@ -59,6 +59,11 @@ export async function GET(req: NextRequest) {
     // would retry the rejected connection on its 20s alarm, and the failure
     // would be invisible from outside. Enable it the day the plan allows a
     // socket, not before.
+    //
+    // ⚠️ The Tape DO itself went with the Cloudflare realtime worker on
+    // 2026-10-29 (it had never run — this gate was always off). Enabling this
+    // now needs a new home for the socket first: it must stay open 24/7, which
+    // a Vercel Function (300 s max) cannot do.
     if (process.env.TAPE_WATCH_ENABLED !== "1") {
         return NextResponse.json({ skipped: "TAPE_WATCH_ENABLED not set (Mobula WS needs the Growth plan)" });
     }
