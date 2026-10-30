@@ -1,8 +1,9 @@
-name: Deploy to Cloudflare Workers
+name: CI
 
-# Builds + deploys server-side on GitHub's runners (clean network), which avoids
-# the local `wrangler` asset-upload EPIPE. Builds the OpenNext worker, deploys
-# it, then pushes runtime secrets to the live Worker.
+# The app and console deploy through Vercel's Git integration (projects
+# watchpartyv8 + watchparty-console) since the 2026-10-29 move off Cloudflare.
+# What's left here: the test/guard/drift gate (informational now — Vercel does
+# not wait on it) and the cron worker, the last thing still on Cloudflare.
 
 on:
   push:
@@ -10,7 +11,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: cf-deploy
+  group: ci
   cancel-in-progress: true
 
 jobs:
@@ -86,206 +87,6 @@ jobs:
       - name: Schema drift (production)
         run: bun scripts/db/check-drift.ts prod
 
-  deploy:
-    needs: [test]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Overlay private assets
-        # Licensed packs + runbooks live in the private watchparty-assets repo
-        # (scripts/ci/overlay-private-assets.sh); the public tree builds
-        # without them, just imageless.
-        env:
-          ASSETS_DEPLOY_KEY: ${{ secrets.ASSETS_DEPLOY_KEY }}
-        run: bash scripts/ci/overlay-private-assets.sh
-
-      # Next 16.3 turned `experimental.turbopackFileSystemCacheForBuild` ON by
-      # default: every `next build` now WRITES ~570MB of Turbopack cache to
-      # .next/cache. That only buys anything if the directory is restored first
-      # — a bare checkout pays the write cost on every run and reads nothing
-      # back. Restore it here (before `bun install`, so hashFiles never walks
-      # node_modules) to actually collect the faster-repeat-build win.
-      #
-      # The key is per-commit so every run saves a fresh cache; the restore-keys
-      # fall back to the newest cache for this lockfile, which is still mostly
-      # reusable. Entries are evicted LRU against the repo's 10GB budget.
-      #
-      # Do NOT key on a source glob like hashFiles('**/*.ts', ...). The cache
-      # action re-evaluates `key` in its POST step, by which point node_modules,
-      # .next and .open-next all exist — the walk then blows GitHub's 120s
-      # expression budget, the template is declared invalid, and the save fails
-      # (observed on run 30874361145). `github.sha` is free to evaluate and
-      # changes exactly as often.
-      - name: Restore Turbopack build cache
-        uses: actions/cache@v4
-        with:
-          path: .next/cache
-          key: nextjs-${{ runner.os }}-${{ hashFiles('bun.lock') }}-${{ github.sha }}
-          restore-keys: |
-            nextjs-${{ runner.os }}-${{ hashFiles('bun.lock') }}-
-            nextjs-${{ runner.os }}-
-
-      - uses: oven-sh/setup-bun@v2
-        id: setup-bun
-        continue-on-error: true
-        with:
-          bun-version: latest
-      # setup-bun failed with "socket hang up" on FIVE separate jobs on
-      # 2026-08-12 (test, deploy-cron, deploy-og, deploy-realtime,
-      # deploy-container) — a transient network error reaching its CDN, not
-      # anything about this repo. Because `test` gates the deploy jobs, one
-      # flake there skips every deployment.
-      #
-      # Strictly additive: the action still runs first and this is skipped
-      # unless it actually failed, so the normal path is unchanged.
-      - name: Install bun (fallback for a flaky setup-bun)
-        if: steps.setup-bun.outcome == 'failure'
-        run: |
-          curl -fsSL https://bun.sh/install | bash
-          echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-
-      # Reconstruct the env file from a single multi-line secret. `next build`
-      # bakes NEXT_PUBLIC_* and runs DB-backed static generation from this.
-      - name: Restore .env
-        # DOTENV_OVERRIDES is appended AFTER, and later wins: gen-secrets.mjs
-        # parses line by line with `out[k] = v`, so the last occurrence of a key
-        # is the one that ships. That makes it possible to change a few values
-        # without rewriting DOTENV_PRODUCTION — which nobody can read, only
-        # replace wholesale, so a targeted edit is otherwise impossible.
-        #
-        # Used 2026-08-10 for the Helius key rotation: the key is embedded in
-        # four RPC URLs as well as HELIUS_API_KEY, and three of those live ONLY
-        # as Worker secrets, so editing .env.production would have missed them.
-        # Empty/unset is a no-op, so this is safe to leave wired up.
-        run: |
-          printf '%s\n' "$DOTENV_PRODUCTION" > .env
-          if [ -n "$DOTENV_OVERRIDES" ]; then printf '%s\n' "$DOTENV_OVERRIDES" >> .env; fi
-        env:
-          DOTENV_PRODUCTION: ${{ secrets.DOTENV_PRODUCTION }}
-          DOTENV_OVERRIDES: ${{ secrets.DOTENV_OVERRIDES }}
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Build (OpenNext → Workers)
-        run: bunx opennextjs-cloudflare build
-
-      - name: Generate runtime secrets bundle
-        run: node scripts/cf/gen-secrets.mjs
-
-      - name: Deploy worker
-        # `wrangler deploy` calls `opennextjs-cloudflare deploy`, which instantiates
-        # every binding locally (incl. Hyperdrive) before uploading — so it needs a
-        # local connection string even though we populate no cache. Point it at the
-        # DB from the restored .env (kept out of the Worker's runtime secrets).
-        run: |
-          # DATABASE_URL may be wrapped in quotes in .env; strip surrounding
-          # quotes so the Hyperdrive local connection string is a valid URL
-          # (miniflare rejects '"postgres://..."' as an invalid url).
-          DBURL="$(grep -E '^DATABASE_URL=' .env | cut -d= -f2-)"
-          DBURL="${DBURL%\"}"; DBURL="${DBURL#\"}"
-          DBURL="${DBURL%\'}"; DBURL="${DBURL#\'}"
-          export CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE="$DBURL"
-          # Source maps are >60 MiB encoded (Cloudflare's cap, error 10021, first hit
-          # 2026-10-22); they only prettify stack traces, so they stay local.
-          bunx wrangler deploy --upload-source-maps=false
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      - name: Push runtime secrets to the Worker
-        run: bunx wrangler secret bulk .cf-secrets.json
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      # Same build, second Worker: watchparty-jobs serves ONLY the cron worker's
-      # /api/cron/* calls (cron/wrangler.jsonc TARGET_BASE_URL). A Worker isolate
-      # is shared by every in-flight request and capped at 128 MB, and an OOM
-      # kills all of them — the minute-long crons (coin-alerts above all) were
-      # taking user requests down with them. Separate Worker = separate isolates.
-      - name: Deploy jobs worker (cron isolation)
-        run: |
-          DBURL="$(grep -E '^DATABASE_URL=' .env | cut -d= -f2-)"
-          DBURL="${DBURL%\"}"; DBURL="${DBURL#\"}"
-          DBURL="${DBURL%\'}"; DBURL="${DBURL#\'}"
-          export CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE="$DBURL"
-          bunx wrangler deploy --name watchparty-jobs --upload-source-maps=false
-          bunx wrangler secret bulk .cf-secrets.json --name watchparty-jobs
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-  # The realtime layer is a separate Worker (Durable Objects via partyserver).
-  # Independent of the Next/OpenNext worker, so it deploys in parallel.
-  deploy-realtime:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v2
-        id: setup-bun
-        continue-on-error: true
-        with:
-          bun-version: latest
-      # setup-bun failed with "socket hang up" on FIVE separate jobs on
-      # 2026-08-12 (test, deploy-cron, deploy-og, deploy-realtime,
-      # deploy-container) — a transient network error reaching its CDN, not
-      # anything about this repo. Because `test` gates the deploy jobs, one
-      # flake there skips every deployment.
-      #
-      # Strictly additive: the action still runs first and this is skipped
-      # unless it actually failed, so the normal path is unchanged.
-      - name: Install bun (fallback for a flaky setup-bun)
-        if: steps.setup-bun.outcome == 'failure'
-        run: |
-          curl -fsSL https://bun.sh/install | bash
-          echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
-
-      # partyserver/partysocket/jose resolve from the root node_modules that
-      # wrangler bundles, so install at the repo root.
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Restore .env
-        # Identical to the assembly in deploy.yml, and it has to stay identical.
-        # This step used to apply DOTENV_PRODUCTION only, so anything added via
-        # DOTENV_OVERRIDES was live on one deploy path and silently absent on
-        # the others — and deploy-container.yml is the one serving the domains.
-        # The failure mode is a missing value, not an error: a fee that quietly
-        # is not charged, a key that is quietly not set.
-        #
-        # `%s\n` matters too. Without the trailing newline the first override
-        # line concatenates onto the last line of DOTENV_PRODUCTION, corrupting
-        # both.
-        run: |
-          printf '%s\n' "$DOTENV_PRODUCTION" > .env
-          if [ -n "$DOTENV_OVERRIDES" ]; then printf '%s\n' "$DOTENV_OVERRIDES" >> .env; fi
-        env:
-          DOTENV_PRODUCTION: ${{ secrets.DOTENV_PRODUCTION }}
-          DOTENV_OVERRIDES: ${{ secrets.DOTENV_OVERRIDES }}
-
-      - name: Deploy realtime worker
-        run: bunx wrangler deploy --config realtime/wrangler.jsonc
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      - name: Generate realtime secrets bundle
-        run: node scripts/cf/gen-realtime-secrets.mjs
-
-      - name: Push REALTIME_SECRET to the realtime worker
-        run: bunx wrangler secret bulk realtime/.cf-secrets.json --config realtime/wrangler.jsonc
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-  # Cron Triggers worker (premium collect + treasury sweep). Calls the app's
-  # guarded /api/cron/* routes on schedule with CRON_SECRET. Standalone worker.
   deploy-cron:
     runs-on: ubuntu-latest
     steps:
@@ -353,104 +154,8 @@ jobs:
   # main worker). TWO installs: root deps first, because `next build`
   # type-checks the type-only AppRouter import against ../server, whose types
   # resolve from the ROOT node_modules; then the console's own lockfile.
-  deploy-console:
-    needs: [test]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v2
-        id: setup-bun
-        continue-on-error: true
-        with:
-          bun-version: latest
-      # setup-bun failed with "socket hang up" on FIVE separate jobs on
-      # 2026-08-12 (test, deploy-cron, deploy-og, deploy-realtime,
-      # deploy-container) — a transient network error reaching its CDN, not
-      # anything about this repo. Because `test` gates the deploy jobs, one
-      # flake there skips every deployment.
-      #
-      # Strictly additive: the action still runs first and this is skipped
-      # unless it actually failed, so the normal path is unchanged.
-      - name: Install bun (fallback for a flaky setup-bun)
-        if: steps.setup-bun.outcome == 'failure'
-        run: |
-          curl -fsSL https://bun.sh/install | bash
-          echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-
-      - name: Install root dependencies (types for the AppRouter bridge)
-        run: bun install --frozen-lockfile
-
-      - name: Install console dependencies
-        run: bun install --frozen-lockfile
-        working-directory: console
-
-      - name: Build (OpenNext → Workers)
-        run: bunx opennextjs-cloudflare build
-        working-directory: console
-
-      - name: Deploy console worker
-        run: bunx wrangler deploy
-        working-directory: console
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-  # OG share-image worker (og-worker/). Standalone on purpose: it carries
-  # next/og's ~1 MiB of resvg/yoga wasm + font so the main `watchparty` worker
-  # doesn't have to (that weight had pushed it over the 10 MiB upload cap). Its
-  # wrangler.jsonc declares the zone route watchparty.xyz/api/og/*, so the SAME
-  # share URLs the app builds resolve here with no client change. No .env — it
-  # bakes no secrets and reads no DB. Bundles src/index.ts directly (no OpenNext
-  # build); workers-og resolves from og-worker's own lockfile.
-  deploy-og:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v2
-        id: setup-bun
-        continue-on-error: true
-        with:
-          bun-version: latest
-      # setup-bun failed with "socket hang up" on FIVE separate jobs on
-      # 2026-08-12 (test, deploy-cron, deploy-og, deploy-realtime,
-      # deploy-container) — a transient network error reaching its CDN, not
-      # anything about this repo. Because `test` gates the deploy jobs, one
-      # flake there skips every deployment.
-      #
-      # Strictly additive: the action still runs first and this is skipped
-      # unless it actually failed, so the normal path is unchanged.
-      - name: Install bun (fallback for a flaky setup-bun)
-        if: steps.setup-bun.outcome == 'failure'
-        run: |
-          curl -fsSL https://bun.sh/install | bash
-          echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
-
-      - name: Install og-worker dependencies
-        run: bun install --frozen-lockfile
-        working-directory: og-worker
-
-      - name: Deploy og worker
-        run: bunx wrangler deploy
-        working-directory: og-worker
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-  # deploy-container removed 2026-10-23: the site runs on the plain `watchparty`
-  # Worker (+ `watchparty-jobs` for crons) and the container was deleted. To bring
-  # it back: .github/workflows/deploy-container.yml (manual) + container/.
-
-  # Loud failure signal: if any deploy job above fails, open (or append to) a
-  # sticky GitHub issue so a broken build can't silently leave production stale.
-  # A failed deploy means prod keeps serving the last *successful* build.
   notify-failure:
-    needs: [deploy, deploy-realtime, deploy-cron, deploy-console]
+    needs: [test, deploy-cron]
     if: failure()
     runs-on: ubuntu-latest
     permissions:
@@ -475,7 +180,7 @@ jobs:
           ⚠️ Production keeps serving the last *successful* build until this is fixed."
           # Ensure the label exists (idempotent), then sticky: comment on an open
           # issue if one exists, otherwise create one.
-          gh label create deploy-failure --color B60205 --description "CI deploy to Cloudflare failed" --force || true
+          gh label create deploy-failure --color B60205 --description "CI (tests/guards or cron worker deploy) failed" --force || true
           existing="$(gh issue list --label deploy-failure --state open --json number --jq '.[0].number' || true)"
           if [ -n "$existing" ]; then
             gh issue comment "$existing" --body "$body"

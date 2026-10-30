@@ -33,9 +33,9 @@ subscribe test.
   (`TREASURY_COLD_PUBKEY`). The ONLY manual recurring task is withdrawing profit from cold
   (+ occasional SOL top-up for gas). Treasury key safety: `docs/treasury-security.md`.
 - **HOW DO I LAUNCH? → `docs/cloudflare-launch.md`** (copy-paste runbook: secrets, env,
-  provision, crons, verify). Ops detail: `docs/premium-ops.md`. Do the mainnet push on
-  Cloudflare, not Vercel (provisioning is permanent + host-independent; secrets/crons belong
-  on the real host).
+  provision, crons, verify). Ops detail: `docs/premium-ops.md`. Provisioning is permanent
+  and host-independent; the runbook's wrangler/secret steps are Cloudflare-era — the app
+  is on Vercel now (see "Deploy target" below), so secrets go in Vercel env.
 - Treasury keypairs are generated into the gitignored `.treasury-keys/` (back up + delete).
 - **Gating a feature on premium: use `server/lib/premium-entitlement.ts`.** It owns
   the one predicate — `(status === "active" || status === "past_due") &&
@@ -211,7 +211,24 @@ iOS app (Expo SDK 56) — invariants live in `mobile/CLAUDE.md`, which loads whe
 
 ## Deploy target & dev setup
 
-- **Deploy: Cloudflare** via `@opennextjs/cloudflare` (chosen for speed/cost). Keep code Workers-compatible: HTTP-based services (Upstash Redis, Resend) are fine; the DB uses **postgres.js** which runs on Cloudflare **Hyperdrive** (front Supabase with it — edge compute + single-region Postgres is slow without it). Full CF/wrangler/Hyperdrive setup is a later milestone.
+- **Deploy: Vercel (moved back from Cloudflare 2026-10-29).** Git integration deploys
+  `main`: project `watchpartyv8` (the app, functions pinned to `pdx1` next to the
+  us-west-2 Supabase pooler) and `watchparty-console` (`console/`). **Hobby plan**: one
+  build at a time across the account, no sub-daily Vercel Cron, no buying overage (a
+  usage cap pauses the site). Each project's `ignoreCommand` skips commits that don't
+  touch it. Previews sit behind Vercel SSO. DNS is on **GoDaddy** (`gddy` CLI).
+  - **Client IP / geo come from Vercel headers** (`x-real-ip`, `x-forwarded-for`,
+    `x-vercel-ip-country`). Never read `cf-connecting-ip` / `x-watchparty-client-ip`
+    again — with no Cloudflare edge in front they are client-controlled, and the
+    rate limiters and the perps US geo-block key on this.
+  - **Realtime** is `app/parties/[party]/[room]` (Vercel WebSockets) + Upstash pub/sub
+    in `lib/realtime/hub.ts`; sockets close at 300 s and PartySocket reconnects.
+    Live gate: the two-socket test pattern (bad token 401, presence, relay, chat,
+    server publish, close) — tsc can't see any of it.
+  - **Crons** are still fired by the `watchparty-cron` Cloudflare worker (`cron/`),
+    calling `https://watchparty.xyz/api/cron/*` — the last Cloudflare piece, pending
+    an external scheduler (Hobby Cron is daily-only).
+  - `/api/og/[template]` must stay in the api-gate EXEMPT list (link-preview bots).
 - **Dev runs on port 3001** (`bun dev` → `next dev -p 3001`) to match the reused OAuth callback URLs and `NEXT_PUBLIC_AUTH_URL` in `.env` (copied from `../sidebar`; same Supabase DB).
 - ⚠️ **The dev DB split covers `DATABASE_URL` ONLY — supabase-js still writes to
   PRODUCTION.** Verified 2026-08-11: `.env.local` points `DATABASE_URL` at the
@@ -260,32 +277,14 @@ iOS app (Expo SDK 56) — invariants live in `mobile/CLAUDE.md`, which loads whe
 - **Reused production DB (dev == prod):** dev runs against the **same** Supabase DB as production, so any schema change hits live data immediately. **Additive, nullable changes are OK** (e.g. `ADD COLUMN ... text` — safe and reversible); apply them deliberately and prefer manual SQL committed under `db/` (see `db/affiliate-column.sql`, `db/feed-indexes.sql`) so the change is reviewable. **Avoid destructive migrations and `drizzle-kit push`**, which can clobber the auth tables ported verbatim from the old app. Keep `db/schema/auth` in sync with the DB by hand.
 - **Squircle corners: use Lisse (`@lisse/react`), opt-in per element.** The old `tailwindcss-corner-shape` was removed — it used the CSS `corner-shape` property which is **Chrome-only** (broken in Safari) and forced squircle onto *every* `rounded-*` (so even pills got squircled). Lisse uses SVG `clip-path` (works in Safari/Firefox/Chrome). Apply via the `components/ui/squircle.tsx` helper: `<Squircle asChild radius={20}><button className="…">…</button></Squircle>` — and do NOT add `rounded-*` to a squircled element (redundant under clip-path). **Pills (Connect Wallet, Complete, Create) stay plain `rounded-full` with NO `<Squircle>`.**
 
-### Cloudflare bot protection: leave Bot Fight Mode OFF (decided 2026-08-06)
+### Bot / AI-crawler protection: none since leaving Cloudflare (2026-10-29)
 
-Cloudflare's domain security scan recommends enabling **Bot Fight Mode**. Don't.
-It challenges anything it scores as automated, exempts only Cloudflare's
-verified-bot list, and on the free plan **cannot be scoped or excepted** — WAF
-skip rules do not apply to it. This domain serves four kinds of legitimate
-non-browser traffic that would start failing silently:
-
-- `/api/trpc/*` — the Expo app (`mobile/`), which can't solve a JS challenge
-- `/api/captions/webhook` (AWS IVS) and `/api/webhooks/community/[webhookId]`
-- the `watchparty-cron` worker's 14 public fetches, plus `/api/ad/*`, `/api/rpc`
-
-The Security Center row says "Bot Fight Mode not enabled" *because* it's off, so
-being off never satisfies it — **dismiss the row**, don't flip the setting. It's
-typed "Configuration suggestion," not a vulnerability.
-
-**If bot protection is ever actually wanted, the real path is Pro + Super Bot
-Fight Mode**, which *does* support skip rules — exempt `/api/*` and let it work
-on the HTML routes.
-
-Related zone state (all verified 2026-08-06): `crawler_protection: enabled`
-(AI Labyrinth — traps crawlers that ignore robots.txt, no SEO impact) and
-`ai_bots_protection: "block"`, which was pre-existing and blocks AI crawlers
-outright — that's the setting that governs whether ChatGPT/Perplexity can cite
-the site, and it's a product call, not a security one. Email/DNS posture (SPF,
-DMARC, security.txt) is documented in the memory `email-dns-hardening`.
+Cloudflare had `ai_bots_protection: "block"` (AI crawlers blocked outright) and
+AI Labyrinth on. Neither exists on Vercel by default, so AI crawlers now reach
+the site — whether ChatGPT/Perplexity may index it is a product call. If bot
+rules come back (Vercel Firewall), exempt the non-browser traffic: `/api/trpc/*`
+(the Expo app), `/api/captions/webhook`, `/api/webhooks/*`, `/api/cron/*`,
+`/api/ad/*`, `/api/rpc`, `/api/og/*`, and `/parties/*`.
 
 ## Rotating the Helius key: FIVE variables, not one
 

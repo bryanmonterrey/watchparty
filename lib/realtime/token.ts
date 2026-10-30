@@ -2,9 +2,9 @@ import { SignJWT } from "jose";
 import type { RealtimeClaims } from "./protocol";
 
 /**
- * Mint a short-lived HS256 token the browser hands to the realtime worker on
- * connect. The DO verifies it with the same `REALTIME_SECRET` (see
- * `realtime/src/auth.ts`). Server-only — do not import from client code.
+ * Mint a short-lived HS256 token the browser hands to the realtime endpoint on
+ * connect. app/parties/[party]/[room] verifies it with the same `REALTIME_SECRET` (see
+ * `lib/realtime/verify.ts`). Server-only — do not import from client code.
  */
 export async function signRealtimeToken(
   claims: RealtimeClaims,

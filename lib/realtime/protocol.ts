@@ -198,7 +198,7 @@ export const rooms = {
    * who have that conversation open, so without this an incoming DM is
    * invisible until something refetches.
    *
-   * Owner-only, enforced in the DO (realtime/src/server.ts).
+   * Owner-only, enforced by mayJoin() in lib/realtime/hub.ts.
    */
   inbox: (userId: string) => `${INBOX_PREFIX}${userId}`,
   /** A live stream's chat room (high fan-out). */
