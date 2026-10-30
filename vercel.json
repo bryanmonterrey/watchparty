@@ -4,7 +4,9 @@
   "installCommand": "bun install --frozen-lockfile",
   "framework": "nextjs",
   "bunVersion": "1.x",
-  "regions": ["pdx1"],
+  "regions": [
+    "pdx1"
+  ],
   "headers": [
     {
       "source": "/_next/static/:path*",
@@ -15,5 +17,6 @@
         }
       ]
     }
-  ]
+  ],
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . ':!console' ':!cron' ':!realtime' ':!mobile' ':!docs'"
 }

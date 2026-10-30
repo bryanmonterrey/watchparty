@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "bunVersion": "1.x",
+  "regions": [
+    "pdx1"
+  ],
+  "installCommand": "cd .. && bun install --frozen-lockfile && cd console && bun install --frozen-lockfile",
+  "buildCommand": "bun run build",
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- ."
+}
