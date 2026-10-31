@@ -188,7 +188,7 @@ const EXPLORERS: Record<string, (a: string) => string> = {
     "sei-network": (a) => `https://seitrace.com/token/${a}`,
     hyperevm: (a) => `https://hyperevmscan.io/token/${a}`,
     // Blockscout (Arbitrum Orbit) — from the chain registry's explorer field.
-    robinhood: (a) => `https://explorer.chain.robinhood.com/token/${a}`,
+    robinhood: (a) => `https://robinhoodchain.blockscout.com/token/${a}`,
     berachain: (a) => `https://berascan.com/token/${a}`,
     blast: (a) => `https://blastscan.io/token/${a}`,
     linea: (a) => `https://lineascan.build/token/${a}`,
@@ -228,7 +228,7 @@ const TX_PATHS: Record<string, (h: string) => string> = {
     aptos: (h) => `https://explorer.aptoslabs.com/txn/${h}`,
     "sei-network": (h) => `https://seitrace.com/tx/${h}`,
     hyperevm: (h) => `https://hyperevmscan.io/tx/${h}`,
-    robinhood: (h) => `https://explorer.chain.robinhood.com/tx/${h}`,
+    robinhood: (h) => `https://robinhoodchain.blockscout.com/tx/${h}`,
     berachain: (h) => `https://berascan.com/tx/${h}`,
     blast: (h) => `https://blastscan.io/tx/${h}`,
     linea: (h) => `https://lineascan.build/tx/${h}`,
