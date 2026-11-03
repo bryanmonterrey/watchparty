@@ -111,37 +111,34 @@ export default {
             ctx.waitUntil(call(env, "/api/cron/end-polls"));
             ctx.waitUntil(call(env, "/api/cron/expire-stories"));
         } else if (event.cron === "* * * * *") {
+            // Every minute — only the two the app treats as live market data.
+            // Everything else moved to */5 on 2026-11-02: on Vercel Hobby each
+            // call is a billed function run (plus a middleware run), and nine a
+            // minute with zero users was ~390k a month — a third of the cap.
+            // In-app swaps also trigger instant per-token refreshes, so this is
+            // the fallback, not the source of truth for perceived latency.
+
+            ctx.waitUntil(call(env, "/api/cron/token-sync"));
+
+            // Coin alert feed (/home left rail): discovers tracked coins across
+            // chains and clusters their swaps into "N traders bought" events.
+            ctx.waitUntil(call(env, "/api/cron/coin-alerts"));
+        } else if (event.cron === "*/5 * * * *") {
+            // A few minutes of lag is invisible for these: live viewer counts,
+            // the /trending board (a rotating slice of chains per pass), and
+            // scheduled posts (publish within 5 min of their time).
+
             // Every minute — the CF cron floor. All three are cheap bounded
             // API-call passes; in-app swaps additionally trigger instant
             // per-token refreshes so this is the fallback, not the source of
             // truth for perceived latency.
             ctx.waitUntil(call(env, "/api/cron/ivs-viewers"));
-            ctx.waitUntil(call(env, "/api/cron/token-sync"));
-            // Coin alert feed (/home left rail): discovers tracked coins across
-            // chains and clusters their swaps into "N traders bought" events.
-            ctx.waitUntil(call(env, "/api/cron/coin-alerts"));
-            // Re-point the Mobula trade socket at the coins that currently
-            // matter — EVERY MINUTE, because it is free to do so.
-            //
-            // Mobula bills a socket per MINUTE OPEN, not per subscription or
-            // message, and Tape.reconcile() sends the new payload on the
-            // EXISTING connection rather than reconnecting. So swapping all 50
-            // coins costs zero credits, and the only cost of doing it per
-            // minute is one indexed query plus one call to the realtime worker.
-            //
-            // That is the inversion this whole move was for. `Helius` billed
-            // per DELIVERY, so the watch list had to be picked cheapest-first
-            // and a coin was EVICTED the moment it took off — the exact opposite
-            // of what a live tape should follow. Here relevance is free, so the
-            // list tracks 24h volume and re-picks on the same cadence as the
-            // rest of the feed.
-            //
-            // No-ops when REALTIME_HOST/SECRET are unset, i.e. until the DO runs.
-            ctx.waitUntil(call(env, "/api/cron/tape-watch"));
+
             // Trending board (/trending): refreshes a rotating slice of chains.
             // Its budget and coin-alerts' deliberately sum under GeckoTerminal's
             // shared ~30 calls/min ceiling — see lib/coin-feed/geckoterminal.ts.
             ctx.waitUntil(call(env, "/api/cron/trending-sync"));
+
             // Scheduled posts. Every minute, not */10, because a post set for
             // 15:00 should appear at 15:00 — a ten-minute window is a visible
             // broken promise. One indexed UPDATE, so it is as cheap as the rest.
@@ -151,9 +148,11 @@ export default {
             // requests to it in 24h. Nothing failed loudly; scheduled posts
             // simply would have sat in `scheduled` forever.
             ctx.waitUntil(call(env, "/api/cron/publish-scheduled"));
-            // Uptime monitor — probes the live site (incl. a DB-touching tRPC
-            // query) and emails on down/recovered transitions. See monitor.ts.
+            // Uptime monitor: 3 probes, one of them a full home-page render —
+            // the costliest call here. An outage email now lands within ~10 min.
             ctx.waitUntil(runMonitor(env));
+            // tape-watch is gone: it is a no-op until TAPE_WATCH_ENABLED=1, and
+            // the Tape it fed was retired with the Cloudflare realtime worker.
         } else {
             ctx.waitUntil(call(env, "/api/cron/premium-collect"));
 
